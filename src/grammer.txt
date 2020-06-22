@@ -1,0 +1,15 @@
+program -> expressions
+
+expressions -> expression*
+
+expression -> let_expression | print_expression | term
+
+let_expression -> "let" identifier "=" expression
+
+print_expression -> "print(" expression ")"
+
+term -> factor (("+" | "-") factor)*
+
+factor -> primary (("*" | "/") primary)*
+
+primary -> Int | Float | Boolean | String | "(" expression ")"
