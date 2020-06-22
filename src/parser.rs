@@ -40,6 +40,9 @@ impl Parser {
         }
     }
 
+    /// Parse the tokens in the tokens field.
+    /// This function returns a vector of all of the parsed expressions.
+    /// The signature of this function might change to return a vector of errors.
     pub fn parse(&mut self) -> Result<Vec<Expression>, Error> {
         let mut expressions = vec![];
         while let Some(_) = self.tokens.front() {
@@ -49,6 +52,7 @@ impl Parser {
         Ok(expressions)
     }
 
+    /// Parse a single expression.
     fn parse_expression(&mut self) -> Result<Expression, Error> {
         match self.tokens.front() {
             Some((pos, TokenKind::Let)) => {
@@ -69,6 +73,7 @@ impl Parser {
         }
     }
     
+    /// Parse a let expression. This may take different forms and so, all forms must be accounted for.
     fn parse_let_expression(&mut self) -> Result<Expression, Error> {
         let (pos, _) = self.tokens.pop_front().unwrap();
         match self.tokens.pop_front() {
@@ -102,6 +107,7 @@ impl Parser {
         }
     }
 
+    /// Parse a print expression. This only has a single form to parse, so it is much cleaner.
     fn parse_print_expression(&mut self) -> Result<Expression, Error> {
         let (pos, _) = self.tokens.pop_front().unwrap();
         match self.tokens.pop_front() {
@@ -118,6 +124,7 @@ impl Parser {
         }
     }
 
+    /// Parses a term. A term is basically a factor + or - another factor.
     fn parse_term(&mut self) -> Result<Expression, Error> {
         let mut left = self.parse_factor()?;
         while let Ok((pos, operation)) = self.parse_term_operator() {
@@ -132,6 +139,7 @@ impl Parser {
         Ok(left)
     }
 
+    /// This parses the different term operators. These operators have a lower precedence than the factor operators.
     fn parse_term_operator(&mut self) -> Result<(usize, Operation), Error> {
         match self.tokens.front() {
             Some((pos, TokenKind::Plus)) => {
@@ -153,6 +161,7 @@ impl Parser {
         }
     }
 
+    /// Parses a factor. A factor is basically a primary * or / by a primary.
     fn parse_factor(&mut self) -> Result<Expression, Error> {
         let mut left = self.parse_primary()?;
         while let Ok((pos, operation)) = self.parse_factor_operator() {
@@ -167,6 +176,7 @@ impl Parser {
         Ok(left)
     }
 
+    /// This parses a factor operator. These have higher priority than the term operators.
     fn parse_factor_operator(&mut self) -> Result<(usize, Operation), Error> {
         match self.tokens.front() {
             Some((pos, TokenKind::Star)) => {
@@ -188,6 +198,7 @@ impl Parser {
         }
     }
 
+    /// Parses a primary expression. This can be a literal, or a parenthesized expression.
     fn parse_primary(&mut self) -> Result<Expression, Error> {
         match self.tokens.pop_front() {
             Some((pos, TokenKind::IntegerLiteral(value))) => {
