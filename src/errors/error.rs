@@ -84,11 +84,7 @@ impl Error {
                 column_number += 1;
             }
 
-            if idx == &(self.position.unwrap() - 1) {
-                true
-            } else {
-                false
-            }
+            idx == &(self.position.unwrap() - 1)
         });
 
         (line_number, column_number)
