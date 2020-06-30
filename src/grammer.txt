@@ -2,14 +2,35 @@ program -> expressions
 
 expressions -> expression*
 
-expression -> let_expression | print_expression | term
+expression -> let_expression 
+            | function_call_expression
+            | block_expression
+            | equality_expression
+            | if_expression
 
-let_expression -> "let" identifier "=" expression
+let_expression -> "let" identifier (":=" expression)?
 
-print_expression -> "print(" expression ")"
+function_call_expression -> identifier "(" arguments ")"
+
+arguments -> argument ("," argument)*
+
+argument -> expression
+
+block_expression -> "{" expression* "}"
+
+equality_expression -> term "=" term
+
+if_expression -> "if" expression block_expression ("else if" expression block_expression)* ("else" block_expression)?
+
+identifier -> [a-zA-Z][a-zA-Z0-9]*
 
 term -> factor (("+" | "-") factor)*
 
 factor -> primary (("*" | "/") primary)*
 
-primary -> Int | Float | Boolean | String | "(" expression ")"
+primary -> Int
+         | Float
+         | Boolean
+         | String
+         | ("-" | "+") primary
+         | "(" expression ")"

@@ -1,3 +1,6 @@
+/// The Compiler module, which walks the AST generated and creates the various different parts of the .dark file.
+pub mod compiler;
+
 /// The Parser module, which creates a AST that can be walked using the Visitor patter. The parser parses all of the tokens from the lexer.
 pub mod parser;
 
@@ -13,6 +16,7 @@ pub mod tokens;
 /// The Errors module, which contains the Error struct and the ErrorKind enum. These describe the various errors that could occur during the program execution.
 mod errors;
 
+use crate::compiler::Compiler;
 use crate::lexer::Lexer;
 use parser::Parser;
 use std::fs;
@@ -26,14 +30,17 @@ fn main() {
 }
 
 fn run(contents: &str) -> Result<(), String> {
-    let tokens = Lexer::new()
+    let tokens = Lexer::default()
         .lex(contents)
         .map_err(|error| error.prettify(contents))?;
 
     let ast = Parser::new(tokens)
         .parse()
         .map_err(|error| error.prettify(contents))?;
-    println!("{:#?}", ast);
+
+    Compiler::new(ast)
+        .compile("src\\test.dark")
+        .map_err(|error| error.prettify(contents))?;
 
     Ok(())
 }

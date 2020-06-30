@@ -7,7 +7,7 @@
 //! ```
 //! # fn run() -> Result<(), Error> {
 //! let contents = "print(1)";
-//! let tokens = Lexer::new().lex(contents)?;
+//! let tokens = Lexer::default().lex(contents)?;
 //! # Ok(())
 //! # }
 //! ```
@@ -18,18 +18,12 @@ use crate::{
 };
 use std::{collections::VecDeque, iter::Peekable, str::Chars};
 
+#[derive(Default)]
 pub struct Lexer {
     current_position: usize,
 }
 
 impl Lexer {
-    /// Constructs a new lexer with the current position set to 0 (the first token).
-    pub fn new() -> Lexer {
-        Lexer {
-            current_position: 0,
-        }
-    }
-
     /// This function lexes the input and returns either a VecDeque of tokens or an error.
     /// The return value of this function may change to returning a vector of errors.
     ///
@@ -48,7 +42,9 @@ impl Lexer {
 
             // Identify what the character is and try to lex as much of it as possible.
             match ch {
-                '-' if iter.peek().map_or(false, |ch| ch.is_ascii_digit()) => tokens.push_back(self.make_number(ch, &mut iter)?),
+                '-' if iter.peek().map_or(false, |ch| ch.is_ascii_digit()) => {
+                    tokens.push_back(self.make_number(ch, &mut iter)?)
+                }
                 '0'..='9' => tokens.push_back(self.make_number(ch, &mut iter)?),
                 '\'' | '"' => tokens.push_back(self.make_string(ch, &mut iter)?),
                 '+' => tokens.push_back(Token::new(TokenKind::Plus, self.current_position)),
@@ -56,8 +52,32 @@ impl Lexer {
                 '*' => tokens.push_back(Token::new(TokenKind::Star, self.current_position)),
                 '/' => tokens.push_back(Token::new(TokenKind::Slash, self.current_position)),
                 '=' => tokens.push_back(Token::new(TokenKind::EqualSign, self.current_position)),
-                '(' => tokens.push_back(Token::new(TokenKind::LeftParenthesis, self.current_position)),
-                ')' => tokens.push_back(Token::new(TokenKind::RightParenthesis, self.current_position)),
+                '(' => tokens.push_back(Token::new(
+                    TokenKind::LeftParenthesis,
+                    self.current_position,
+                )),
+                ')' => tokens.push_back(Token::new(
+                    TokenKind::RightParenthesis,
+                    self.current_position,
+                )),
+                '{' => {
+                    tokens.push_back(Token::new(TokenKind::LeftCurlyBrace, self.current_position))
+                }
+                '}' => tokens.push_back(Token::new(
+                    TokenKind::RightCurlyBrace,
+                    self.current_position,
+                )),
+                ',' => tokens.push_back(Token::new(TokenKind::Comma, self.current_position)),
+                ':' if iter.peek().map_or(false, |ch| ch == &'=') => {
+                    iter.next();
+                    self.current_position += 1;
+                    tokens.push_back(Token::new(TokenKind::ColonEqualSign, self.current_position));
+                }
+                ':' if iter.peek().map_or(false, |ch| ch == &':') => {
+                    iter.next();
+                    self.current_position += 1;
+                    tokens.push_back(Token::new(TokenKind::ColonColon, self.current_position));
+                }
                 ':' => tokens.push_back(Token::new(TokenKind::Colon, self.current_position)),
                 letter if ch.is_ascii_alphabetic() => {
                     tokens.push_back(self.make_word(letter, &mut iter))
@@ -106,15 +126,13 @@ impl Lexer {
                     self.current_position,
                 ))
             }
+        } else if let Ok(value) = number.parse() {
+            Ok(Token::new(TokenKind::FloatLiteral(value), initial_point))
         } else {
-            if let Ok(value) = number.parse() {
-                Ok(Token::new(TokenKind::FloatLiteral(value), initial_point))
-            } else {
-                Err(Error::new(
-                    ErrorKind::InvalidNumberFormat,
-                    self.current_position,
-                ))
-            }
+            Err(Error::new(
+                ErrorKind::InvalidNumberFormat,
+                self.current_position,
+            ))
         }
     }
 
@@ -147,13 +165,9 @@ impl Lexer {
             "true" => Token::new(TokenKind::BooleanLiteral(true), initial_point),
             "false" => Token::new(TokenKind::BooleanLiteral(false), initial_point),
             "let" => Token::new(TokenKind::Let, initial_point),
-            _ => {
-                if let Some(builtin_function) = TokenKind::is_builtin(word.as_str()) {
-                    Token::new(builtin_function, initial_point)
-                } else {
-                    Token::new(TokenKind::Identifier(word), initial_point)
-                }
-            }
+            "if" => Token::new(TokenKind::If, initial_point),
+            "else" => Token::new(TokenKind::Else, initial_point),
+            _ => Token::new(TokenKind::Identifier(word), initial_point),
         }
     }
 
