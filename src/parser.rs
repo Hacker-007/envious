@@ -7,7 +7,7 @@
 //! ```
 //! # fn run() -> Result<(), Error> {
 //! let contents = "print(1)";
-//! let tokens = Lexer::new().lex(contents)?;
+//! let tokens = Lexer::default().lex(contents)?;
 //! let ast = Parser::new(tokens).parse()?;
 //! # Ok(())
 //! # }
@@ -16,7 +16,9 @@
 use crate::{
     ast::{
         expression::Expression,
-        expression_kind::{ExpressionKind, Operation, Type},
+        expression_kind::{
+            BinaryEqualityOperation, BinaryOperation, ExpressionKind, Type, UnaryOperation,
+        },
     },
     errors::{error::Error, error_kind::ErrorKind},
     tokens::{token::Token, token_kind::TokenKind},
@@ -59,69 +61,219 @@ impl Parser {
                 self.last_position = *pos;
                 self.parse_let_expression()
             }
-            Some((pos, TokenKind::BuiltInFunction(function_name))) => {
+            Some((pos, TokenKind::If)) => {
                 self.last_position = *pos;
-                match function_name.as_str() {
-                    "print" => {
-                        self.parse_print_expression()
-                    },
-                    _ => unreachable!()
-                }
+                self.parse_if_expression()
             }
-            Some(_) => self.parse_term(),
-            None => Err(Error::new(ErrorKind::Expected("An Expression".to_owned()), self.last_position))
+            Some((_, TokenKind::Identifier(_)))
+                if self.tokens.get(1).map_or(false, |(_, kind)| {
+                    matches!(kind, TokenKind::LeftParenthesis)
+                }) =>
+            {
+                self.parse_function_call_expression()
+            }
+            Some((_, TokenKind::LeftCurlyBrace)) => {
+                Ok(self.parse_block_expression().map(|(expressions, pos)| {
+                    Expression::new(ExpressionKind::BlockExpression(expressions), pos)
+                })?)
+            }
+            Some(_) => self.parse_equality_expression(),
+            None => Err(Error::new(
+                ErrorKind::Expected("An Expression".to_owned()),
+                self.last_position,
+            )),
         }
     }
-    
-    /// Parse a let expression. This may take different forms and so, all forms must be accounted for.
+
+    /// Parses a let expression. This may take different forms and so, all forms must be accounted for.
     fn parse_let_expression(&mut self) -> Result<Expression, Error> {
         let (pos, _) = self.tokens.pop_front().unwrap();
         match self.tokens.pop_front() {
             Some((_, TokenKind::Identifier(name))) => {
                 let mut var_type = Type::Unknown;
-                match self.tokens.front() {
-                    Some((_, TokenKind::Colon)) => {
-                        self.tokens.pop_front();
-                        match self.tokens.pop_front() {
-                            Some((_, TokenKind::Int)) => var_type = Type::Int,
-                            Some((_, TokenKind::Float)) => var_type = Type::Float,
-                            Some((_, TokenKind::Boolean)) => var_type = Type::Boolean,
-                            Some((_, TokenKind::String)) => var_type = Type::String,
-                            Some((pos, kind)) => return Err(Error::new(ErrorKind::TypeMismatch("A Type".to_owned(), kind.get_name()), pos)),
-                            None => return Err(Error::new(ErrorKind::Expected("A Type".to_owned()), self.last_position)),
+                if let Some((_, TokenKind::Colon)) = self.tokens.front() {
+                    self.tokens.pop_front();
+                    match self.tokens.pop_front() {
+                        Some((_, TokenKind::Int)) => var_type = Type::Int,
+                        Some((_, TokenKind::Float)) => var_type = Type::Float,
+                        Some((_, TokenKind::Boolean)) => var_type = Type::Boolean,
+                        Some((_, TokenKind::String)) => var_type = Type::String,
+                        Some((pos, kind)) => {
+                            return Err(Error::new(
+                                ErrorKind::TypeMismatch("A Type".to_owned(), kind.get_name()),
+                                pos,
+                            ))
                         }
-                    },
-                    _ => {},
-                }
-                match self.tokens.pop_front() {
-                    Some((_, TokenKind::EqualSign)) => {
-                        let value = self.parse_expression()?;
-                        Ok(Expression::new(ExpressionKind::LetExpression(name, var_type, Box::new(value)), pos))
+                        None => {
+                            return Err(Error::new(
+                                ErrorKind::Expected("A Type".to_owned()),
+                                self.last_position,
+                            ))
+                        }
                     }
-                    Some((pos, kind)) => Err(Error::new(ErrorKind::TypeMismatch("An Equal Sign".to_owned(), kind.get_name()), pos)),
-                    None => Err(Error::new(ErrorKind::Expected("An Equal Sign".to_owned()), self.last_position)),
+                }
+
+                if let Some((_, TokenKind::ColonEqualSign)) = self.tokens.front() {
+                    self.tokens.pop_front();
+                    let value = self.parse_expression()?;
+                    Ok(Expression::new(
+                        ExpressionKind::LetExpression(name, var_type, Some(Box::new(value))),
+                        pos,
+                    ))
+                } else {
+                    Ok(Expression::new(
+                        ExpressionKind::LetExpression(name, var_type, None),
+                        pos,
+                    ))
                 }
             }
-            Some((pos, kind)) => Err(Error::new(ErrorKind::TypeMismatch("An Identifier".to_owned(), kind.get_name()), pos)),
-            None => Err(Error::new(ErrorKind::Expected("An Identifier".to_owned()), self.last_position)),
+            Some((pos, kind)) => Err(Error::new(
+                ErrorKind::TypeMismatch("An Identifier".to_owned(), kind.get_name()),
+                pos,
+            )),
+            None => Err(Error::new(
+                ErrorKind::Expected("An Identifier".to_owned()),
+                self.last_position,
+            )),
         }
     }
 
-    /// Parse a print expression. This only has a single form to parse, so it is much cleaner.
-    fn parse_print_expression(&mut self) -> Result<Expression, Error> {
-        let (pos, _) = self.tokens.pop_front().unwrap();
+    /// Parses a function call expression. This only has a single form to parse, so it is much cleaner.
+    fn parse_function_call_expression(&mut self) -> Result<Expression, Error> {
+        let (pos, function_name) =
+            if let (pos, TokenKind::Identifier(function_name)) = self.tokens.pop_front().unwrap() {
+                (pos, function_name)
+            } else {
+                unreachable!()
+            };
         match self.tokens.pop_front() {
-            Some((_, TokenKind::LeftParenthesis)) => {
-                let value = self.parse_expression()?;
+            Some((paren_pos, TokenKind::LeftParenthesis)) => {
+                self.last_position = paren_pos;
+                if let Some((_, TokenKind::RightParenthesis)) = self.tokens.front() {
+                    self.tokens.pop_front();
+                    return Ok(Expression::new(
+                        ExpressionKind::FunctionCallExpression(function_name, vec![]),
+                        pos,
+                    ));
+                }
+
+                let value = self.parse_arguments()?;
                 match self.tokens.pop_front() {
-                    Some((_, TokenKind::RightParenthesis)) => Ok(Expression::new(ExpressionKind::PrintExpression(Box::new(value)), pos)),
-                    Some((pos, kind)) => Err(Error::new(ErrorKind::TypeMismatch("A Right Parenthesis".to_owned(), kind.get_name()), pos)),
-                    None => Err(Error::new(ErrorKind::Expected("A Right Parenthesis".to_owned()), self.last_position)),
+                    Some((_, TokenKind::RightParenthesis)) => Ok(Expression::new(
+                        ExpressionKind::FunctionCallExpression(function_name, value),
+                        pos,
+                    )),
+                    Some((pos, kind)) => Err(Error::new(
+                        ErrorKind::TypeMismatch("A Right Parenthesis".to_owned(), kind.get_name()),
+                        pos,
+                    )),
+                    None => Err(Error::new(
+                        ErrorKind::Expected("A Right Parenthesis".to_owned()),
+                        self.last_position,
+                    )),
                 }
             }
-            Some((pos, kind)) => Err(Error::new(ErrorKind::TypeMismatch("A Left Parenthesis".to_owned(), kind.get_name()), pos)),
-            None => Err(Error::new(ErrorKind::Expected("A Left Parenthesis".to_owned()), self.last_position)),
+            Some((pos, kind)) => Err(Error::new(
+                ErrorKind::TypeMismatch("A Left Parenthesis".to_owned(), kind.get_name()),
+                pos,
+            )),
+            None => Err(Error::new(
+                ErrorKind::Expected("A Left Parenthesis".to_owned()),
+                self.last_position,
+            )),
         }
+    }
+
+    // Parses a list of arguments. This is used by function call expressions.
+    fn parse_arguments(&mut self) -> Result<Vec<Expression>, Error> {
+        let mut arguments = vec![];
+        arguments.push(self.parse_argument()?);
+        while let Some((pos, TokenKind::Comma)) = self.tokens.front() {
+            self.last_position = *pos;
+            self.tokens.pop_front();
+            arguments.push(self.parse_argument()?);
+        }
+
+        Ok(arguments)
+    }
+
+    // Parses a single argument. The implementation details of this function may change and it why the implementation has been decoupled.
+    fn parse_argument(&mut self) -> Result<Expression, Error> {
+        self.parse_expression()
+    }
+
+    fn parse_block_expression(&mut self) -> Result<(Vec<Expression>, usize), Error> {
+        let (pos, _) = self.tokens.pop_front().unwrap();
+        self.last_position = pos;
+        let mut expressions = vec![];
+        let mut found_end_brace = false;
+        while let Some((_, kind)) = self.tokens.front() {
+            if matches!(kind, &TokenKind::RightCurlyBrace) {
+                self.tokens.pop_front();
+                found_end_brace = true;
+                break;
+            } else {
+                expressions.push(self.parse_expression()?);
+            }
+        }
+
+        if !found_end_brace {
+            Err(Error::new(
+                ErrorKind::Expected("A Right Curly Brace".to_owned()),
+                self.last_position,
+            ))
+        } else {
+            Ok((expressions, pos))
+        }
+    }
+
+    /// Parses an equality expression. This may take different forms but for now, it only has one form.
+    fn parse_equality_expression(&mut self) -> Result<Expression, Error> {
+        let mut left = self.parse_term()?;
+        while let Ok((pos, operation)) = self.parse_equality_operator() {
+            self.tokens.pop_front();
+            self.last_position = pos;
+            let right = self.parse_term()?;
+            left = Expression::new(
+                ExpressionKind::BinaryEqualityExpression(
+                    operation,
+                    Box::new(left),
+                    Box::new(right),
+                ),
+                pos,
+            );
+        }
+
+        Ok(left)
+    }
+
+    /// Parses an equality operator. Currently, the only operator is =.
+    fn parse_equality_operator(&mut self) -> Result<(usize, BinaryEqualityOperation), Error> {
+        match self.tokens.front() {
+            Some((pos, TokenKind::EqualSign)) => {
+                self.last_position = *pos;
+                Ok((*pos, BinaryEqualityOperation::Equals))
+            }
+            Some((pos, kind)) => Err(Error::new(
+                ErrorKind::TypeMismatch("An Equal Sign".to_owned(), kind.get_name()),
+                *pos,
+            )),
+            None => Err(Error::new(
+                ErrorKind::Expected("An Equal Sign".to_owned()),
+                self.last_position,
+            )),
+        }
+    }
+
+    /// Parses an if expression.
+    fn parse_if_expression(&mut self) -> Result<Expression, Error> {
+        let (pos, _) = self.tokens.pop_front().unwrap();
+        let condition = self.parse_expression()?;
+        let (code, _) = self.parse_block_expression()?;
+        Ok(Expression::new(
+            ExpressionKind::IfExpression(Box::new(condition), code),
+            pos,
+        ))
     }
 
     /// Parses a term. A term is basically a factor + or - another factor.
@@ -131,7 +283,7 @@ impl Parser {
             self.tokens.pop_front();
             let right = self.parse_factor()?;
             left = Expression::new(
-                ExpressionKind::InfixBinaryOperation(operation, Box::new(left), Box::new(right)),
+                ExpressionKind::InfixBinaryExpression(operation, Box::new(left), Box::new(right)),
                 pos,
             );
         }
@@ -139,16 +291,16 @@ impl Parser {
         Ok(left)
     }
 
-    /// This parses the different term operators. These operators have a lower precedence than the factor operators.
-    fn parse_term_operator(&mut self) -> Result<(usize, Operation), Error> {
+    /// Parses the different term operators. These operators have a lower precedence than the factor operators.
+    fn parse_term_operator(&mut self) -> Result<(usize, BinaryOperation), Error> {
         match self.tokens.front() {
             Some((pos, TokenKind::Plus)) => {
                 self.last_position = *pos;
-                Ok((*pos, Operation::Add))
-            },
+                Ok((*pos, BinaryOperation::Plus))
+            }
             Some((pos, TokenKind::Minus)) => {
                 self.last_position = *pos;
-                Ok((*pos, Operation::Subtract))
+                Ok((*pos, BinaryOperation::Minus))
             }
             Some((pos, kind)) => Err(Error::new(
                 ErrorKind::TypeMismatch("A Plus Or Minus Operator".to_owned(), kind.get_name()),
@@ -168,7 +320,7 @@ impl Parser {
             self.tokens.pop_front();
             let right = self.parse_primary()?;
             left = Expression::new(
-                ExpressionKind::InfixBinaryOperation(operation, Box::new(left), Box::new(right)),
+                ExpressionKind::InfixBinaryExpression(operation, Box::new(left), Box::new(right)),
                 pos,
             );
         }
@@ -176,17 +328,17 @@ impl Parser {
         Ok(left)
     }
 
-    /// This parses a factor operator. These have higher priority than the term operators.
-    fn parse_factor_operator(&mut self) -> Result<(usize, Operation), Error> {
+    /// Parses a factor operator. These have higher priority than the term operators.
+    fn parse_factor_operator(&mut self) -> Result<(usize, BinaryOperation), Error> {
         match self.tokens.front() {
             Some((pos, TokenKind::Star)) => {
                 self.last_position = *pos;
-                Ok((*pos, Operation::Multiply))
-            },
+                Ok((*pos, BinaryOperation::Multiply))
+            }
             Some((pos, TokenKind::Slash)) => {
                 self.last_position = *pos;
-                Ok((*pos, Operation::Divide))
-            },
+                Ok((*pos, BinaryOperation::Divide))
+            }
             Some((pos, kind)) => Err(Error::new(
                 ErrorKind::TypeMismatch("A Multiply Operator".to_owned(), kind.get_name()),
                 *pos,
@@ -221,6 +373,22 @@ impl Parser {
                 self.last_position = pos;
                 Ok(Expression::new(ExpressionKind::Identifier(name), pos))
             }
+            Some((pos, TokenKind::Plus)) => {
+                self.last_position = pos;
+                let value = self.parse_primary()?;
+                Ok(Expression::new(
+                    ExpressionKind::UnaryExpression(UnaryOperation::Positive, Box::new(value)),
+                    pos,
+                ))
+            }
+            Some((pos, TokenKind::Minus)) => {
+                self.last_position = pos;
+                let value = self.parse_primary()?;
+                Ok(Expression::new(
+                    ExpressionKind::UnaryExpression(UnaryOperation::Negative, Box::new(value)),
+                    pos,
+                ))
+            }
             Some((pos, TokenKind::LeftParenthesis)) => {
                 self.last_position = pos;
                 let expr = self.parse_expression()?;
@@ -229,19 +397,23 @@ impl Parser {
                     self.tokens.pop_front();
                     Ok(expr)
                 } else {
-                    Err(Error::new(ErrorKind::Expected("A Right Parenthesis".to_owned()), self.last_position))
+                    Err(Error::new(
+                        ErrorKind::Expected("A Right Parenthesis".to_owned()),
+                        self.last_position,
+                    ))
                 }
             }
-            Some((pos, kind)) => {
-                return Err(Error::new(
-                    ErrorKind::TypeMismatch(
-                        "An Int, A Float, Or A Left Parenthesis".to_owned(),
-                        kind.get_name(),
-                    ),
-                    pos,
-                ))
-            }
-            None => Err(Error::new(ErrorKind::Expected("An Int, A Float, Or A Left Parenthesis".to_owned()), self.last_position)),
+            Some((pos, kind)) => Err(Error::new(
+                ErrorKind::TypeMismatch(
+                    "An Int, A Float, Or A Left Parenthesis".to_owned(),
+                    kind.get_name(),
+                ),
+                pos,
+            )),
+            None => Err(Error::new(
+                ErrorKind::Expected("An Int, A Float, Or A Left Parenthesis".to_owned()),
+                self.last_position,
+            )),
         }
     }
 }

@@ -1,0 +1,15 @@
+@main
+push -1
+push -1
+push mul
+push -1
+push mul
+push -1
+push mul
+push -1
+push mul
+push -1
+push mul
+push -1
+push mul
+end

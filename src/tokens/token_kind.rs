@@ -17,16 +17,21 @@ pub enum TokenKind {
 
     LeftParenthesis,
     RightParenthesis,
+    LeftCurlyBrace,
+    RightCurlyBrace,
     Plus,
     Minus,
     Star,
     Slash,
     EqualSign,
+    ColonEqualSign,
+    Comma,
     Colon,
-    
-    Let,
+    ColonColon,
 
-    BuiltInFunction(String),
+    Let,
+    If,
+    Else,
 }
 
 impl TokenKind {
@@ -47,27 +52,22 @@ impl TokenKind {
 
             TokenKind::LeftParenthesis => "Left Parenthesis",
             TokenKind::RightParenthesis => "Right Parenthesis",
+            TokenKind::LeftCurlyBrace => "Left Curly Brace",
+            TokenKind::RightCurlyBrace => "Right Curly Brace",
             TokenKind::Plus => "Plus Operator",
             TokenKind::Minus => "Minus Operator",
             TokenKind::Star => "Star Operator",
             TokenKind::Slash => "Slash Operator",
             TokenKind::EqualSign => "Equal Sign",
+            TokenKind::ColonEqualSign => "Colon Equal Sign",
+            TokenKind::Comma => "Comma",
             TokenKind::Colon => "Colon",
+            TokenKind::ColonColon => "Colon Colon",
 
             TokenKind::Let => "Let Keyword",
-
-            TokenKind::BuiltInFunction(function_name) => return format!("<builtin function '{}'>", function_name)
-        }.to_owned()
-    }
-
-    /// Checks if the name is a builtin function.
-    ///
-    /// # Arguments
-    /// `name` - The name of the token to check.
-    pub fn is_builtin(name: &str) -> Option<TokenKind> {
-        match name.to_ascii_lowercase().as_str() {
-            "print" => Some(TokenKind::BuiltInFunction("print".to_owned())),
-            _ => None,
+            TokenKind::If => "If Keyword",
+            TokenKind::Else => "Else Keyword",
         }
+        .to_owned()
     }
 }

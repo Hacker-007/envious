@@ -11,15 +11,19 @@ pub enum ExpressionKind {
     String(String),
     Identifier(String),
 
-    InfixBinaryOperation(Operation, Box<Expression>, Box<Expression>),
-    LetExpression(String, Type, Box<Expression>),
-    PrintExpression(Box<Expression>),
+    InfixBinaryExpression(BinaryOperation, Box<Expression>, Box<Expression>),
+    UnaryExpression(UnaryOperation, Box<Expression>),
+    BinaryEqualityExpression(BinaryEqualityOperation, Box<Expression>, Box<Expression>),
+    LetExpression(String, Type, Option<Box<Expression>>),
+    FunctionCallExpression(String, Vec<Expression>),
+    BlockExpression(Vec<Expression>),
+    IfExpression(Box<Expression>, Vec<Expression>),
 }
 
 #[derive(Debug)]
 pub enum Type {
     Unknown,
-    
+
     Int,
     Float,
     Boolean,
@@ -27,9 +31,20 @@ pub enum Type {
 }
 
 #[derive(Debug)]
-pub enum Operation {
-    Add,
-    Subtract,
+pub enum BinaryOperation {
+    Plus,
+    Minus,
     Multiply,
     Divide,
+}
+
+#[derive(Debug)]
+pub enum UnaryOperation {
+    Positive,
+    Negative,
+}
+
+#[derive(Debug)]
+pub enum BinaryEqualityOperation {
+    Equals,
 }
