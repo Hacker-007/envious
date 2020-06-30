@@ -231,7 +231,7 @@ impl Lexer {
     /// * `iter` - The iterator which contains all of the characters.
     fn handle_single_line_comments(&mut self, iter: &mut Peekable<Chars>) {
         self.advance(iter);
-        while let Some(c) = iter.next() {
+        for c in iter {
             self.current_position += 1;
             if c == '\n' {
                 break;

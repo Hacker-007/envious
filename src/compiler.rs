@@ -1,12 +1,13 @@
 //! The Compiler struct compiles the AST. It generates a dark file that can then be invoked by the DarkVM.
-//! The Compiler may prematurely return an error if it could not compile part of the AST.
+//! For now, the Compiler does not return any errors because there is no semantic checking.
+//! The Compiler expects that the code written is correct.
 //!
 //! The compiler must be the last thing that is invoked because it requires the AST from the parsing stage.
 //!
 //! # Example
 //! ```
 //! # fn run() -> Result<(), Error> {
-//! let contents = "print(1)";
+//! let contents = "1 + 1";
 //! let tokens = Lexer::default().lex(contents)?;
 //! let ast = Parser::new(tokens).parse()?;
 //! Compiler::new(ast, "test.dark").compile()?;
@@ -15,7 +16,12 @@
 //! ```
 
 use crate::{
-    ast::{expression::Expression, expression_kind::{BinaryOperation, ExpressionKind, UnaryOperation}},
+    ast::{
+        expression::Expression,
+        expression_kind::{
+            BinaryEqualityOperation, BinaryOperation, ExpressionKind, UnaryOperation,
+        },
+    },
     errors::{error::Error, error_kind::ErrorKind},
 };
 use std::{fs::File, io::Write};
@@ -52,61 +58,68 @@ impl Compiler {
 
     /// Converts the expression provided into a String. Internally, this function performs a match on the kind
     /// and delegates the work to a seperate function. This recursive function helps reduce the code to write.
-    /// 
+    ///
     /// # Arguments
     /// `expression` - The expression to convert.
     fn compile_expression(&self, expression: &Expression) -> String {
         match &expression.kind {
-            ExpressionKind::Int(value) => self.compile_int_expression(value),
-            ExpressionKind::Float(value) => self.compile_float_expression(value),
-            ExpressionKind::Boolean(value) => self.compile_boolean_expression(value),
+            ExpressionKind::Int(value) => self.compile_int_expression(*value),
+            ExpressionKind::Float(value) => self.compile_float_expression(*value),
+            ExpressionKind::Boolean(value) => self.compile_boolean_expression(*value),
             ExpressionKind::String(value) => self.compile_string_expression(value),
             ExpressionKind::Identifier(name) => self.compile_identifier_expression(name),
-            ExpressionKind::InfixBinaryExpression(operation, left, right) => self.compile_infix_binary_expression(operation, left, right),
-            ExpressionKind::UnaryExpression(operation, expression) => self.compile_unary_expression(operation, expression),
+            ExpressionKind::InfixBinaryExpression(operation, left, right) => {
+                self.compile_infix_binary_expression(operation, left, right)
+            }
+            ExpressionKind::UnaryExpression(operation, expression) => {
+                self.compile_unary_expression(operation, expression)
+            }
+            ExpressionKind::BinaryEqualityExpression(operation, left, right) => {
+                self.compile_binary_equality_expression(operation, left, right)
+            }
             _ => todo!(),
         }
     }
 
     /// Converts the Int expression provided into a String.
-    /// 
+    ///
     /// # Arguments
     /// `value` - The value of the int expression.
-    fn compile_int_expression(&self, value: &i64) -> String {
+    fn compile_int_expression(&self, value: i64) -> String {
         format!("push {}", value)
     }
 
     /// Converts the Float expression provided into a String.
-    /// 
+    ///
     /// # Arguments
     /// `value` - The value of the Float expression.
-    fn compile_float_expression(&self, value: &f64) -> String {
+    fn compile_float_expression(&self, value: f64) -> String {
         format!("push {}", value)
     }
 
     /// Converts the Boolean expression provided into a String.
-    /// 
+    ///
     /// # Arguments
     /// `value` - The value of the Boolean expression.
-    fn compile_boolean_expression(&self, value: &bool) -> String {
+    fn compile_boolean_expression(&self, value: bool) -> String {
         format!("push {}", value)
     }
 
     /// Converts the String expression provided into a String.
-    /// 
+    ///
     /// # Arguments
     /// `value` - The value of the String expression.
-    fn compile_string_expression(&self, value: &String) -> String {
+    fn compile_string_expression(&self, value: &str) -> String {
         // TODO: Change to single quotes.
-        format!("push \"{}\"", value)
+        format!("push '{}'", value)
     }
 
     /// Converts the Identifier expression provided into a String.
-    /// 
+    ///
     /// # Arguments
     /// `name` - The name of the Identifier expression.
     fn compile_identifier_expression(&self, name: &String) -> String {
-        format!("{}", name)
+        name.to_owned()
     }
 
     /// Converts an Infix Binary expression provided into a String.
@@ -117,7 +130,12 @@ impl Compiler {
     /// `operation` - The Binary Operation to compile
     /// `left` - The left sub-expression to compile
     /// `right` - The right sub-expression to compile
-    fn compile_infix_binary_expression(&self, operation: &BinaryOperation, left: &Box<Expression>, right: &Box<Expression>) -> String {
+    fn compile_infix_binary_expression(
+        &self,
+        operation: &BinaryOperation,
+        left: &Expression,
+        right: &Expression,
+    ) -> String {
         let operation_instruction = match operation {
             BinaryOperation::Plus => "add",
             BinaryOperation::Minus => "sub",
@@ -125,7 +143,12 @@ impl Compiler {
             BinaryOperation::Divide => "div",
         };
 
-        format!("{}\n{}\npush {}", self.compile_expression(right), self.compile_expression(left), operation_instruction)
+        format!(
+            "{}\n{}\npush {}",
+            self.compile_expression(right),
+            self.compile_expression(left),
+            operation_instruction
+        )
     }
 
     /// Converts an Unary expression provided into a String.
@@ -135,13 +158,47 @@ impl Compiler {
     /// # Arguments
     /// `operation` - The Binary Operation to compile
     /// `expression` - The left expression to compile
-    fn compile_unary_expression(&self, operation: &UnaryOperation, expression: &Box<Expression>) -> String {
+    fn compile_unary_expression(
+        &self,
+        operation: &UnaryOperation,
+        expression: &Expression,
+    ) -> String {
         let operation_instruction = match operation {
             UnaryOperation::Positive => "",
             UnaryOperation::Negative => "\npush -1\npush mul",
         };
 
-        format!("{}{}", self.compile_expression(expression), operation_instruction)
+        format!(
+            "{}{}",
+            self.compile_expression(expression),
+            operation_instruction
+        )
+    }
+
+    /// Converts a Binary Equality expression provided into a String.
+    /// It depends on both of the sub-expressions to be pushed on to the stack.
+    /// This is because the DarkVM code generated pops the top two values.
+    ///
+    /// # Arguments
+    /// `operation` - The Binary Equality operation to compile
+    /// `left` - The left sub-expression to compile
+    /// `right` - The right sub-expression to compile
+    fn compile_binary_equality_expression(
+        &self,
+        operation: &BinaryEqualityOperation,
+        left: &Expression,
+        right: &Expression,
+    ) -> String {
+        let operation_instruction = match operation {
+            BinaryEqualityOperation::Equals => "eq",
+        };
+
+        format!(
+            "{}\n{}\npush {} pop pop",
+            self.compile_expression(right),
+            self.compile_expression(left),
+            operation_instruction
+        )
     }
 
     /// Creates the .dark file based on the path provided

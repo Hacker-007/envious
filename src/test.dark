@@ -1,15 +1,5 @@
 @main
-push -1
-push -1
-push mul
-push -1
-push mul
-push -1
-push mul
-push -1
-push mul
-push -1
-push mul
-push -1
-push mul
+push 'hello'
+push 'hello'
+push eq pop pop
 end
