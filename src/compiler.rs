@@ -47,8 +47,8 @@ impl Compiler {
     pub fn compile(&self, dark_file_path: &str) -> Result<(), Error> {
         let dark_file = Compiler::create_dark_file(dark_file_path)?;
         let mut contents = "@main\n".to_owned();
-        let mut iter = self.ast.iter();
-        while let Some(expression) = iter.next() {
+        let iter = self.ast.iter();
+        for expression in iter {
             contents = format!("{}{}\n", contents, self.compile_expression(expression));
         }
 
@@ -76,6 +76,9 @@ impl Compiler {
             }
             ExpressionKind::BinaryEqualityExpression(operation, left, right) => {
                 self.compile_binary_equality_expression(operation, left, right)
+            }
+            ExpressionKind::LetExpression(name, _, value) => {
+                self.compile_let_expression(name, value)
             }
             _ => todo!(),
         }
@@ -118,7 +121,7 @@ impl Compiler {
     ///
     /// # Arguments
     /// `name` - The name of the Identifier expression.
-    fn compile_identifier_expression(&self, name: &String) -> String {
+    fn compile_identifier_expression(&self, name: &str) -> String {
         name.to_owned()
     }
 
@@ -199,6 +202,21 @@ impl Compiler {
             self.compile_expression(left),
             operation_instruction
         )
+    }
+
+    /// Converts a Let expression provided into a String.
+    /// It will take the value and generate the code necessary for that first.
+    /// In the case that a value is not provided, the default is set to void.
+    ///
+    /// # Arguments
+    /// `name` - The name of the variable.
+    /// `value` - The value of the variable. This is optional.
+    fn compile_let_expression(&self, name: &str, value: &Option<Box<Expression>>) -> String {
+        if let Some(expression) = value {
+            format!("{}\nset {} pop", self.compile_expression(expression), name,)
+        } else {
+            format!("set {} void", name)
+        }
     }
 
     /// Creates the .dark file based on the path provided
