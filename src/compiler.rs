@@ -49,7 +49,7 @@ impl Compiler {
         let mut contents = "@main\n".to_owned();
         let iter = self.ast.iter();
         for expression in iter {
-            contents = format!("{}{}\n", contents, self.compile_expression(expression));
+            contents = format!("{}{}\n", contents, self.compile_expression(expression, 0));
         }
 
         contents.push_str("end");
@@ -61,7 +61,7 @@ impl Compiler {
     ///
     /// # Arguments
     /// `expression` - The expression to convert.
-    fn compile_expression(&self, expression: &Expression) -> String {
+    fn compile_expression(&self, expression: &Expression, label_value: usize) -> String {
         match &expression.kind {
             ExpressionKind::Int(value) => self.compile_int_expression(*value),
             ExpressionKind::Float(value) => self.compile_float_expression(*value),
@@ -69,17 +69,19 @@ impl Compiler {
             ExpressionKind::String(value) => self.compile_string_expression(value),
             ExpressionKind::Identifier(name) => self.compile_identifier_expression(name),
             ExpressionKind::InfixBinaryExpression(operation, left, right) => {
-                self.compile_infix_binary_expression(operation, left, right)
+                self.compile_infix_binary_expression(operation, left, right, label_value)
             }
             ExpressionKind::UnaryExpression(operation, expression) => {
-                self.compile_unary_expression(operation, expression)
+                self.compile_unary_expression(operation, expression, label_value)
             }
             ExpressionKind::BinaryEqualityExpression(operation, left, right) => {
-                self.compile_binary_equality_expression(operation, left, right)
+                self.compile_binary_equality_expression(operation, left, right, label_value)
             }
             ExpressionKind::LetExpression(name, _, value) => {
-                self.compile_let_expression(name, value)
+                self.compile_let_expression(name, value, label_value)
             }
+            ExpressionKind::BlockExpression(expressions) => self.compile_block_expression(expressions, label_value),
+            ExpressionKind::IfExpression(condition, expression) => self.compile_if_expression(condition, expression),
             _ => todo!(),
         }
     }
@@ -130,14 +132,16 @@ impl Compiler {
     /// thus resembling a postfix traversal.
     ///
     /// # Arguments
-    /// `operation` - The Binary Operation to compile
-    /// `left` - The left sub-expression to compile
-    /// `right` - The right sub-expression to compile
+    /// `operation` - The Binary Operation to compile.
+    /// `left` - The left sub-expression to compile.
+    /// `right` - The right sub-expression to compile.
+    /// `label_value` - The value of the current temporary label.
     fn compile_infix_binary_expression(
         &self,
         operation: &BinaryOperation,
         left: &Expression,
         right: &Expression,
+        label_value: usize
     ) -> String {
         let operation_instruction = match operation {
             BinaryOperation::Plus => "add",
@@ -148,8 +152,8 @@ impl Compiler {
 
         format!(
             "{}\n{}\npush {}",
-            self.compile_expression(right),
-            self.compile_expression(left),
+            self.compile_expression(right, label_value),
+            self.compile_expression(left, label_value),
             operation_instruction
         )
     }
@@ -159,12 +163,14 @@ impl Compiler {
     /// thus resembling a postfix traversal.
     ///
     /// # Arguments
-    /// `operation` - The Binary Operation to compile
-    /// `expression` - The left expression to compile
+    /// `operation` - The Binary Operation to compile.
+    /// `expression` - The left expression to compile.
+    /// `label_value` - The value of the current temporary label.
     fn compile_unary_expression(
         &self,
         operation: &UnaryOperation,
         expression: &Expression,
+        label_value: usize
     ) -> String {
         let operation_instruction = match operation {
             UnaryOperation::Positive => "",
@@ -173,7 +179,7 @@ impl Compiler {
 
         format!(
             "{}{}",
-            self.compile_expression(expression),
+            self.compile_expression(expression, label_value),
             operation_instruction
         )
     }
@@ -183,14 +189,16 @@ impl Compiler {
     /// This is because the DarkVM code generated pops the top two values.
     ///
     /// # Arguments
-    /// `operation` - The Binary Equality operation to compile
-    /// `left` - The left sub-expression to compile
-    /// `right` - The right sub-expression to compile
+    /// `operation` - The Binary Equality operation to compile.
+    /// `left` - The left sub-expression to compile.
+    /// `right` - The right sub-expression to compile.
+    /// `label_value` - The value of the current temporary label.
     fn compile_binary_equality_expression(
         &self,
         operation: &BinaryEqualityOperation,
         left: &Expression,
         right: &Expression,
+        label_value: usize
     ) -> String {
         let operation_instruction = match operation {
             BinaryEqualityOperation::Equals => "eq",
@@ -198,8 +206,8 @@ impl Compiler {
 
         format!(
             "{}\n{}\npush {} pop pop",
-            self.compile_expression(right),
-            self.compile_expression(left),
+            self.compile_expression(right, label_value),
+            self.compile_expression(left, label_value),
             operation_instruction
         )
     }
@@ -211,12 +219,28 @@ impl Compiler {
     /// # Arguments
     /// `name` - The name of the variable.
     /// `value` - The value of the variable. This is optional.
-    fn compile_let_expression(&self, name: &str, value: &Option<Box<Expression>>) -> String {
+    /// `label_value` - The value of the current temporary label.
+    fn compile_let_expression(&self, name: &str, value: &Option<Box<Expression>>, label_value: usize) -> String {
         if let Some(expression) = value {
-            format!("{}\nset {} pop", self.compile_expression(expression), name,)
+            format!("{}\nset {} pop", self.compile_expression(expression, label_value), name,)
         } else {
             format!("set {} void", name)
         }
+    }
+
+    /// Converts a Block expression provided into a String.
+    /// It takes the vector of expressions and places it into a label in the dark code.
+    ///
+    /// # Arguments
+    /// `expressions` - The expressions in the block statement.
+    /// `label_value` - The value of the current temporary label.
+    fn compile_block_expression(&self, expressions: &Vec<Expression>, label_value: usize) -> String {
+        let mut created_label = format!("@__{}__", label_value);
+        for expression in expressions {
+            created_label = format!("{}\n\t{}", created_label, self.compile_expression(expression, label_value + 1));
+        }
+
+        format!("{}\nend\ncall __{}__", created_label, label_value)
     }
 
     /// Creates the .dark file based on the path provided

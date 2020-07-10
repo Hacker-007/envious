@@ -17,7 +17,7 @@ pub enum ExpressionKind {
     LetExpression(String, Type, Option<Box<Expression>>),
     FunctionCallExpression(String, Vec<Expression>),
     BlockExpression(Vec<Expression>),
-    IfExpression(Box<Expression>, Vec<Expression>),
+    IfExpression(Box<Expression>, Box<Expression>),
 }
 
 #[derive(Debug)]

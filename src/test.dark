@@ -1,3 +1,17 @@
 @main
-push 1
+push 5
 set x pop
+@__0__
+	push 5
+set x pop
+	@__1__
+	push 5
+set x pop
+	x
+end
+call __1__
+	x
+end
+call __0__
+x
+end
