@@ -27,16 +27,17 @@ use crate::{
 use std::{fs::File, io::Write};
 
 pub struct Compiler {
-    ast: Vec<Expression>,
+    label_value: usize,
+    token_idx: usize,
 }
 
 impl Compiler {
-    /// Constructs a new Compiler with the given AST. This AST comes from the parser and, therefore must be invoked after the parser.
-    ///
-    /// # Arguments
-    /// * `ast` - The AST to compile.
-    pub fn new(ast: Vec<Expression>) -> Compiler {
-        Compiler { ast }
+    /// Constructs a new Compiler.
+    pub fn new() -> Compiler {
+        Compiler {
+            label_value: 0,
+            token_idx: 0,
+        }
     }
 
     /// Compiles the AST into the .dark file specified by the file name.
@@ -44,15 +45,17 @@ impl Compiler {
     ///
     /// # Arguments
     /// * `dark_file_path` - The path to the .dark file
-    pub fn compile(&self, dark_file_path: &str) -> Result<(), Error> {
+    pub fn compile(&mut self, dark_file_path: &str, ast: Vec<Expression>) -> Result<(), Error> {
         let dark_file = Compiler::create_dark_file(dark_file_path)?;
-        let mut contents = "@main\n".to_owned();
-        let iter = self.ast.iter();
+        let mut contents = "@main".to_owned();
+        self.token_idx += 1;
+        let iter = ast.iter();
         for expression in iter {
-            contents = format!("{}{}\n", contents, self.compile_expression(expression));
+            contents = format!("{}\n\t{}", contents, self.compile_expression(expression));
         }
 
-        contents.push_str("end");
+        contents.push_str("\nend");
+        self.token_idx += 1;
         Compiler::write_to_dark_file(dark_file, contents, dark_file_path)
     }
 
@@ -61,7 +64,7 @@ impl Compiler {
     ///
     /// # Arguments
     /// `expression` - The expression to convert.
-    fn compile_expression(&self, expression: &Expression) -> String {
+    fn compile_expression(&mut self, expression: &Expression) -> String {
         match &expression.kind {
             ExpressionKind::Int(value) => self.compile_int_expression(*value),
             ExpressionKind::Float(value) => self.compile_float_expression(*value),
@@ -80,6 +83,8 @@ impl Compiler {
             ExpressionKind::LetExpression(name, _, value) => {
                 self.compile_let_expression(name, value)
             }
+            ExpressionKind::BlockExpression(expressions) => self.compile_block_expression(expressions),
+            ExpressionKind::IfExpression(condition, expression) => self.compile_if_expression(condition, expression),
             _ => todo!(),
         }
     }
@@ -88,7 +93,8 @@ impl Compiler {
     ///
     /// # Arguments
     /// `value` - The value of the int expression.
-    fn compile_int_expression(&self, value: i64) -> String {
+    fn compile_int_expression(&mut self, value: i64) -> String {
+        self.token_idx += 2;
         format!("push {}", value)
     }
 
@@ -96,7 +102,8 @@ impl Compiler {
     ///
     /// # Arguments
     /// `value` - The value of the Float expression.
-    fn compile_float_expression(&self, value: f64) -> String {
+    fn compile_float_expression(&mut self, value: f64) -> String {
+        self.token_idx += 2;
         format!("push {}", value)
     }
 
@@ -104,7 +111,8 @@ impl Compiler {
     ///
     /// # Arguments
     /// `value` - The value of the Boolean expression.
-    fn compile_boolean_expression(&self, value: bool) -> String {
+    fn compile_boolean_expression(&mut self, value: bool) -> String {
+        self.token_idx += 2;
         format!("push {}", value)
     }
 
@@ -112,8 +120,8 @@ impl Compiler {
     ///
     /// # Arguments
     /// `value` - The value of the String expression.
-    fn compile_string_expression(&self, value: &str) -> String {
-        // TODO: Change to single quotes.
+    fn compile_string_expression(&mut self, value: &str) -> String {
+        self.token_idx += 2;
         format!("push '{}'", value)
     }
 
@@ -121,8 +129,9 @@ impl Compiler {
     ///
     /// # Arguments
     /// `name` - The name of the Identifier expression.
-    fn compile_identifier_expression(&self, name: &str) -> String {
-        name.to_owned()
+    fn compile_identifier_expression(&mut self, name: &str) -> String {
+        self.token_idx += 2;
+        format!("push {}", name)
     }
 
     /// Converts an Infix Binary expression provided into a String.
@@ -130,14 +139,15 @@ impl Compiler {
     /// thus resembling a postfix traversal.
     ///
     /// # Arguments
-    /// `operation` - The Binary Operation to compile
-    /// `left` - The left sub-expression to compile
-    /// `right` - The right sub-expression to compile
+    /// `operation` - The Binary Operation to compile.
+    /// `left` - The left sub-expression to compile.
+    /// `right` - The right sub-expression to compile.
+    /// `label_value` - The value of the current temporary label.
     fn compile_infix_binary_expression(
-        &self,
+        &mut self,
         operation: &BinaryOperation,
         left: &Expression,
-        right: &Expression,
+        right: &Expression
     ) -> String {
         let operation_instruction = match operation {
             BinaryOperation::Plus => "add",
@@ -146,12 +156,15 @@ impl Compiler {
             BinaryOperation::Divide => "div",
         };
 
-        format!(
-            "{}\n{}\npush {}",
+        let compiled = format!(
+            "{}\n\t{}\n\tpush {}",
             self.compile_expression(right),
             self.compile_expression(left),
             operation_instruction
-        )
+        );
+
+        self.token_idx += 2;
+        compiled
     }
 
     /// Converts an Unary expression provided into a String.
@@ -159,20 +172,24 @@ impl Compiler {
     /// thus resembling a postfix traversal.
     ///
     /// # Arguments
-    /// `operation` - The Binary Operation to compile
-    /// `expression` - The left expression to compile
+    /// `operation` - The Binary Operation to compile.
+    /// `expression` - The left expression to compile.
+    /// `label_value` - The value of the current temporary label.
     fn compile_unary_expression(
-        &self,
+        &mut self,
         operation: &UnaryOperation,
-        expression: &Expression,
+        expression: &Expression
     ) -> String {
         let operation_instruction = match operation {
             UnaryOperation::Positive => "",
-            UnaryOperation::Negative => "\npush -1\npush mul",
+            UnaryOperation::Negative => {
+                self.token_idx += 4;
+                "push -1\n\tpush mul"
+            },
         };
 
         format!(
-            "{}{}",
+            "{}\n\t{}",
             self.compile_expression(expression),
             operation_instruction
         )
@@ -183,25 +200,29 @@ impl Compiler {
     /// This is because the DarkVM code generated pops the top two values.
     ///
     /// # Arguments
-    /// `operation` - The Binary Equality operation to compile
-    /// `left` - The left sub-expression to compile
-    /// `right` - The right sub-expression to compile
+    /// `operation` - The Binary Equality operation to compile.
+    /// `left` - The left sub-expression to compile.
+    /// `right` - The right sub-expression to compile.
+    /// `label_value` - The value of the current temporary label.
     fn compile_binary_equality_expression(
-        &self,
+        &mut self,
         operation: &BinaryEqualityOperation,
         left: &Expression,
-        right: &Expression,
+        right: &Expression
     ) -> String {
         let operation_instruction = match operation {
             BinaryEqualityOperation::Equals => "eq",
         };
 
-        format!(
-            "{}\n{}\npush {} pop pop",
+        let compiled = format!(
+            "{}\n\t{}\n\tpush {} pop pop",
             self.compile_expression(right),
             self.compile_expression(left),
             operation_instruction
-        )
+        );
+
+        self.token_idx += 4;
+        compiled
     }
 
     /// Converts a Let expression provided into a String.
@@ -211,12 +232,50 @@ impl Compiler {
     /// # Arguments
     /// `name` - The name of the variable.
     /// `value` - The value of the variable. This is optional.
-    fn compile_let_expression(&self, name: &str, value: &Option<Box<Expression>>) -> String {
-        if let Some(expression) = value {
-            format!("{}\nset {} pop", self.compile_expression(expression), name,)
+    /// `label_value` - The value of the current temporary label.
+    fn compile_let_expression(&mut self, name: &str, value: &Option<Box<Expression>>) -> String {
+        let compiled = if let Some(expression) = value {
+            format!("{}\n\tset {} pop", self.compile_expression(expression), name)
         } else {
-            format!("set {} void", name)
+            format!("\tset {} void", name)
+        };
+
+        self.token_idx += 3;
+        compiled
+    }
+
+    /// Converts a Block expression provided into a String.
+    /// It takes the vector of expressions and places it into a label in the dark code.
+    ///
+    /// # Arguments
+    /// `expressions` - The expressions in the block statement.
+    /// `label_value` - The value of the current temporary label.
+    fn compile_block_expression(&mut self, expressions: &Vec<Expression>) -> String {
+        let label_value = self.label_value;
+        let mut created_label = format!("@__{}__", label_value);
+        self.label_value += 1;
+        self.token_idx += 1;
+        for expression in expressions {
+            created_label = format!("{}\n\t\t{}", created_label, self.compile_expression(expression));
         }
+
+        self.token_idx += 3;
+        format!("{}\n\tend\n\n\tcall __{}__", created_label, label_value)
+    }
+
+    /// Converts an If expression provided into a String.
+    /// It takes the condition and the expression and first generates the code for the condition.
+    /// If the condition is true, then a jump instruction is used to jump to the correct location.
+    /// Otherwise, it skips the expression.
+    ///
+    /// # Arguments
+    /// `condition` - The condition of the if expression.
+    /// `expression` - The expression to execute if the condition is true.
+    fn compile_if_expression(&mut self, condition: &Expression, expression: &Expression) -> String {
+        let compiled_condition = self.compile_expression(condition);
+        let compiled_expression = self.compile_expression(expression);
+        
+        format!("{}\n\tjmpf {}\n\t{}", compiled_condition, self.token_idx + 2, compiled_expression)
     }
 
     /// Creates the .dark file based on the path provided
@@ -248,6 +307,15 @@ impl Compiler {
                 "An Error Occurred When Writing To The File {}.",
                 dark_file_path
             )))
-        })
+        })?;
+
+        dark_file.flush().map_err(|_| {
+            Error::message_only(ErrorKind::SystemError(format!(
+                "An Error Occurred When Writing To The File {}.",
+                dark_file_path
+            )))
+        })?;
+
+        Ok(())
     }
 }

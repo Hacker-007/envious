@@ -72,11 +72,7 @@ impl Parser {
             {
                 self.parse_function_call_expression()
             }
-            Some((_, TokenKind::LeftCurlyBrace)) => {
-                Ok(self.parse_block_expression().map(|(expressions, pos)| {
-                    Expression::new(ExpressionKind::BlockExpression(expressions), pos)
-                })?)
-            }
+            Some((_, TokenKind::LeftCurlyBrace)) => self.parse_block_expression(),
             Some(_) => self.parse_equality_expression(),
             None => Err(Error::new(
                 ErrorKind::Expected("An Expression".to_owned()),
@@ -202,7 +198,7 @@ impl Parser {
         self.parse_expression()
     }
 
-    fn parse_block_expression(&mut self) -> Result<(Vec<Expression>, usize), Error> {
+    fn parse_block_expression(&mut self) -> Result<Expression, Error> {
         let (pos, _) = self.tokens.pop_front().unwrap();
         self.last_position = pos;
         let mut expressions = vec![];
@@ -223,7 +219,7 @@ impl Parser {
                 self.last_position,
             ))
         } else {
-            Ok((expressions, pos))
+            Ok(Expression::new(ExpressionKind::BlockExpression(expressions), pos))
         }
     }
 
@@ -269,7 +265,7 @@ impl Parser {
     fn parse_if_expression(&mut self) -> Result<Expression, Error> {
         let (pos, _) = self.tokens.pop_front().unwrap();
         let condition = self.parse_expression()?;
-        let (code, _) = self.parse_block_expression()?;
+        let code = Box::new(self.parse_expression()?);
         Ok(Expression::new(
             ExpressionKind::IfExpression(Box::new(condition), code),
             pos,
