@@ -38,8 +38,8 @@ fn run(contents: &str) -> Result<(), String> {
         .parse()
         .map_err(|error| error.prettify(contents))?;
 
-    Compiler::new(ast)
-        .compile("src\\test.dark")
+    Compiler::new()
+        .compile("src\\test.dark", ast)
         .map_err(|error| error.prettify(contents))?;
 
     Ok(())

@@ -1,0 +1,8 @@
+let x := 123
+if x = 124 {
+    "Wow, This Is Weird."
+}
+
+if x = 123 {
+    "Wow, This Works!"
+}
