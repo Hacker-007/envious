@@ -1,22 +1,2 @@
 @main
-	push 123
-	set x pop
-	push 124
-	push x
-	push eq pop pop
-	jmpf 22
-	@__0__
-		push 'Wow, This Is Weird.'
-	end
-
-	call __0__
-	push 123
-	push x
-	push eq pop pop
-	jmpf 36
-	@__1__
-		push 'Wow, This Works!'
-	end
-
-	call __1__
 end

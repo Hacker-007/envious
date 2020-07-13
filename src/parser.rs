@@ -219,7 +219,10 @@ impl Parser {
                 self.last_position,
             ))
         } else {
-            Ok(Expression::new(ExpressionKind::BlockExpression(expressions), pos))
+            Ok(Expression::new(
+                ExpressionKind::BlockExpression(expressions),
+                pos,
+            ))
         }
     }
 
