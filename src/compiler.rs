@@ -51,7 +51,7 @@ impl Compiler {
         self.token_idx += 1;
         let iter = ast.iter();
         for expression in iter {
-            contents = format!("{}\n\t{}", contents, self.compile_expression(expression));
+            contents = format!("{}\n{}", contents, self.compile_expression(expression));
         }
 
         contents.push_str("\nend");
@@ -83,8 +83,12 @@ impl Compiler {
             ExpressionKind::LetExpression(name, _, value) => {
                 self.compile_let_expression(name, value)
             }
-            ExpressionKind::BlockExpression(expressions) => self.compile_block_expression(expressions),
-            ExpressionKind::IfExpression(condition, expression) => self.compile_if_expression(condition, expression),
+            ExpressionKind::BlockExpression(expressions) => {
+                self.compile_block_expression(expressions)
+            }
+            ExpressionKind::IfExpression(condition, expression) => {
+                self.compile_if_expression(condition, expression)
+            }
             _ => todo!(),
         }
     }
@@ -147,7 +151,7 @@ impl Compiler {
         &mut self,
         operation: &BinaryOperation,
         left: &Expression,
-        right: &Expression
+        right: &Expression,
     ) -> String {
         let operation_instruction = match operation {
             BinaryOperation::Plus => "add",
@@ -157,7 +161,7 @@ impl Compiler {
         };
 
         let compiled = format!(
-            "{}\n\t{}\n\tpush {}",
+            "{}\n{}\npush {}",
             self.compile_expression(right),
             self.compile_expression(left),
             operation_instruction
@@ -178,18 +182,18 @@ impl Compiler {
     fn compile_unary_expression(
         &mut self,
         operation: &UnaryOperation,
-        expression: &Expression
+        expression: &Expression,
     ) -> String {
         let operation_instruction = match operation {
             UnaryOperation::Positive => "",
             UnaryOperation::Negative => {
                 self.token_idx += 4;
-                "push -1\n\tpush mul"
-            },
+                "push -1\npush mul"
+            }
         };
 
         format!(
-            "{}\n\t{}",
+            "{}\n{}",
             self.compile_expression(expression),
             operation_instruction
         )
@@ -208,14 +212,14 @@ impl Compiler {
         &mut self,
         operation: &BinaryEqualityOperation,
         left: &Expression,
-        right: &Expression
+        right: &Expression,
     ) -> String {
         let operation_instruction = match operation {
             BinaryEqualityOperation::Equals => "eq",
         };
 
         let compiled = format!(
-            "{}\n\t{}\n\tpush {} pop pop",
+            "{}\n{}\npush {} pop pop",
             self.compile_expression(right),
             self.compile_expression(left),
             operation_instruction
@@ -235,9 +239,9 @@ impl Compiler {
     /// `label_value` - The value of the current temporary label.
     fn compile_let_expression(&mut self, name: &str, value: &Option<Box<Expression>>) -> String {
         let compiled = if let Some(expression) = value {
-            format!("{}\n\tset {} pop", self.compile_expression(expression), name)
+            format!("{}\nset {} pop", self.compile_expression(expression), name)
         } else {
-            format!("\tset {} void", name)
+            format!("set {} void", name)
         };
 
         self.token_idx += 3;
@@ -250,17 +254,17 @@ impl Compiler {
     /// # Arguments
     /// `expressions` - The expressions in the block statement.
     /// `label_value` - The value of the current temporary label.
-    fn compile_block_expression(&mut self, expressions: &Vec<Expression>) -> String {
+    fn compile_block_expression(&mut self, expressions: &[Expression]) -> String {
         let label_value = self.label_value;
         let mut created_label = format!("@__{}__", label_value);
         self.label_value += 1;
         self.token_idx += 1;
         for expression in expressions {
-            created_label = format!("{}\n\t\t{}", created_label, self.compile_expression(expression));
+            created_label = format!("{}\n{}", created_label, self.compile_expression(expression));
         }
 
         self.token_idx += 3;
-        format!("{}\n\tend\n\n\tcall __{}__", created_label, label_value)
+        format!("{}\nend\ncall __{}__", created_label, label_value)
     }
 
     /// Converts an If expression provided into a String.
@@ -274,8 +278,13 @@ impl Compiler {
     fn compile_if_expression(&mut self, condition: &Expression, expression: &Expression) -> String {
         let compiled_condition = self.compile_expression(condition);
         let compiled_expression = self.compile_expression(expression);
-        
-        format!("{}\n\tjmpf {}\n\t{}", compiled_condition, self.token_idx + 2, compiled_expression)
+
+        format!(
+            "{}\njmpf {}\n{}",
+            compiled_condition,
+            self.token_idx + 2,
+            compiled_expression
+        )
     }
 
     /// Creates the .dark file based on the path provided

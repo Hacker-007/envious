@@ -4,6 +4,7 @@
 
 pub enum ErrorKind {
     SystemError(String),
+    UnrecognizedArgument(String),
 
     UnknownCharacter,
     InvalidNumberFormat,
@@ -19,6 +20,9 @@ impl Into<String> for ErrorKind {
     fn into(self) -> String {
         match self {
             ErrorKind::SystemError(error) => return error,
+            ErrorKind::UnrecognizedArgument(arg) => {
+                return format!("The Argument '{}' Is Not A Valid Argument.", arg)
+            }
 
             ErrorKind::UnknownCharacter => "Unknown Character Found Here.",
             ErrorKind::InvalidNumberFormat => "Invalid Number Format.",

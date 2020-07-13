@@ -16,20 +16,26 @@ pub mod tokens;
 /// The Errors module, which contains the Error struct and the ErrorKind enum. These describe the various errors that could occur during the program execution.
 mod errors;
 
+/// The CLI module, which contains all of the arguments that were passed in to the program.
+mod cli;
+
 use crate::compiler::Compiler;
 use crate::lexer::Lexer;
+use cli::arguments::Arguments;
 use parser::Parser;
-use std::fs;
 
 fn main() {
-    let contents = fs::read_to_string("src\\test.envy").unwrap();
-    match run(&contents) {
-        Ok(()) => {}
-        Err(error) => println!("{}", error),
+    match Arguments::new() {
+        Ok(args) => {
+            if let Err(error) = args.run(run) {
+                println!("{}", error);
+            }
+        }
+        Err(error) => println!("{}", error.prettify("")),
     }
 }
 
-fn run(contents: &str) -> Result<(), String> {
+fn run(contents: &str, args: &Arguments) -> Result<(), String> {
     let tokens = Lexer::default()
         .lex(contents)
         .map_err(|error| error.prettify(contents))?;
@@ -39,7 +45,7 @@ fn run(contents: &str) -> Result<(), String> {
         .map_err(|error| error.prettify(contents))?;
 
     Compiler::new()
-        .compile("src\\test.dark", ast)
+        .compile(&args.get_path().ok_or("The REPL Is Not Yet Supported.".to_owned())?.replace(".envy", ".dark"), ast)
         .map_err(|error| error.prettify(contents))?;
 
     Ok(())
