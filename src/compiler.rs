@@ -1,8 +1,8 @@
-//! The CodeGenerator struct compiles the AST. It generates a dark file that can then be invoked by the DarkVM.
-//! For now, the code generator does not return any errors because there is no semantic checking.
-//! The code generator expects that the code written is correct.
+//! The Compiler struct compiles the AST. It generates a dark file that can then be invoked by the DarkVM.
+//! For now, the Compiler does not return any errors because there is no semantic checking.
+//! The Compiler expects that the code written is correct.
 //!
-//! The code generator must be the last thing that is invoked because it requires the AST from the parsing stage.
+//! The compiler must be the last thing that is invoked because it requires the AST from the parsing stage.
 //!
 //! # Example
 //! ```
@@ -26,31 +26,27 @@ use crate::{
 };
 use std::{fs::File, io::Write};
 
-pub struct CodeGenerator {
+pub struct Compiler {
     label_value: usize,
     token_idx: usize,
 }
 
-impl CodeGenerator {
-    /// Constructs a new CodeGenerator.
-    pub fn new() -> CodeGenerator {
-        CodeGenerator {
+impl Compiler {
+    /// Constructs a new Compiler.
+    pub fn new() -> Compiler {
+        Compiler {
             label_value: 0,
             token_idx: 0,
         }
     }
 
-    /// Converts the AST into the .dark file specified by the file name.
+    /// Compiles the AST into the .dark file specified by the file name.
     /// This returns an error if it could not compile some of the AST.
     ///
     /// # Arguments
     /// * `dark_file_path` - The path to the .dark file
-    pub fn generate_code(
-        &mut self,
-        dark_file_path: &str,
-        ast: Vec<Expression>,
-    ) -> Result<(), Error> {
-        let dark_file = CodeGenerator::create_dark_file(dark_file_path)?;
+    pub fn compile(&mut self, dark_file_path: &str, ast: Vec<Expression>) -> Result<(), Error> {
+        let dark_file = Compiler::create_dark_file(dark_file_path)?;
         let mut contents = "@main".to_owned();
         self.token_idx += 1;
         let iter = ast.iter();
@@ -60,7 +56,7 @@ impl CodeGenerator {
 
         contents.push_str("\nend");
         self.token_idx += 1;
-        CodeGenerator::write_to_dark_file(dark_file, contents, dark_file_path)
+        Compiler::write_to_dark_file(dark_file, contents, dark_file_path)
     }
 
     /// Converts the expression provided into a String. Internally, this function performs a match on the kind

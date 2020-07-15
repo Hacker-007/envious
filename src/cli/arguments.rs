@@ -1,9 +1,5 @@
-//! The Arguments struct deals with the arguments that were passed in to the program.
-//! For example, the option of showing the time of execution is an argument.
-//! These arguments are analyzed and collected into this struct.
-
 use crate::errors::{error::Error, error_kind::ErrorKind};
-use std::env;
+use std::{env, fs, time::Instant};
 
 pub struct Arguments {
     path: Option<String>,
@@ -11,8 +7,6 @@ pub struct Arguments {
 }
 
 impl Arguments {
-    /// Creates a new Arguments struct that contains all of the arguments passed in to the program.
-    /// An error is reported if an unrecognized argument is passed in.
     pub fn new() -> Result<Arguments, Error> {
         let args = env::args().skip(1);
         let mut arguments = Arguments {
@@ -31,14 +25,35 @@ impl Arguments {
         Ok(arguments)
     }
 
-    /// This function gets the path provided.
-    /// This function returns an option because a REPL could be instantiated if no path was defined.
+    pub fn run<F: Fn(&str, &Arguments) -> Result<(), String>>(&self, f: F) -> Result<(), String> {
+        if self.path.is_none() {
+            generate_error("Expected The Path To The Envious File.")
+        } else if self
+            .path
+            .as_ref()
+            .filter(|path| path.ends_with(".envy"))
+            .is_some()
+        {
+            let contents = fs::read_to_string(self.path.as_ref().unwrap())
+                .map_err(|_| "An Error Occurred.\nThe Path Provided Is Not Valid.".to_owned())?;
+            let start = Instant::now();
+            if let Err(error) = f(&contents, &self) {
+                return Err(error);
+            } else if self.show_time {
+                println!("Time Taken: {:#?}", start.elapsed())
+            }
+
+            Ok(())
+        } else {
+            generate_error("Expected The File Passed In To Be An Envious File.")
+        }
+    }
+
     pub fn get_path(&self) -> Option<&String> {
         self.path.as_ref()
     }
+}
 
-    /// This function retuns if the 'show_time' parameter was passed in.
-    pub fn show_time(&self) -> bool {
-        self.show_time
-    }
+fn generate_error(error_message: &str) -> Result<(), String> {
+    Err(format!("An Error Occurred.\n{}", error_message))
 }
