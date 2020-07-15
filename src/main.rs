@@ -1,5 +1,5 @@
-/// The Compiler module, which walks the AST generated and creates the various different parts of the .dark file.
-pub mod compiler;
+/// The CodeGenerator module, which walks the AST generated and creates the various different parts of the .dark file.
+pub mod code_generation;
 
 /// The Parser module, which creates a AST that can be walked using the Visitor patter. The parser parses all of the tokens from the lexer.
 pub mod parser;
@@ -19,23 +19,20 @@ mod errors;
 /// The CLI module, which contains all of the arguments that were passed in to the program.
 mod cli;
 
-use crate::compiler::Compiler;
+use crate::code_generation::CodeGenerator;
 use crate::lexer::Lexer;
-use cli::arguments::Arguments;
+use cli::runner;
 use parser::Parser;
 
 fn main() {
-    match Arguments::new() {
-        Ok(args) => {
-            if let Err(error) = args.run(run) {
-                println!("{}", error);
-            }
-        }
-        Err(error) => println!("{}", error.prettify("")),
+    if let Err(error) = runner(run) {
+        println!("{}", error)
     }
 }
 
-fn run(contents: &str, args: &Arguments) -> Result<(), String> {
+/// This runs the lexer, the parser, and the code generator on the contents passed in.
+/// An error is reported if any part of the process returns an error.
+fn run(contents: &str, path: &str) -> Result<(), String> {
     let tokens = Lexer::default()
         .lex(contents)
         .map_err(|error| error.prettify(contents))?;
@@ -44,8 +41,8 @@ fn run(contents: &str, args: &Arguments) -> Result<(), String> {
         .parse()
         .map_err(|error| error.prettify(contents))?;
 
-    Compiler::new()
-        .compile(&args.get_path().ok_or("The REPL Is Not Yet Supported.".to_owned())?.replace(".envy", ".dark"), ast)
+    CodeGenerator::new()
+        .generate_code(&path.replace(".envy", ".dark"), ast)
         .map_err(|error| error.prettify(contents))?;
 
     Ok(())
