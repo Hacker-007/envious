@@ -21,7 +21,7 @@ mod cli;
 
 use crate::code_generation::CodeGenerator;
 use crate::lexer::Lexer;
-use cli::runner;
+use cli::{arguments::Arguments, runner};
 use parser::Parser;
 
 fn main() {
@@ -32,7 +32,7 @@ fn main() {
 
 /// This runs the lexer, the parser, and the code generator on the contents passed in.
 /// An error is reported if any part of the process returns an error.
-fn run(contents: &str, path: &str) -> Result<(), String> {
+fn run(contents: &str, path: &str, args: &Arguments) -> Result<(), String> {
     let tokens = Lexer::default()
         .lex(contents)
         .map_err(|error| error.prettify(contents))?;
@@ -41,7 +41,7 @@ fn run(contents: &str, path: &str) -> Result<(), String> {
         .parse()
         .map_err(|error| error.prettify(contents))?;
 
-    CodeGenerator::new()
+    CodeGenerator::new(args.format_output())
         .generate_code(&path.replace(".envy", ".dark"), ast)
         .map_err(|error| error.prettify(contents))?;
 

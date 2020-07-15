@@ -7,6 +7,7 @@ use std::env;
 
 pub struct Arguments {
     path: Option<String>,
+    format_output: bool,
     show_time: bool,
 }
 
@@ -17,11 +18,13 @@ impl Arguments {
         let args = env::args().skip(1);
         let mut arguments = Arguments {
             path: None,
+            format_output: false,
             show_time: false,
         };
 
         for arg in args {
             match arg.as_str() {
+                "-f" | "--format-output" => arguments.format_output = true,
                 "-t" | "--show-time" => arguments.show_time = true,
                 _ if arguments.path.is_none() => arguments.path = Some(arg),
                 _ => return Err(Error::message_only(ErrorKind::UnrecognizedArgument(arg))),
@@ -35,6 +38,11 @@ impl Arguments {
     /// This function returns an option because a REPL could be instantiated if no path was defined.
     pub fn get_path(&self) -> Option<&String> {
         self.path.as_ref()
+    }
+
+    /// This function returns if the 'format_output' parameter was passed in.
+    pub fn format_output(&self) -> bool {
+        self.format_output
     }
 
     /// This function retuns if the 'show_time' parameter was passed in.

@@ -29,14 +29,19 @@ use std::{fs::File, io::Write};
 pub struct CodeGenerator {
     label_value: usize,
     token_idx: usize,
+    format_code: bool,
 }
 
 impl CodeGenerator {
     /// Constructs a new CodeGenerator.
-    pub fn new() -> CodeGenerator {
+    ///
+    /// # Arguments
+    /// `format_code` - Whether or not to format the outputted code.
+    pub fn new(format_code: bool) -> CodeGenerator {
         CodeGenerator {
             label_value: 0,
             token_idx: 0,
+            format_code,
         }
     }
 
@@ -55,7 +60,7 @@ impl CodeGenerator {
         self.token_idx += 1;
         let iter = ast.iter();
         for expression in iter {
-            contents = format!("{}\n{}", contents, self.compile_expression(expression));
+            contents = format!("{}\n{}", contents, self.compile_expression(expression, &self.indent("")));
         }
 
         contents.push_str("\nend");
@@ -68,30 +73,31 @@ impl CodeGenerator {
     ///
     /// # Arguments
     /// `expression` - The expression to convert.
-    fn compile_expression(&mut self, expression: &Expression) -> String {
+    /// `indent` - The current indent level.
+    fn compile_expression(&mut self, expression: &Expression, indent: &str) -> String {
         match &expression.kind {
-            ExpressionKind::Int(value) => self.compile_int_expression(*value),
-            ExpressionKind::Float(value) => self.compile_float_expression(*value),
-            ExpressionKind::Boolean(value) => self.compile_boolean_expression(*value),
-            ExpressionKind::String(value) => self.compile_string_expression(value),
-            ExpressionKind::Identifier(name) => self.compile_identifier_expression(name),
+            ExpressionKind::Int(value) => self.compile_int_expression(*value, indent),
+            ExpressionKind::Float(value) => self.compile_float_expression(*value, indent),
+            ExpressionKind::Boolean(value) => self.compile_boolean_expression(*value, indent),
+            ExpressionKind::String(value) => self.compile_string_expression(value, indent),
+            ExpressionKind::Identifier(name) => self.compile_identifier_expression(name, indent),
             ExpressionKind::InfixBinaryExpression(operation, left, right) => {
-                self.compile_infix_binary_expression(operation, left, right)
+                self.compile_infix_binary_expression(operation, left, right, indent)
             }
             ExpressionKind::UnaryExpression(operation, expression) => {
-                self.compile_unary_expression(operation, expression)
+                self.compile_unary_expression(operation, expression, indent)
             }
             ExpressionKind::BinaryEqualityExpression(operation, left, right) => {
-                self.compile_binary_equality_expression(operation, left, right)
+                self.compile_binary_equality_expression(operation, left, right, indent)
             }
             ExpressionKind::LetExpression(name, _, value) => {
-                self.compile_let_expression(name, value)
+                self.compile_let_expression(name, value, indent)
             }
             ExpressionKind::BlockExpression(expressions) => {
-                self.compile_block_expression(expressions)
+                self.compile_block_expression(expressions, indent)
             }
             ExpressionKind::IfExpression(condition, expression) => {
-                self.compile_if_expression(condition, expression)
+                self.compile_if_expression(condition, expression, indent)
             }
             _ => todo!(),
         }
@@ -100,46 +106,51 @@ impl CodeGenerator {
     /// Converts the Int expression provided into a String.
     ///
     /// # Arguments
-    /// `value` - The value of the int expression.
-    fn compile_int_expression(&mut self, value: i64) -> String {
+    /// `value` - The value of the Int expression.
+    /// `indent` - The current level of indent.
+    fn compile_int_expression(&mut self, value: i64, indent: &str) -> String {
         self.token_idx += 2;
-        format!("push {}", value)
+        format!("{}push {}", indent, value)
     }
 
     /// Converts the Float expression provided into a String.
     ///
     /// # Arguments
     /// `value` - The value of the Float expression.
-    fn compile_float_expression(&mut self, value: f64) -> String {
+    /// `indent` - The current level of indent.
+    fn compile_float_expression(&mut self, value: f64, indent: &str) -> String {
         self.token_idx += 2;
-        format!("push {}", value)
+        format!("{}push {}", indent, value)
     }
 
     /// Converts the Boolean expression provided into a String.
     ///
     /// # Arguments
     /// `value` - The value of the Boolean expression.
-    fn compile_boolean_expression(&mut self, value: bool) -> String {
+    /// `indent` - The current level of indent.
+    fn compile_boolean_expression(&mut self, value: bool, indent: &str) -> String {
         self.token_idx += 2;
-        format!("push {}", value)
+        format!("{}push {}", indent, value)
     }
 
     /// Converts the String expression provided into a String.
     ///
     /// # Arguments
     /// `value` - The value of the String expression.
-    fn compile_string_expression(&mut self, value: &str) -> String {
+    /// `indent` - The current level of indent.
+    fn compile_string_expression(&mut self, value: &str, indent: &str) -> String {
         self.token_idx += 2;
-        format!("push '{}'", value)
+        format!("{}push '{}'", indent, value)
     }
 
     /// Converts the Identifier expression provided into a String.
     ///
     /// # Arguments
     /// `name` - The name of the Identifier expression.
-    fn compile_identifier_expression(&mut self, name: &str) -> String {
+    /// `indent` - The current level of indent.
+    fn compile_identifier_expression(&mut self, name: &str, indent: &str) -> String {
         self.token_idx += 2;
-        format!("push {}", name)
+        format!("{}push {}", indent, name)
     }
 
     /// Converts an Infix Binary expression provided into a String.
@@ -151,11 +162,13 @@ impl CodeGenerator {
     /// `left` - The left sub-expression to compile.
     /// `right` - The right sub-expression to compile.
     /// `label_value` - The value of the current temporary label.
+    /// `indent` - The current level of indent.
     fn compile_infix_binary_expression(
         &mut self,
         operation: &BinaryOperation,
         left: &Expression,
         right: &Expression,
+        indent: &str,
     ) -> String {
         let operation_instruction = match operation {
             BinaryOperation::Plus => "add",
@@ -165,9 +178,10 @@ impl CodeGenerator {
         };
 
         let compiled = format!(
-            "{}\n{}\npush {}",
-            self.compile_expression(right),
-            self.compile_expression(left),
+            "{}\n{}\n{}push {}",
+            self.compile_expression(right, indent),
+            self.compile_expression(left, indent),
+            indent,
             operation_instruction
         );
 
@@ -183,22 +197,25 @@ impl CodeGenerator {
     /// `operation` - The Binary Operation to compile.
     /// `expression` - The left expression to compile.
     /// `label_value` - The value of the current temporary label.
+    /// `indent` - The current level of indent.
     fn compile_unary_expression(
         &mut self,
         operation: &UnaryOperation,
         expression: &Expression,
+        indent: &str,
     ) -> String {
         let operation_instruction = match operation {
-            UnaryOperation::Positive => "",
+            UnaryOperation::Positive => String::new(),
             UnaryOperation::Negative => {
                 self.token_idx += 4;
-                "push -1\npush mul"
+                format!("push -1\n{}push mul", indent)
             }
         };
 
         format!(
-            "{}\n{}",
-            self.compile_expression(expression),
+            "{}\n{}{}",
+            self.compile_expression(expression, indent),
+            indent,
             operation_instruction
         )
     }
@@ -212,20 +229,23 @@ impl CodeGenerator {
     /// `left` - The left sub-expression to compile.
     /// `right` - The right sub-expression to compile.
     /// `label_value` - The value of the current temporary label.
+    /// `indent` - The current level of indent.
     fn compile_binary_equality_expression(
         &mut self,
         operation: &BinaryEqualityOperation,
         left: &Expression,
         right: &Expression,
+        indent: &str,
     ) -> String {
         let operation_instruction = match operation {
             BinaryEqualityOperation::Equals => "eq",
         };
 
         let compiled = format!(
-            "{}\n{}\npush {} pop pop",
-            self.compile_expression(right),
-            self.compile_expression(left),
+            "{}\n{}\n{}push {} pop pop",
+            self.compile_expression(right, indent),
+            self.compile_expression(left, indent),
+            indent,
             operation_instruction
         );
 
@@ -241,11 +261,12 @@ impl CodeGenerator {
     /// `name` - The name of the variable.
     /// `value` - The value of the variable. This is optional.
     /// `label_value` - The value of the current temporary label.
-    fn compile_let_expression(&mut self, name: &str, value: &Option<Box<Expression>>) -> String {
+    /// `indent` - The current level of indent.
+    fn compile_let_expression(&mut self, name: &str, value: &Option<Box<Expression>>, indent: &str) -> String {
         let compiled = if let Some(expression) = value {
-            format!("{}\nset {} pop", self.compile_expression(expression), name)
+            format!("{}\n{}set {} pop", self.compile_expression(expression, indent), indent, name)
         } else {
-            format!("set {} void", name)
+            format!("{}set {} void", indent, name)
         };
 
         self.token_idx += 3;
@@ -258,17 +279,18 @@ impl CodeGenerator {
     /// # Arguments
     /// `expressions` - The expressions in the block statement.
     /// `label_value` - The value of the current temporary label.
-    fn compile_block_expression(&mut self, expressions: &[Expression]) -> String {
+    /// `indent` - The current level of indent.
+    fn compile_block_expression(&mut self, expressions: &[Expression], indent: &str) -> String {
         let label_value = self.label_value;
-        let mut created_label = format!("@__{}__", label_value);
+        let mut created_label = format!("{}@__{}__", indent, label_value);
         self.label_value += 1;
         self.token_idx += 1;
         for expression in expressions {
-            created_label = format!("{}\n{}", created_label, self.compile_expression(expression));
+            created_label = format!("{}\n{}", created_label, self.compile_expression(expression, &self.indent(indent)));
         }
 
         self.token_idx += 3;
-        format!("{}\nend\ncall __{}__", created_label, label_value)
+        format!("{}\n{}end\n\n{}call __{}__", created_label, indent, indent, label_value)
     }
 
     /// Converts an If expression provided into a String.
@@ -279,16 +301,30 @@ impl CodeGenerator {
     /// # Arguments
     /// `condition` - The condition of the if expression.
     /// `expression` - The expression to execute if the condition is true.
-    fn compile_if_expression(&mut self, condition: &Expression, expression: &Expression) -> String {
-        let compiled_condition = self.compile_expression(condition);
-        let compiled_expression = self.compile_expression(expression);
+    // `indent` - The current level of indent.
+    fn compile_if_expression(&mut self, condition: &Expression, expression: &Expression, indent: &str) -> String {
+        let compiled_condition = self.compile_expression(condition, indent);
+        let compiled_expression = self.compile_expression(expression, indent);
 
         format!(
-            "{}\njmpf {}\n{}",
+            "{}\n{}jmpf {}\n{}",
             compiled_condition,
+            indent,
             self.token_idx + 2,
             compiled_expression
         )
+    }
+
+    /// Indents the code based on if the formatting feature was turned on and what the current indent size is.
+    ///
+    /// # Arguments
+    /// `current_indent` - The current level of indentation.
+    fn indent(&self, current_indent: &str) -> String {
+        if self.format_code {
+            format!("{}{}", current_indent, " ".repeat(4))
+        } else {
+            String::new()
+        }
     }
 
     /// Creates the .dark file based on the path provided

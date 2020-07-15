@@ -10,7 +10,7 @@ use std::{fs, time::Instant};
 ///
 /// # Arguments
 /// `envy` - A function that deals with the task of the running the Envious code.
-pub fn runner<F: Fn(&str, &str) -> Result<(), String>>(envy: F) -> Result<(), String> {
+pub fn runner<F: Fn(&str, &str, &Arguments) -> Result<(), String>>(envy: F) -> Result<(), String> {
     let args = Arguments::new().map_err(|error| error.prettify(""))?;
     if args.get_path().is_none() {
         generate_error("The REPL Is Not Yet Supported.")
@@ -18,7 +18,7 @@ pub fn runner<F: Fn(&str, &str) -> Result<(), String>>(envy: F) -> Result<(), St
         let contents = fs::read_to_string(path)
             .map_err(|_| "An Error Occurred.\nThe Path Provided Is Not Valid.".to_owned())?;
         let start = Instant::now();
-        if let Err(error) = envy(&contents, path) {
+        if let Err(error) = envy(&contents, path, &args) {
             return Err(error);
         } else if args.show_time() {
             println!("Time Taken: {:#?}", start.elapsed())
