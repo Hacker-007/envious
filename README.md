@@ -2,9 +2,10 @@
 
 A new programming language that focuses on simplicity without compromising on speed. This language is meant to be born from the desires of the community. In a sense, it is a language that will hopefully address the issues that developers have by having developers contribute ideas about the language and its features.
 
-> This project is also a way fr me to learn more about compilers and VMs.
+> This project is also a way for me to learn more about compilers and VMs.
 
 **Details About EnvyLang**
+
 Envy is heavily influenced by Math. A lot of the symbols used comes directly from mathametical theory.
 In that right, Envy is easy to understand. Envy targets the DarkVM, a stack based VM.
 
