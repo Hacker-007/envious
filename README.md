@@ -7,7 +7,7 @@ A new programming language that focuses on simplicity without compromising on sp
 **Details About EnvyLang**
 
 Envy is heavily influenced by Math. A lot of the symbols used comes directly from mathametical theory.
-In that right, Envy is easy to understand. Envy targets the DarkVM, a stack based VM.
+In that right, Envy is easy to understand. Envy targets the [DarkVM](https://github.com/Hacker-007/DarkVirtualMachine), a stack based VM.
 
 **Brief Introduction To Envious Syntax**
 
