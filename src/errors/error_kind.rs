@@ -12,6 +12,8 @@ pub enum ErrorKind {
 
     TypeMismatch(String, String),
     Expected(String),
+    UnknownFunction,
+    WrongNumberOfParameters,
 }
 
 /// Converts the ErrorKind into a String.
@@ -32,6 +34,8 @@ impl Into<String> for ErrorKind {
                 return format!("Expected {}, But Found {}.", expected, actual)
             }
             ErrorKind::Expected(expected) => return format!("Expected {} After Here.", expected),
+            ErrorKind::UnknownFunction => "Unknown Function Called Here.",
+            ErrorKind::WrongNumberOfParameters => "The Wrong Number Of Parameters Were Supplied To This Function.",
         }
         .to_owned()
     }
