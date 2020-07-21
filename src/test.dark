@@ -1,16 +1,4 @@
 @main
-    push 123
-    set x pop
-    @__0__
-        push 'Hello, World!'
-        set y pop
-        @__1__
-            push 'Is This Working?'
-        end
-
-        call __1__
-        set y pop
-    end
-
-    call __0__
+    push 'Hello, World!'
+    printn pop
 end

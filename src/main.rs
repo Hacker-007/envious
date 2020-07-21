@@ -1,22 +1,26 @@
-/// The CodeGenerator module, which walks the AST generated and creates the various different parts of the .dark file.
+/// The code_generation module, which walks the AST generated and creates the various different parts of the .dark file.
 pub mod code_generation;
 
-/// The Parser module, which creates a AST that can be walked using the Visitor patter. The parser parses all of the tokens from the lexer.
+/// The parser module, which creates a AST that can be walked using the Visitor patter. The parser parses all of the tokens from the lexer.
 pub mod parser;
 
-/// The AST module, which contains the Expression struct and the ExpressionKind enum. These describe the various expressions that can occur in the program.
+/// The ast module, which contains the Expression struct and the ExpressionKind enum. These describe the various expressions that can occur in the program.
 pub mod ast;
 
-/// The Lexer module, which creates a vector of all of the tokens in the input. This input may come from either a file or a REPL.
+/// The lexer module, which creates a vector of all of the tokens in the input. This input may come from either a file or a REPL.
 pub mod lexer;
 
-/// The Tokens module, which contains the Token struct and the TokenKind enum. These describe the various tokens that can be recognized.
+/// The std module, which contains all of the standard library functions. There is still no module system, so all functions get grouped together.
+/// However, this will change.
+pub mod std;
+
+/// The tokens module, which contains the Token struct and the TokenKind enum. These describe the various tokens that can be recognized.
 pub mod tokens;
 
-/// The Errors module, which contains the Error struct and the ErrorKind enum. These describe the various errors that could occur during the program execution.
+/// The errors module, which contains the Error struct and the ErrorKind enum. These describe the various errors that could occur during the program execution.
 mod errors;
 
-/// The CLI module, which contains all of the arguments that were passed in to the program.
+/// The cli module, which contains all of the arguments that were passed in to the program.
 mod cli;
 
 use crate::code_generation::CodeGenerator;
