@@ -22,7 +22,8 @@ use crate::{
             BinaryEqualityOperation, BinaryOperation, ExpressionKind, UnaryOperation,
         },
     },
-    errors::{error::Error, error_kind::ErrorKind}, std::standard_library::StandardLibrary,
+    errors::{error::Error, error_kind::ErrorKind},
+    std::standard_library::StandardLibrary,
 };
 use std::{fs::File, io::Write};
 
@@ -62,7 +63,11 @@ impl CodeGenerator {
         self.token_idx += 1;
         let iter = ast.iter();
         for expression in iter {
-            contents = format!("{}\n{}", contents, self.compile_expression(expression, &self.indent(""))?);
+            contents = format!(
+                "{}\n{}",
+                contents,
+                self.compile_expression(expression, &self.indent(""))?
+            );
         }
 
         contents.push_str("\nend");
@@ -76,7 +81,11 @@ impl CodeGenerator {
     /// # Arguments
     /// `expression` - The expression to convert.
     /// `indent` - The current indent level.
-    fn compile_expression(&mut self, expression: &Expression, indent: &str) -> Result<String, Error> {
+    fn compile_expression(
+        &mut self,
+        expression: &Expression,
+        indent: &str,
+    ) -> Result<String, Error> {
         match &expression.kind {
             ExpressionKind::Int(value) => self.compile_int_expression(*value, indent),
             ExpressionKind::Float(value) => self.compile_float_expression(*value, indent),
@@ -101,9 +110,13 @@ impl CodeGenerator {
             ExpressionKind::IfExpression(condition, expression) => {
                 self.compile_if_expression(condition, expression, indent)
             }
-            ExpressionKind::FunctionCallExpression(function_name, parameters) => {
-                self.compile_function_call_expression(expression.pos, function_name, parameters, indent)
-            }
+            ExpressionKind::FunctionCallExpression(function_name, parameters) => self
+                .compile_function_call_expression(
+                    expression.pos,
+                    function_name,
+                    parameters,
+                    indent,
+                ),
         }
     }
 
@@ -266,9 +279,19 @@ impl CodeGenerator {
     /// `value` - The value of the variable. This is optional.
     /// `label_value` - The value of the current temporary label.
     /// `indent` - The current level of indent.
-    fn compile_let_expression(&mut self, name: &str, value: &Option<Box<Expression>>, indent: &str) -> Result<String, Error> {
+    fn compile_let_expression(
+        &mut self,
+        name: &str,
+        value: &Option<Box<Expression>>,
+        indent: &str,
+    ) -> Result<String, Error> {
         let compiled = if let Some(expression) = value {
-            format!("{}\n{}set {} pop", self.compile_expression(expression, indent)?, indent, name)
+            format!(
+                "{}\n{}set {} pop",
+                self.compile_expression(expression, indent)?,
+                indent,
+                name
+            )
         } else {
             format!("{}set {} void", indent, name)
         };
@@ -284,17 +307,28 @@ impl CodeGenerator {
     /// `expressions` - The expressions in the block statement.
     /// `label_value` - The value of the current temporary label.
     /// `indent` - The current level of indent.
-    fn compile_block_expression(&mut self, expressions: &[Expression], indent: &str) -> Result<String, Error> {
+    fn compile_block_expression(
+        &mut self,
+        expressions: &[Expression],
+        indent: &str,
+    ) -> Result<String, Error> {
         let label_value = self.label_value;
         let mut created_label = format!("{}@__{}__", indent, label_value);
         self.label_value += 1;
         self.token_idx += 1;
         for expression in expressions {
-            created_label = format!("{}\n{}", created_label, self.compile_expression(expression, &self.indent(indent))?);
+            created_label = format!(
+                "{}\n{}",
+                created_label,
+                self.compile_expression(expression, &self.indent(indent))?
+            );
         }
 
         self.token_idx += 3;
-        Ok(format!("{}\n{}end\n\n{}call __{}__", created_label, indent, indent, label_value))
+        Ok(format!(
+            "{}\n{}end\n\n{}call __{}__",
+            created_label, indent, indent, label_value
+        ))
     }
 
     /// Converts an If expression provided into a String.
@@ -306,7 +340,12 @@ impl CodeGenerator {
     /// `condition` - The condition of the if expression.
     /// `expression` - The expression to execute if the condition is true.
     /// `indent` - The current level of indent.
-    fn compile_if_expression(&mut self, condition: &Expression, expression: &Expression, indent: &str) -> Result<String, Error> {
+    fn compile_if_expression(
+        &mut self,
+        condition: &Expression,
+        expression: &Expression,
+        indent: &str,
+    ) -> Result<String, Error> {
         let compiled_condition = self.compile_expression(condition, indent)?;
         let compiled_expression = self.compile_expression(expression, indent)?;
 
@@ -329,13 +368,20 @@ impl CodeGenerator {
     /// `name` - The name of the function called.
     /// `parameters` - The parameters passed to the function.
     /// `indent` - The current level of indent.
-    fn compile_function_call_expression(&mut self, pos: usize, name: &String, parameters: &[Expression], indent: &str) -> Result<String, Error> {
+    fn compile_function_call_expression(
+        &mut self,
+        pos: usize,
+        name: &String,
+        parameters: &[Expression],
+        indent: &str,
+    ) -> Result<String, Error> {
         let mut compiled_params = vec![];
         for parameter in parameters {
             compiled_params.push(self.compile_expression(parameter, indent)?);
         }
 
-        self.standard_library.compile_function(pos, indent, name, &compiled_params)
+        self.standard_library
+            .compile_function(pos, indent, name, &compiled_params)
     }
 
     /// Indents the code based on if the formatting feature was turned on and what the current indent size is.

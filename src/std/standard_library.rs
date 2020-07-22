@@ -1,6 +1,6 @@
 //! The StandardLibrary struct is a wrapper over a HashMap and contains all of the different functions considered to be in the standard library.
 //! Currently, there are no modules. This means that all of the defined functions will be under the same "module". This will change in the future.
-//! The StandardLibrary will usually be invoked by the code generator. 
+//! The StandardLibrary will usually be invoked by the code generator.
 //!
 //! # Example
 //! ```
@@ -8,9 +8,9 @@
 //! standard_library.compile_function(1, "print", "Hello, World!")
 //! ```
 
-use std::collections::HashMap;
-use crate::errors::{error_kind::ErrorKind, error::Error};
 use super::{function::Function, io};
+use crate::errors::{error::Error, error_kind::ErrorKind};
+use std::collections::HashMap;
 
 pub type Return = Result<String, Error>;
 
@@ -21,13 +21,16 @@ impl StandardLibrary {
     pub fn new() -> StandardLibrary {
         let mut function_mapper = HashMap::new();
         StandardLibrary::initialize_io_module(&mut function_mapper);
-        
+
         StandardLibrary(function_mapper)
     }
 
     fn initialize_io_module(function_mapper: &mut HashMap<String, Function>) {
         function_mapper.insert("print".to_owned(), Function::new("print", 1..2, io::print));
-        function_mapper.insert("println".to_owned(), Function::new("println", 1..2, io::println));
+        function_mapper.insert(
+            "println".to_owned(),
+            Function::new("println", 1..2, io::println),
+        );
     }
 
     /// Executes the function with the given name and returns the result.
@@ -38,7 +41,13 @@ impl StandardLibrary {
     /// `indent` - The current level of indent.
     /// `name` - The name of the function called.
     /// `parameters` - The parameters to the function.
-    pub fn compile_function(&self, pos: usize, indent: &str, name: &String, parameters: &[String]) -> Return {
+    pub fn compile_function(
+        &self,
+        pos: usize,
+        indent: &str,
+        name: &String,
+        parameters: &[String],
+    ) -> Return {
         if let Some(function) = self.0.get(name) {
             function.get_function()(pos, indent, parameters)
         } else {
