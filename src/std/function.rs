@@ -19,7 +19,11 @@ impl Function {
     /// `name` - The name of the function.
     /// `number_of_args` - The number of arguments.
     /// `function` - The actual fuction to call.
-    pub fn new(_name: &str, _number_of_args: Range<usize>, function: fn(usize, &str, &[String]) -> Return) -> Function {
+    pub fn new(
+        _name: &str,
+        _number_of_args: Range<usize>,
+        function: fn(usize, &str, &[String]) -> Return,
+    ) -> Function {
         Function {
             // name: name.to_owned(),
             // number_of_args,

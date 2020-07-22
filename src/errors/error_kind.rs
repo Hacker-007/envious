@@ -35,7 +35,9 @@ impl Into<String> for ErrorKind {
             }
             ErrorKind::Expected(expected) => return format!("Expected {} After Here.", expected),
             ErrorKind::UnknownFunction => "Unknown Function Called Here.",
-            ErrorKind::WrongNumberOfParameters => "The Wrong Number Of Parameters Were Supplied To This Function.",
+            ErrorKind::WrongNumberOfParameters => {
+                "The Wrong Number Of Parameters Were Supplied To This Function."
+            }
         }
         .to_owned()
     }

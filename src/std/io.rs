@@ -1,7 +1,7 @@
 //! All of the functions related to IO are here. This may change to become a folder if the number of functions increases.
 
-use crate::errors::{error_kind::ErrorKind, error::Error};
 use super::standard_library::Return;
+use crate::errors::{error::Error, error_kind::ErrorKind};
 
 /// This function prints out all of the parameters seperated by a space.
 ///
