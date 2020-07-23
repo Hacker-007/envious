@@ -45,7 +45,7 @@ impl StandardLibrary {
         &self,
         pos: usize,
         indent: &str,
-        name: &String,
+        name: &str,
         parameters: &[String],
     ) -> Return {
         if let Some(function) = self.0.get(name) {

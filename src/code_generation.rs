@@ -52,13 +52,13 @@ impl CodeGenerator {
     /// This returns an error if it could not compile some of the AST.
     ///
     /// # Arguments
-    /// * `dark_file_path` - The path to the .dark file
+    /// `dark_file_path` - The path to the .dark file
+    /// `ast` - The AST to compile.
     pub fn generate_code(
         &mut self,
-        dark_file_path: &str,
+        dark_file_path: Option<&str>,
         ast: Vec<Expression>,
-    ) -> Result<(), Error> {
-        let dark_file = CodeGenerator::create_dark_file(dark_file_path)?;
+    ) -> Result<String, Error> {
         let mut contents = "@main".to_owned();
         self.token_idx += 1;
         let iter = ast.iter();
@@ -72,7 +72,12 @@ impl CodeGenerator {
 
         contents.push_str("\nend");
         self.token_idx += 1;
-        CodeGenerator::write_to_dark_file(dark_file, contents, dark_file_path)
+        if let Some(dark_file_path) = dark_file_path {
+            let dark_file = CodeGenerator::create_dark_file(dark_file_path)?;
+            CodeGenerator::write_to_dark_file(dark_file, &contents, dark_file_path)?;
+        }
+
+        Ok(contents)
     }
 
     /// Converts the expression provided into a String. Internally, this function performs a match on the kind
@@ -371,7 +376,7 @@ impl CodeGenerator {
     fn compile_function_call_expression(
         &mut self,
         pos: usize,
-        name: &String,
+        name: &str,
         parameters: &[Expression],
         indent: &str,
     ) -> Result<String, Error> {
@@ -417,7 +422,7 @@ impl CodeGenerator {
     /// * `dark_file_path` - The path to the .dark file
     fn write_to_dark_file(
         mut dark_file: File,
-        contents: String,
+        contents: &str,
         dark_file_path: &str,
     ) -> Result<(), Error> {
         dark_file.write_all(contents.as_bytes()).map_err(|_| {

@@ -1,3 +1,5 @@
+extern crate console;
+
 /// The code_generation module, which walks the AST generated and creates the various different parts of the .dark file.
 pub mod code_generation;
 
@@ -23,6 +25,9 @@ mod errors;
 /// The cli module, which contains all of the arguments that were passed in to the program.
 mod cli;
 
+/// The repl module, which contains the REPL for the Envious programming language.
+mod repl;
+
 use crate::code_generation::CodeGenerator;
 use crate::lexer::Lexer;
 use cli::{arguments::Arguments, runner};
@@ -36,7 +41,7 @@ fn main() {
 
 /// This runs the lexer, the parser, and the code generator on the contents passed in.
 /// An error is reported if any part of the process returns an error.
-fn run(contents: &str, path: &str, args: &Arguments) -> Result<(), String> {
+fn run(contents: &str, path: &str, args: &Arguments) -> Result<String, String> {
     let tokens = Lexer::default()
         .lex(contents)
         .map_err(|error| error.prettify(contents))?;
@@ -46,8 +51,6 @@ fn run(contents: &str, path: &str, args: &Arguments) -> Result<(), String> {
         .map_err(|error| error.prettify(contents))?;
 
     CodeGenerator::new(args.format_output())
-        .generate_code(&path.replace(".envy", ".dark"), ast)
-        .map_err(|error| error.prettify(contents))?;
-
-    Ok(())
+        .generate_code(Some(&path.replace(".envy", ".dark")), ast)
+        .map_err(|error| error.prettify(contents))
 }

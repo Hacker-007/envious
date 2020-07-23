@@ -1,6 +1,7 @@
 /// The arguments module, which holds all of the arguments to the program.
 pub mod arguments;
 
+use crate::repl::Repl;
 use arguments::Arguments;
 use std::{fs, time::Instant};
 
@@ -10,10 +11,15 @@ use std::{fs, time::Instant};
 ///
 /// # Arguments
 /// `envy` - A function that deals with the task of the running the Envious code.
-pub fn runner<F: Fn(&str, &str, &Arguments) -> Result<(), String>>(envy: F) -> Result<(), String> {
+pub fn runner<F: Fn(&str, &str, &Arguments) -> Result<String, String>>(
+    envy: F,
+) -> Result<(), String> {
     let args = Arguments::new().map_err(|error| error.prettify(""))?;
     if args.get_path().is_none() {
-        generate_error("The REPL Is Not Yet Supported.")
+        Repl::new()
+            .start_loop(&args)
+            .map_err(|_| "An Error Occurred When Interacting With The REPL.".to_owned())?;
+        Ok(())
     } else if let Some(path) = args.get_path().filter(|path| path.ends_with(".envy")) {
         let contents = fs::read_to_string(path)
             .map_err(|_| "An Error Occurred.\nThe Path Provided Is Not Valid.".to_owned())?;
