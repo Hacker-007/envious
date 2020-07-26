@@ -22,43 +22,51 @@ impl Repl {
     pub fn start_loop(&self, args: &Arguments) -> io::Result<()> {
         let term = Term::stdout();
         let mut input = String::new();
-        let mut current = String::new();
+        let mut current = 0;
         term.write_str("envious -> ")?;
         loop {
             let key = term.read_key()?;
             match key {
                 Key::Char(';') => {
-                    term.write_str(";\n\n")?;
+                    term.write_str(";\n")?;
                     input.push('\n');
                     match self.evaluate(&input, args) {
-                        Ok(code) => term.write_str(&code)?,
+                        Ok(code) => {
+                            match dark_vm::run(&code) {
+                                Ok(_) => {}
+                                Err(error) => {
+                                    input = input[0..(input.len() - current - 1)].to_owned();
+                                    term.write_str(&error)?
+                                }
+                            }
+                        }
                         Err(error) => {
-                            input = input[0..(input.len() - current.len() - 1)].to_owned();
+                            input = input[0..(input.len() - current - 1)].to_owned();
                             term.write_str(&error)?
                         }
                     }
 
-                    current.clear();
-                    term.write_str("\n\nenvious -> ")?;
+                    current = 0;
+                    term.write_str("\nenvious -> ")?;
                 }
                 Key::Char(ch) => {
                     term.write_str(&ch.to_string())?;
                     input.push(ch);
-                    current.push(ch);
+                    current += 1;
                 }
                 Key::Enter => {
                     term.write_str("\n         | ")?;
                     input.push('\n');
-                    current.push('\n');
+                    current += 1;
                 }
                 Key::Backspace => {
-                    term.clear_chars(1)?;
                     if !input.is_empty() {
+                        term.clear_chars(1)?;
                         input.remove(input.len() - 1);
                     }
 
-                    if !current.is_empty() {
-                        current.remove(current.len() - 1);
+                    if current != 0 {
+                        current -= 1;
                     }
                 }
                 Key::Unknown => {}

@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 console = "0.11.3"
+dark-vm = "0.3.0"

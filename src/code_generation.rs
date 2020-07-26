@@ -96,7 +96,7 @@ impl CodeGenerator {
             ExpressionKind::Float(value) => self.compile_float_expression(*value, indent),
             ExpressionKind::Boolean(value) => self.compile_boolean_expression(*value, indent),
             ExpressionKind::String(value) => self.compile_string_expression(value, indent),
-            ExpressionKind::Identifier(name) => self.compile_identifier_expression(name, indent),
+            ExpressionKind::Identifier(name, _) => self.compile_identifier_expression(name, indent),
             ExpressionKind::InfixBinaryExpression(operation, left, right) => {
                 self.compile_infix_binary_expression(operation, left, right, indent)
             }

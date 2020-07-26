@@ -1,4 +1,4 @@
 @main
-    push 'Hello, World!'
-    printn pop
+    push 1
+    
 end

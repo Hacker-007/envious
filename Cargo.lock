@@ -18,6 +18,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dark-vm"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c631c06790671f9e8f8d872380de0e6759ed5e87547586c4ff539fb386cc4e2"
+
+[[package]]
 name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -28,6 +34,7 @@ name = "envious"
 version = "0.1.0"
 dependencies = [
  "console",
+ "dark-vm",
 ]
 
 [[package]]

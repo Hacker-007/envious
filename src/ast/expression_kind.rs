@@ -2,6 +2,7 @@
 //! Using an enum allows for easy extensibility.
 
 use super::expression::Expression;
+use crate::semantic_analyzer::types::Types;
 
 #[derive(Debug)]
 pub enum ExpressionKind {
@@ -9,25 +10,15 @@ pub enum ExpressionKind {
     Float(f64),
     Boolean(bool),
     String(String),
-    Identifier(String),
+    Identifier(String, Option<Types>),
 
     InfixBinaryExpression(BinaryOperation, Box<Expression>, Box<Expression>),
     UnaryExpression(UnaryOperation, Box<Expression>),
     BinaryEqualityExpression(BinaryEqualityOperation, Box<Expression>, Box<Expression>),
-    LetExpression(String, Type, Option<Box<Expression>>),
+    LetExpression(String, Option<Types>, Option<Box<Expression>>),
     FunctionCallExpression(String, Vec<Expression>),
     BlockExpression(Vec<Expression>),
     IfExpression(Box<Expression>, Box<Expression>),
-}
-
-#[derive(Debug)]
-pub enum Type {
-    Unknown,
-
-    Int,
-    Float,
-    Boolean,
-    String,
 }
 
 #[derive(Debug)]

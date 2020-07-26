@@ -3,6 +3,9 @@ extern crate console;
 /// The code_generation module, which walks the AST generated and creates the various different parts of the .dark file.
 pub mod code_generation;
 
+/// The semantic_analyzer module, which performs semantic analysis on the code. This includes type checking and proper code.
+pub mod semantic_analyzer;
+
 /// The parser module, which creates a AST that can be walked using the Visitor patter. The parser parses all of the tokens from the lexer.
 pub mod parser;
 
@@ -32,6 +35,7 @@ use crate::code_generation::CodeGenerator;
 use crate::lexer::Lexer;
 use cli::{arguments::Arguments, runner};
 use parser::Parser;
+use semantic_analyzer::type_checker::TypeChecker;
 
 fn main() {
     if let Err(error) = runner(run) {
@@ -48,6 +52,10 @@ fn run(contents: &str, path: &str, args: &Arguments) -> Result<String, String> {
 
     let ast = Parser::new(tokens)
         .parse()
+        .map_err(|error| error.prettify(contents))?;
+    
+    TypeChecker::new()
+        .perform_type_checking(&ast)
         .map_err(|error| error.prettify(contents))?;
 
     CodeGenerator::new(args.format_output())

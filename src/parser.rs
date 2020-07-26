@@ -17,17 +17,18 @@ use crate::{
     ast::{
         expression::Expression,
         expression_kind::{
-            BinaryEqualityOperation, BinaryOperation, ExpressionKind, Type, UnaryOperation,
+            BinaryEqualityOperation, BinaryOperation, ExpressionKind, UnaryOperation,
         },
     },
     errors::{error::Error, error_kind::ErrorKind},
-    tokens::{token::Token, token_kind::TokenKind},
+    tokens::{token::Token, token_kind::TokenKind}, semantic_analyzer::{type_checker::TypeChecker, types::Types},
 };
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 pub struct Parser {
     last_position: usize,
     tokens: VecDeque<(usize, TokenKind)>,
+    identifier_mapping: HashMap<String, Types>,
 }
 
 impl Parser {
@@ -39,6 +40,7 @@ impl Parser {
                 .into_iter()
                 .map(|token| (token.pos, token.kind))
                 .collect(),
+                identifier_mapping: HashMap::new(),
         }
     }
 
@@ -85,15 +87,15 @@ impl Parser {
     fn parse_let_expression(&mut self) -> Result<Expression, Error> {
         let (pos, _) = self.tokens.pop_front().unwrap();
         match self.tokens.pop_front() {
-            Some((_, TokenKind::Identifier(name))) => {
-                let mut var_type = Type::Unknown;
+            Some((ident_pos, TokenKind::Identifier(name))) => {
+                let mut var_type = None;
                 if let Some((_, TokenKind::Colon)) = self.tokens.front() {
                     self.tokens.pop_front();
                     match self.tokens.pop_front() {
-                        Some((_, TokenKind::Int)) => var_type = Type::Int,
-                        Some((_, TokenKind::Float)) => var_type = Type::Float,
-                        Some((_, TokenKind::Boolean)) => var_type = Type::Boolean,
-                        Some((_, TokenKind::String)) => var_type = Type::String,
+                        Some((_, TokenKind::Int)) => var_type = Some(Types::Int),
+                        Some((_, TokenKind::Float)) => var_type = Some(Types::Float),
+                        Some((_, TokenKind::Boolean)) => var_type = Some(Types::Boolean),
+                        Some((_, TokenKind::String)) => var_type = Some(Types::String),
                         Some((pos, kind)) => {
                             return Err(Error::new(
                                 ErrorKind::TypeMismatch("A Type".to_owned(), kind.get_name()),
@@ -109,9 +111,21 @@ impl Parser {
                     }
                 }
 
+                if let Some(new_type) = var_type {
+                    if let Some(defined_type) = self.identifier_mapping.get(&name) {
+                        if &new_type != defined_type {
+                            return Err(Error::new(ErrorKind::TypeMismatch((*defined_type).into(), new_type.into()), ident_pos))
+                        }
+                    }
+                }
+
                 if let Some((_, TokenKind::ColonEqualSign)) = self.tokens.front() {
                     self.tokens.pop_front();
                     let value = self.parse_expression()?;
+                    if !self.identifier_mapping.contains_key(&name) {
+                        self.identifier_mapping.insert(name.clone(), TypeChecker::check_types(&value)?.ok_or_else(|| Error::new(ErrorKind::Expected("A Type".to_owned()), value.pos))?);
+                    }
+
                     Ok(Expression::new(
                         ExpressionKind::LetExpression(name, var_type, Some(Box::new(value))),
                         pos,
@@ -370,7 +384,8 @@ impl Parser {
             }
             Some((pos, TokenKind::Identifier(name))) => {
                 self.last_position = pos;
-                Ok(Expression::new(ExpressionKind::Identifier(name), pos))
+                let ident_type = self.identifier_mapping.get(&name).copied();
+                Ok(Expression::new(ExpressionKind::Identifier(name, ident_type), pos))
             }
             Some((pos, TokenKind::Plus)) => {
                 self.last_position = pos;
