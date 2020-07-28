@@ -12,10 +12,11 @@ pub enum ExpressionKind {
     String(String),
     Identifier(String, Option<Types>),
 
+    ParenthesizedExpression(Box<Expression>),
     InfixBinaryExpression(BinaryOperation, Box<Expression>, Box<Expression>),
     UnaryExpression(UnaryOperation, Box<Expression>),
     BinaryEqualityExpression(BinaryEqualityOperation, Box<Expression>, Box<Expression>),
-    LetExpression(String, Option<Types>, Option<Box<Expression>>),
+    LetExpression(String, Types, Option<Box<Expression>>),
     FunctionCallExpression(String, Vec<Expression>),
     BlockExpression(Vec<Expression>),
     IfExpression(Box<Expression>, Box<Expression>),

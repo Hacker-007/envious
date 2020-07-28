@@ -25,6 +25,7 @@ use crate::{
 };
 use std::collections::{HashMap, VecDeque};
 
+#[derive(Debug)]
 pub struct Parser {
     last_position: usize,
     tokens: VecDeque<(usize, TokenKind)>,
@@ -113,7 +114,7 @@ impl Parser {
 
                 if let Some(new_type) = var_type {
                     if let Some(defined_type) = self.identifier_mapping.get(&name) {
-                        if &new_type != defined_type {
+                        if defined_type != &Types::Any && &new_type != defined_type {
                             return Err(Error::new(ErrorKind::TypeMismatch((*defined_type).into(), new_type.into()), ident_pos))
                         }
                     }
@@ -123,16 +124,20 @@ impl Parser {
                     self.tokens.pop_front();
                     let value = self.parse_expression()?;
                     if !self.identifier_mapping.contains_key(&name) {
-                        self.identifier_mapping.insert(name.clone(), TypeChecker::check_types(&value)?.ok_or_else(|| Error::new(ErrorKind::Expected("A Type".to_owned()), value.pos))?);
+                        self.identifier_mapping.insert(name.clone(), TypeChecker::check_types(&value)?.ok_or_else(|| Error::new(ErrorKind::Expected("A Non-Void Type".to_owned()), value.pos))?);
                     }
 
                     Ok(Expression::new(
-                        ExpressionKind::LetExpression(name, var_type, Some(Box::new(value))),
+                        ExpressionKind::LetExpression(name, var_type.unwrap_or(Types::Any), Some(Box::new(value))),
                         pos,
                     ))
                 } else {
+                    if !self.identifier_mapping.contains_key(&name) {
+                        self.identifier_mapping.insert(name.clone(), var_type.unwrap_or(Types::Any));
+                    }
+
                     Ok(Expression::new(
-                        ExpressionKind::LetExpression(name, var_type, None),
+                        ExpressionKind::LetExpression(name, var_type.unwrap_or(Types::Any), None),
                         pos,
                     ))
                 }
@@ -353,11 +358,11 @@ impl Parser {
                 Ok((*pos, BinaryOperation::Divide))
             }
             Some((pos, kind)) => Err(Error::new(
-                ErrorKind::TypeMismatch("A Multiply Operator".to_owned(), kind.get_name()),
+                ErrorKind::TypeMismatch("A Multiply Or Divide Operator".to_owned(), kind.get_name()),
                 *pos,
             )),
             None => Err(Error::new(
-                ErrorKind::Expected("A Multiply Operator".to_owned()),
+                ErrorKind::Expected("A Multiply Or Divide Operator".to_owned()),
                 self.last_position,
             )),
         }
@@ -406,10 +411,13 @@ impl Parser {
             Some((pos, TokenKind::LeftParenthesis)) => {
                 self.last_position = pos;
                 let expr = self.parse_expression()?;
-                if let Some((pos, TokenKind::RightParenthesis)) = self.tokens.front() {
-                    self.last_position = *pos;
+                if let Some((_, TokenKind::RightParenthesis)) = self.tokens.front() {
+                    self.last_position = pos;
                     self.tokens.pop_front();
-                    Ok(expr)
+                    Ok(Expression::new(
+                        ExpressionKind::ParenthesizedExpression(Box::new(expr)),
+                        pos
+                    ))
                 } else {
                     Err(Error::new(
                         ErrorKind::Expected("A Right Parenthesis".to_owned()),

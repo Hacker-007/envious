@@ -23,7 +23,7 @@ use crate::{
         },
     },
     errors::{error::Error, error_kind::ErrorKind},
-    std::standard_library::StandardLibrary,
+    std::standard_library::StandardLibrary, semantic_analyzer::types::Types,
 };
 use std::{fs::File, io::Write};
 
@@ -97,6 +97,7 @@ impl CodeGenerator {
             ExpressionKind::Boolean(value) => self.compile_boolean_expression(*value, indent),
             ExpressionKind::String(value) => self.compile_string_expression(value, indent),
             ExpressionKind::Identifier(name, _) => self.compile_identifier_expression(name, indent),
+            ExpressionKind::ParenthesizedExpression(expression) => self.compile_expression(expression, indent),
             ExpressionKind::InfixBinaryExpression(operation, left, right) => {
                 self.compile_infix_binary_expression(operation, left, right, indent)
             }
@@ -106,8 +107,22 @@ impl CodeGenerator {
             ExpressionKind::BinaryEqualityExpression(operation, left, right) => {
                 self.compile_binary_equality_expression(operation, left, right, indent)
             }
-            ExpressionKind::LetExpression(name, _, value) => {
-                self.compile_let_expression(name, value, indent)
+            ExpressionKind::LetExpression(name, type_to_get_value, value) => {
+                if let Some(value) = value {
+                    let value = self.compile_expression(value, indent)?;
+                    self.compile_let_expression(
+                        name,
+                        value.as_str(),
+                        indent
+                    )
+                } else {
+                    let value = self.get_default_values(type_to_get_value, indent)?;
+                    self.compile_let_expression(
+                        name, 
+                        &value,
+                        indent
+                    )
+                }
             }
             ExpressionKind::BlockExpression(expressions) => {
                 self.compile_block_expression(expressions, indent)
@@ -122,6 +137,18 @@ impl CodeGenerator {
                     parameters,
                     indent,
                 ),
+        }
+    }
+
+    /// Gets the default value for the given type.
+    fn get_default_values(&mut self, type_to_get_value: &Types, indent: &str) -> Result<String, Error> {
+        match type_to_get_value {
+            Types::Int => self.compile_int_expression(0, indent),
+            Types::Float => self.compile_float_expression(0.0, indent),
+            Types::Boolean => self.compile_boolean_expression(false, indent),
+            Types::String => self.compile_string_expression("\"\"", indent),
+            Types::Any => self.compile_string_expression("any", indent),
+            Types::Void => self.compile_string_expression("void", indent),
         }
     }
 
@@ -287,19 +314,15 @@ impl CodeGenerator {
     fn compile_let_expression(
         &mut self,
         name: &str,
-        value: &Option<Box<Expression>>,
+        value: &str,
         indent: &str,
     ) -> Result<String, Error> {
-        let compiled = if let Some(expression) = value {
-            format!(
-                "{}\n{}set {} pop",
-                self.compile_expression(expression, indent)?,
-                indent,
-                name
-            )
-        } else {
-            format!("{}set {} void", indent, name)
-        };
+        let compiled = format!(
+            "{}\n{}set {} pop",
+            value,
+            indent,
+            name
+        );
 
         self.token_idx += 3;
         Ok(compiled)

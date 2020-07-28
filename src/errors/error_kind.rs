@@ -14,6 +14,7 @@ pub enum ErrorKind {
     Expected(String),
     UnknownFunction,
     WrongNumberOfParameters,
+    UnsupportedOperation(String, Vec<String>),
 }
 
 /// Converts the ErrorKind into a String.
@@ -37,6 +38,19 @@ impl Into<String> for ErrorKind {
             ErrorKind::UnknownFunction => "Unknown Function Called Here.",
             ErrorKind::WrongNumberOfParameters => {
                 "The Wrong Number Of Parameters Were Supplied To This Function."
+            }
+            ErrorKind::UnsupportedOperation(operation, arguments) => {
+                let mut concated_args = String::new();
+                for arg in 0..arguments.len() - 2 {
+                    concated_args.push_str(arguments.get(arg).unwrap());
+                    concated_args.push_str(", ");
+                }
+
+                concated_args.push_str(arguments.get(arguments.len() - 2).unwrap());
+                concated_args.push_str(" And ");
+                concated_args.push_str(arguments.last().unwrap());
+                
+                return format!("The Operation '{}' Can Not Be Applied To {}.", operation, concated_args)
             }
         }
         .to_owned()

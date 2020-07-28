@@ -38,6 +38,7 @@ use parser::Parser;
 use semantic_analyzer::type_checker::TypeChecker;
 
 fn main() {
+    
     if let Err(error) = runner(run) {
         println!("{}", error)
     }
