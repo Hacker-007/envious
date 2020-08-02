@@ -1,0 +1,7 @@
+let x := 123
+if x = 123 {
+    println("Yay!")
+}
+if x = 234 {
+    println("Nay.")
+}

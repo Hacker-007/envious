@@ -54,9 +54,9 @@ dependencies = [
 
 [[package]]
 name = "dark-vm"
-version = "0.4.1"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11ff8a1ef4155adb65ca25a154d7149faab5e414229ddbbb960bfe4cd3b63bba"
+checksum = "5aae15e2f60a066bc359d90840fa9995b0d6adfa9ca573e4dc47df8f08679214"
 
 [[package]]
 name = "envious"

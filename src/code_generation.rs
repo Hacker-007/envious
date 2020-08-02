@@ -86,7 +86,7 @@ impl CodeGenerator {
     /// # Arguments
     /// `expression` - The expression to convert.
     /// `indent` - The current indent level.
-    fn compile_expression(
+    pub fn compile_expression(
         &mut self,
         expression: &Expression,
         indent: &str,

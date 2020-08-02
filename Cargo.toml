@@ -8,4 +8,4 @@ edition = "2018"
 
 [dependencies]
 crossterm = "0.17.7"
-dark-vm = "0.4.1"
+dark-vm = "0.4.3"

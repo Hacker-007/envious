@@ -1,6 +1,6 @@
 use super::repl_trait::Repl;
 use std::io::Write;
-use crate::{parser::Parser, lexer::Lexer, code_generation::CodeGenerator};
+use crate::{parser::Parser, lexer::Lexer, code_generation::CodeGenerator, errors::error::Error};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use dark_vm::vm::VM;
 
@@ -22,77 +22,69 @@ impl EnvyRepl {
     }
 }
 
-
 impl Repl for EnvyRepl {
     fn evaluate_submission(&mut self, stdout: &mut std::io::Stdout, text: &String) -> crossterm::Result<()> {
-        match self.lexer.lex(text) {
-            Err(error) => {
-                write!(stdout, "{}", error.prettify(text))?;
-                Ok(())
-            }
-            Ok(tokens) => {
-                if self.parser.is_none() {
-                    self.parser = Some(Parser::new(tokens));
-                } else {
-                    self.parser.as_mut().unwrap().with_tokens(tokens);
-                }
+        let tokens = self.lexer
+            .lex(text)
+            .map_err(|error| prettify(stdout, error, text))?;
+        
+        let parser = if let Some(ref mut p) = self.parser {
+            p.with_tokens(tokens);
+            p
+        } else {
+            self.parser = Some(Parser::new(tokens));
+            self.parser.as_mut().unwrap()
+        };
 
-                match self.parser.as_mut().unwrap().parse() {
-                    Err(error) => {
-                        write!(stdout, "{}", error.prettify(text))?;
-                        Ok(())
-                    }
-                    Ok(syntax_tree) => {
-                        match self.code_gen.generate_code(None, syntax_tree) {
-                            Err(error) => {
-                                write!(stdout, "{}", error.prettify(text))?;
-                                Ok(())
-                            }
-                            Ok(generated_code) => {
-                                disable_raw_mode()?;
-                                match dark_vm::lexer::Lexer::default().lex(&generated_code) {
-                                    Ok(tokens) => {
-                                        if self.vm.is_none() {
-                                            match VM::new(tokens) {
-                                                Ok(vm) => self.vm = Some(vm),
-                                                Err(error) => {
-                                                    write!(stdout, "{}", error.prettify(&generated_code))?;
-                                                }
-                                            }
-                                        } else {
-                                            let vm = self.vm.as_mut().unwrap();
-                                            if let Err(error) = vm.with_tokens(tokens) {
-                                                write!(stdout, "{}", error.prettify(&generated_code))?;
-                                            }
-                                        }
-
-                                        match self.vm.as_mut().unwrap().run() {
-                                            Ok(res) => {
-                                                if let Some(res) = res {
-                                                    write!(stdout, "{:#?}", res)?;
-                                                }
-                                            }
-                                            Err(error) => {
-                                                write!(stdout, "{}", error.prettify(&generated_code))?;
-                                            }
-                                        }
-                                    }
-                                    Err(error) => {
-                                        write!(stdout, "{}", error.prettify(&generated_code))?;
-                                    }
-                                }
-
-                                enable_raw_mode()
-                            }
-                        }
-                    }
-                }
-            }
+        let ast = parser
+            .parse()
+            .map_err(|error| prettify(stdout, error, text))?;
+        
+        let mut generated_code = String::new();
+        for expression in ast.iter() {
+            generated_code = format!("{}{}\n", generated_code, self.code_gen.compile_expression(expression, "").map_err(|error| prettify(stdout, error, text))?);
         }
+        
+        let tokens = dark_vm::lexer::Lexer::default()
+            .lex(&generated_code)
+            .map_err(|error| prettify_vm(stdout, error, text))?;
+
+        let vm = if let Some(ref mut vm) = self.vm {
+            vm.load_tokens(tokens).map_err(|error| prettify_vm(stdout, error, text))?;
+            vm
+        } else {
+            let mut vm = VM::repl().map_err(|error| prettify_vm(stdout, error, text))?;
+            vm.load_tokens(tokens).map_err(|error| prettify_vm(stdout, error, text))?;
+            self.vm = Some(vm);
+            self.vm.as_mut().unwrap()
+        };
+
+        disable_raw_mode()?;
+        if let Some(result) = vm.run().map_err(|error| prettify_vm(stdout, error, text))? {
+            write!(stdout, "{:#?}", result)?;
+        }
+
+        enable_raw_mode()
     }
 
     fn render_line(&mut self, stdout: &mut std::io::Stdout, lines: &[String], line_index: usize) -> crossterm::Result<()> {
         write!(stdout, "{}", lines.get(line_index).unwrap())?;
         Ok(())
+    }
+}
+
+fn prettify(stdout: &mut std::io::Stdout, error: Error, text: &str) -> std::io::Error {
+    if let Err(error) = write!(stdout, "{}", error.prettify(text)) {
+        error
+    } else {
+        std::io::Error::new(std::io::ErrorKind::Other, "Whoops!\nAn Unidentifiable Error Occurred.")
+    }
+}
+
+fn prettify_vm(stdout: &mut std::io::Stdout, error: dark_vm::errors::error::Error, text: &str) -> std::io::Error {
+    if let Err(error) = write!(stdout, "{}", error.prettify(text)) {
+        error
+    } else {
+        std::io::Error::new(std::io::ErrorKind::Other, "Whoops!\nSome Error Occurred And Could Not Be Represented.")
     }
 }
