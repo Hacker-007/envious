@@ -1,8 +1,2 @@
 @main
-    @__0__
-        push 0
-    end
-
-    call __0__
-    set x pop
 end

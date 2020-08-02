@@ -1,7 +1,7 @@
 /// The arguments module, which holds all of the arguments to the program.
 pub mod arguments;
 
-use crate::repl::Repl;
+use crate::repl_helpers::{envy_repl::EnvyRepl, repl_support::ReplSupport};
 use arguments::Arguments;
 use std::{fs, time::Instant};
 
@@ -16,8 +16,9 @@ pub fn runner<F: Fn(&str, &str, &Arguments) -> Result<String, String>>(
 ) -> Result<(), String> {
     let args = Arguments::new().map_err(|error| error.prettify(""))?;
     if args.get_path().is_none() {
-        Repl::new()
-            .start_loop(&args)
+        ReplSupport::new()
+            .map_err(|_| "An Error Occurred When Interacting With The REPL.".to_owned())?
+            .run(EnvyRepl::new())
             .map_err(|_| "An Error Occurred When Interacting With The REPL.".to_owned())?;
         Ok(())
     } else if let Some(path) = args.get_path().filter(|path| path.ends_with(".envy")) {

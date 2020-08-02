@@ -1,4 +1,4 @@
-extern crate console;
+extern crate crossterm;
 
 /// The code_generation module, which walks the AST generated and creates the various different parts of the .dark file.
 pub mod code_generation;
@@ -28,8 +28,8 @@ mod errors;
 /// The cli module, which contains all of the arguments that were passed in to the program.
 mod cli;
 
-/// The repl module, which contains the REPL for the Envious programming language.
-mod repl;
+/// The repl_helpers module, which contains the REPL for the Envious programming language.
+mod repl_helpers;
 
 use crate::code_generation::CodeGenerator;
 use crate::lexer::Lexer;

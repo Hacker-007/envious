@@ -45,6 +45,18 @@ impl Parser {
         }
     }
 
+    /// Resets the parser with the supplied tokens.
+    ///
+    /// # Arguments
+    /// `tokens` - The new tokens to parse.
+    pub fn with_tokens(&mut self, tokens: VecDeque<Token>) {
+        self.last_position = tokens.front().map_or(0, |token| token.pos);
+        self.tokens = tokens
+            .into_iter()
+            .map(|token| (token.pos, token.kind))
+            .collect();
+    }
+
     /// Parse the tokens in the tokens field.
     /// This function returns a vector of all of the parsed expressions.
     /// The signature of this function might change to return a vector of errors.

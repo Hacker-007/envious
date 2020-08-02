@@ -7,5 +7,5 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-console = "0.11.3"
-dark-vm = "0.3.0"
+crossterm = "0.17.7"
+dark-vm = "0.4.1"
