@@ -25,7 +25,7 @@ impl ReplSupport {
                 break;
             }
 
-            repl.evaluate_submission(&mut stdout, &text)?;
+            repl.evaluate_submission(&mut stdout, &text).ok();
             self.submission_history.push(text);
             self.submission_history_index = 0;
         }
@@ -71,7 +71,9 @@ impl ReplSupport {
             }
         } else if event.modifiers == KeyModifiers::SHIFT {
             match event.code {
-                KeyCode::Char(c) => self.handle_typing(stdout, view, c, repl)?,
+                KeyCode::Char(c) => {
+                    self.handle_typing(stdout, view, c, repl)?;
+                }
                 _ => {},
             }
         } else if event.modifiers == KeyModifiers::ALT {

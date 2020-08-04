@@ -1,12 +1,14 @@
 use super::repl_trait::Repl;
 use std::io::Write;
-use crate::{parser::Parser, lexer::Lexer, code_generation::CodeGenerator, errors::error::Error};
+use crate::{parser::Parser, lexer::Lexer, code_generation::CodeGenerator, errors::error::Error, tokens::classification::Classification, semantic_analyzer::type_checker::TypeChecker};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
+use crossterm::style::Colorize;
 use dark_vm::vm::VM;
 
 pub struct EnvyRepl {
     lexer: Lexer,
     parser: Option<Parser>,
+    type_checker: TypeChecker,
     code_gen: CodeGenerator,
     vm: Option<VM>,
 }
@@ -16,6 +18,7 @@ impl EnvyRepl {
         EnvyRepl {
             lexer: Lexer::default(),
             parser: None,
+            type_checker: TypeChecker::new(),
             code_gen: CodeGenerator::new(false),
             vm: None,
         }
@@ -39,6 +42,10 @@ impl Repl for EnvyRepl {
         let ast = parser
             .parse()
             .map_err(|error| prettify(stdout, error, text))?;
+
+        // self.type_checker
+        //     .perform_type_checking(&ast)
+        //     .map_err(|error| prettify(stdout, error, text))?;
         
         let mut generated_code = String::new();
         for expression in ast.iter() {
@@ -68,7 +75,39 @@ impl Repl for EnvyRepl {
     }
 
     fn render_line(&mut self, stdout: &mut std::io::Stdout, lines: &[String], line_index: usize) -> crossterm::Result<()> {
-        write!(stdout, "{}", lines.get(line_index).unwrap())?;
+        let text = lines.get(line_index).unwrap();
+        let tokens = self
+            .lexer
+            .lex(&text)
+            .ok();
+
+        if let Some(tokens) = tokens {
+            for token in tokens {
+                match token.kind.get_classification() {
+                    Classification::Whitespace(text) => {
+                        write!(stdout, "{}", text)?;
+                    }
+                    Classification::Type(text) => {
+                        write!(stdout, "{}", text.yellow())?;
+                    }
+                    Classification::Keyword(text) => {
+                        write!(stdout, "{}", text.blue())?;
+                    }
+                    Classification::Values(text) => {
+                        write!(stdout, "{}", text.cyan())?;
+                    }
+                    Classification::Punctuation(text) => {
+                        write!(stdout, "{}", text.dark_grey())?;
+                    }
+                    Classification::Identifier(text) => {
+                        write!(stdout, "{}", text.dark_yellow())?;
+                    }
+                }
+            }
+        } else {
+            write!(stdout, "{}", lines.get(line_index).unwrap())?;
+        }
+        
         Ok(())
     }
 }

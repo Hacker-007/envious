@@ -1,24 +1,4 @@
 @main
-push 123
+push 'any'
 set x pop
-push 123
-push x
-push eq pop pop
-jmpf 23
-@__0__
-push 'Yay!'
-printn pop
-end
-
-call __0__
-push 234
-push x
-push eq pop pop
-jmpf 38
-@__1__
-push 'Nay.'
-printn pop
-end
-
-call __1__
 end

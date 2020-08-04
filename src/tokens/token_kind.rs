@@ -1,8 +1,12 @@
 //! The TokenKind enum maintains all of the different Tokens that could occur within the program.
 //! Using an enum allows for easy extensibility.
 
+use super::classification::Classification;
+
 #[derive(Debug)]
 pub enum TokenKind {
+    Whitespace(String),
+
     Void,
     Any,
     Int,
@@ -38,6 +42,7 @@ impl TokenKind {
     /// Gets the name of the token based on the kind.
     pub fn get_name(&self) -> String {
         match self {
+            TokenKind::Whitespace(_) => "",
             TokenKind::Void => "Void",
             TokenKind::Any => "Any",
             TokenKind::Int => "Int",
@@ -69,5 +74,75 @@ impl TokenKind {
             TokenKind::Else => "Else Keyword",
         }
         .to_owned()
+    }
+
+    /// Gets the length of the token.
+    pub fn get_length(&self) -> usize {
+        match self {
+            TokenKind::Whitespace(whitespace) => whitespace.len(),
+            TokenKind::Void => 4,
+            TokenKind::Any => 3,
+            TokenKind::Int => 3,
+            TokenKind::Float => 4,
+            TokenKind::Boolean => 7,
+            TokenKind::String => 6,
+            TokenKind::IntegerLiteral(val) => val.to_string().len(),
+            TokenKind::FloatLiteral(val) => val.to_string().len(),
+            TokenKind::BooleanLiteral(val) => val.to_string().len(),
+            TokenKind::StringLiteral(val) => val.len(),
+            TokenKind::Identifier(name) => name.len(),
+            TokenKind::LeftParenthesis => 1,
+            TokenKind::RightParenthesis => 1,
+            TokenKind::LeftCurlyBrace => 1,
+            TokenKind::RightCurlyBrace => 1,
+            TokenKind::Plus => 1,
+            TokenKind::Minus => 1,
+            TokenKind::Star => 1,
+            TokenKind::Slash => 1,
+            TokenKind::EqualSign => 1,
+            TokenKind::ColonEqualSign => 2,
+            TokenKind::Comma => 1,
+            TokenKind::Colon => 1,
+            TokenKind::ColonColon => 2,
+            TokenKind::Let => 3,
+            TokenKind::If => 2,
+            TokenKind::Else => 4,
+        }
+    }
+    
+    /// Gets the classification of the token based on the kind.
+    pub fn get_classification(&self) -> Classification {
+        match self {
+            TokenKind::Whitespace(whitespace) => Classification::Whitespace(whitespace.to_owned()),
+            TokenKind::Void => Classification::Type("Void".to_owned()),
+            TokenKind::Any => Classification::Type("Any".to_owned()),
+            TokenKind::Int => Classification::Type("Int".to_owned()),
+            TokenKind::Float => Classification::Type("Float".to_owned()),
+            TokenKind::Boolean => Classification::Type("Boolean".to_owned()),
+            TokenKind::String => Classification::Type("String".to_owned()),
+            TokenKind::IntegerLiteral(val) => Classification::Values(val.to_string()),
+            TokenKind::FloatLiteral(val) => Classification::Values(val.to_string()),
+            TokenKind::BooleanLiteral(val) => Classification::Values(val.to_string()),
+            TokenKind::StringLiteral(val) => Classification::Values(format!("\"{}\"", val)),
+            TokenKind::Identifier(name) => Classification::Identifier(name.to_owned()),
+
+            TokenKind::LeftParenthesis => Classification::Punctuation("(".to_owned()),
+            TokenKind::RightParenthesis => Classification::Punctuation(")".to_owned()),
+            TokenKind::LeftCurlyBrace => Classification::Punctuation("{".to_owned()),
+            TokenKind::RightCurlyBrace => Classification::Punctuation("}".to_owned()),
+            TokenKind::Plus => Classification::Punctuation("+".to_owned()),
+            TokenKind::Minus => Classification::Punctuation("-".to_owned()),
+            TokenKind::Star => Classification::Punctuation("*".to_owned()),
+            TokenKind::Slash => Classification::Punctuation("/".to_owned()),
+            TokenKind::EqualSign => Classification::Punctuation("=".to_owned()),
+            TokenKind::ColonEqualSign => Classification::Punctuation(":=".to_owned()),
+            TokenKind::Comma => Classification::Punctuation(",".to_owned()),
+            TokenKind::Colon => Classification::Punctuation(":".to_owned()),
+            TokenKind::ColonColon => Classification::Punctuation("::".to_owned()),
+            
+            TokenKind::Let => Classification::Keyword("let".to_owned()),
+            TokenKind::If => Classification::Keyword("if".to_owned()),
+            TokenKind::Else => Classification::Keyword("else".to_owned()),
+        }
     }
 }

@@ -39,6 +39,7 @@ impl Parser {
             last_position: tokens.front().map_or(0, |token| token.pos),
             tokens: tokens
                 .into_iter()
+                .filter(|token| !matches!(token.kind, TokenKind::Whitespace(_)))
                 .map(|token| (token.pos, token.kind))
                 .collect(),
                 identifier_mapping: HashMap::new(),
@@ -53,6 +54,7 @@ impl Parser {
         self.last_position = tokens.front().map_or(0, |token| token.pos);
         self.tokens = tokens
             .into_iter()
+            .filter(|token| !matches!(token.kind, TokenKind::Whitespace(_)))
             .map(|token| (token.pos, token.kind))
             .collect();
     }

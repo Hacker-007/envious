@@ -3,3 +3,7 @@ pub mod token;
 
 /// The token_kind module, which contains the TokenKind enum. This enum describes the various kinds of tokens that are recognized.
 pub mod token_kind;
+
+/// The classification module, which contains the Classification enum.
+/// This enum contains the various classifications of the tokens and is used in the REPL for syntax highlighting.
+pub mod classification;

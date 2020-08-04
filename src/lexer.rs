@@ -34,9 +34,13 @@ impl Lexer {
         let mut tokens = VecDeque::new();
         while let Some(ch) = iter.next() {
             self.current_position += 1;
-
             // If the current character is a whitespace or a comment, handle it, and continue lexing.
-            if ch.is_ascii_whitespace() || self.handle_comments(ch, &mut iter) {
+            if ch.is_ascii_whitespace() {
+                tokens.push_back(Token::new(TokenKind::Whitespace(ch.to_string()), self.current_position));
+                continue;
+            }
+            
+            if self.handle_comments(ch, &mut iter) {
                 continue;
             }
 
@@ -146,7 +150,6 @@ impl Lexer {
         let mut word = letter.to_string();
         while let Some(ch) = iter.peek() {
             if ch.is_ascii_whitespace() {
-                self.advance(iter);
                 break;
             } else if !ch.is_ascii_punctuation() {
                 word.push(self.advance(iter));
@@ -155,13 +158,13 @@ impl Lexer {
             }
         }
 
-        match word.to_ascii_lowercase().as_str() {
-            "void" => Token::new(TokenKind::Void, initial_point),
-            "any" => Token::new(TokenKind::Any, initial_point),
-            "int" => Token::new(TokenKind::Int, initial_point),
-            "float" => Token::new(TokenKind::Float, initial_point),
-            "boolean" => Token::new(TokenKind::Boolean, initial_point),
-            "string" => Token::new(TokenKind::String, initial_point),
+        match word.as_str() {
+            "Void" => Token::new(TokenKind::Void, initial_point),
+            "Any" => Token::new(TokenKind::Any, initial_point),
+            "Int" => Token::new(TokenKind::Int, initial_point),
+            "Float" => Token::new(TokenKind::Float, initial_point),
+            "Boolean" => Token::new(TokenKind::Boolean, initial_point),
+            "String" => Token::new(TokenKind::String, initial_point),
             "true" => Token::new(TokenKind::BooleanLiteral(true), initial_point),
             "false" => Token::new(TokenKind::BooleanLiteral(false), initial_point),
             "let" => Token::new(TokenKind::Let, initial_point),
