@@ -36,9 +36,9 @@ use crate::lexer::Lexer;
 use cli::{arguments::Arguments, runner};
 use parser::Parser;
 use semantic_analyzer::type_checker::TypeChecker;
+use crate::std::standard_library::StandardLibrary;
 
 fn main() {
-    
     if let Err(error) = runner(run) {
         println!("{}", error)
     }
@@ -51,15 +51,16 @@ fn run(contents: &str, path: &str, args: &Arguments) -> Result<String, String> {
         .lex(contents)
         .map_err(|error| error.prettify(contents))?;
 
+    let standard_library = StandardLibrary::new();
     let ast = Parser::new(tokens)
-        .parse()
+        .parse(&standard_library)
         .map_err(|error| error.prettify(contents))?;
-    
+
     TypeChecker::new()
-        .perform_type_checking(&ast)
+        .perform_type_checking(&ast, &standard_library)
         .map_err(|error| error.prettify(contents))?;
 
     CodeGenerator::new(args.format_output())
-        .generate_code(Some(&path.replace(".envy", ".dark")), ast)
+        .generate_code(Some(&path.replace(".envy", ".dark")), ast, &standard_library)
         .map_err(|error| error.prettify(contents))
 }

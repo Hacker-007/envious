@@ -24,6 +24,7 @@ use crate::{
     tokens::{token::Token, token_kind::TokenKind}, semantic_analyzer::{type_checker::TypeChecker, types::Types},
 };
 use std::collections::{HashMap, VecDeque};
+use crate::std::standard_library::StandardLibrary;
 
 #[derive(Debug)]
 pub struct Parser {
@@ -62,35 +63,35 @@ impl Parser {
     /// Parse the tokens in the tokens field.
     /// This function returns a vector of all of the parsed expressions.
     /// The signature of this function might change to return a vector of errors.
-    pub fn parse(&mut self) -> Result<Vec<Expression>, Error> {
+    pub fn parse(&mut self, standard_library: &StandardLibrary) -> Result<Vec<Expression>, Error> {
         let mut expressions = vec![];
         while let Some(_) = self.tokens.front() {
-            expressions.push(self.parse_expression()?);
+            expressions.push(self.parse_expression(standard_library)?);
         }
 
         Ok(expressions)
     }
 
     /// Parse a single expression.
-    fn parse_expression(&mut self) -> Result<Expression, Error> {
+    fn parse_expression(&mut self, standard_library: &StandardLibrary) -> Result<Expression, Error> {
         match self.tokens.front() {
             Some((pos, TokenKind::Let)) => {
                 self.last_position = *pos;
-                self.parse_let_expression()
+                self.parse_let_expression(standard_library)
             }
             Some((pos, TokenKind::If)) => {
                 self.last_position = *pos;
-                self.parse_if_expression()
+                self.parse_if_expression(standard_library)
             }
             Some((_, TokenKind::Identifier(_)))
                 if self.tokens.get(1).map_or(false, |(_, kind)| {
                     matches!(kind, TokenKind::LeftParenthesis)
                 }) =>
             {
-                self.parse_function_call_expression()
+                self.parse_function_call_expression(standard_library)
             }
-            Some((_, TokenKind::LeftCurlyBrace)) => self.parse_block_expression(),
-            Some(_) => self.parse_equality_expression(),
+            Some((_, TokenKind::LeftCurlyBrace)) => self.parse_block_expression(standard_library),
+            Some(_) => self.parse_equality_expression(standard_library),
             None => Err(Error::new(
                 ErrorKind::Expected("An Expression".to_owned()),
                 self.last_position,
@@ -99,7 +100,7 @@ impl Parser {
     }
 
     /// Parses a let expression. This may take different forms and so, all forms must be accounted for.
-    fn parse_let_expression(&mut self) -> Result<Expression, Error> {
+    fn parse_let_expression(&mut self, standard_library: &StandardLibrary) -> Result<Expression, Error> {
         let (pos, _) = self.tokens.pop_front().unwrap();
         match self.tokens.pop_front() {
             Some((ident_pos, TokenKind::Identifier(name))) => {
@@ -136,9 +137,9 @@ impl Parser {
 
                 if let Some((_, TokenKind::ColonEqualSign)) = self.tokens.front() {
                     self.tokens.pop_front();
-                    let value = self.parse_expression()?;
+                    let value = self.parse_expression(standard_library)?;
                     if !self.identifier_mapping.contains_key(&name) {
-                        self.identifier_mapping.insert(name.clone(), TypeChecker::check_types(&value)?.ok_or_else(|| Error::new(ErrorKind::Expected("A Non-Void Type".to_owned()), value.pos))?);
+                        self.identifier_mapping.insert(name.clone(), TypeChecker::check_types(&value, standard_library)?.ok_or_else(|| Error::new(ErrorKind::Expected("A Non-Void Type".to_owned()), value.pos))?);
                     }
 
                     Ok(Expression::new(
@@ -168,7 +169,7 @@ impl Parser {
     }
 
     /// Parses a function call expression. This only has a single form to parse, so it is much cleaner.
-    fn parse_function_call_expression(&mut self) -> Result<Expression, Error> {
+    fn parse_function_call_expression(&mut self, standard_library: &StandardLibrary) -> Result<Expression, Error> {
         let (pos, function_name) =
             if let (pos, TokenKind::Identifier(function_name)) = self.tokens.pop_front().unwrap() {
                 (pos, function_name)
@@ -186,7 +187,7 @@ impl Parser {
                     ));
                 }
 
-                let value = self.parse_arguments()?;
+                let value = self.parse_arguments(standard_library)?;
                 match self.tokens.pop_front() {
                     Some((_, TokenKind::RightParenthesis)) => Ok(Expression::new(
                         ExpressionKind::FunctionCallExpression(function_name, value),
@@ -214,24 +215,24 @@ impl Parser {
     }
 
     // Parses a list of arguments. This is used by function call expressions.
-    fn parse_arguments(&mut self) -> Result<Vec<Expression>, Error> {
+    fn parse_arguments(&mut self, standard_library: &StandardLibrary) -> Result<Vec<Expression>, Error> {
         let mut arguments = vec![];
-        arguments.push(self.parse_argument()?);
+        arguments.push(self.parse_argument(standard_library)?);
         while let Some((pos, TokenKind::Comma)) = self.tokens.front() {
             self.last_position = *pos;
             self.tokens.pop_front();
-            arguments.push(self.parse_argument()?);
+            arguments.push(self.parse_argument(standard_library)?);
         }
 
         Ok(arguments)
     }
 
     // Parses a single argument. The implementation details of this function may change and it why the implementation has been decoupled.
-    fn parse_argument(&mut self) -> Result<Expression, Error> {
-        self.parse_expression()
+    fn parse_argument(&mut self, standard_library: &StandardLibrary) -> Result<Expression, Error> {
+        self.parse_expression(standard_library)
     }
 
-    fn parse_block_expression(&mut self) -> Result<Expression, Error> {
+    fn parse_block_expression(&mut self, standard_library: &StandardLibrary) -> Result<Expression, Error> {
         let (pos, _) = self.tokens.pop_front().unwrap();
         self.last_position = pos;
         let mut expressions = vec![];
@@ -242,7 +243,7 @@ impl Parser {
                 found_end_brace = true;
                 break;
             } else {
-                expressions.push(self.parse_expression()?);
+                expressions.push(self.parse_expression(standard_library)?);
             }
         }
 
@@ -260,12 +261,12 @@ impl Parser {
     }
 
     /// Parses an equality expression. This may take different forms but for now, it only has one form.
-    fn parse_equality_expression(&mut self) -> Result<Expression, Error> {
-        let mut left = self.parse_term()?;
+    fn parse_equality_expression(&mut self, standard_library: &StandardLibrary) -> Result<Expression, Error> {
+        let mut left = self.parse_term(standard_library)?;
         while let Ok((pos, operation)) = self.parse_equality_operator() {
             self.tokens.pop_front();
             self.last_position = pos;
-            let right = self.parse_term()?;
+            let right = self.parse_term(standard_library)?;
             left = Expression::new(
                 ExpressionKind::BinaryEqualityExpression(
                     operation,
@@ -298,10 +299,10 @@ impl Parser {
     }
 
     /// Parses an if expression.
-    fn parse_if_expression(&mut self) -> Result<Expression, Error> {
+    fn parse_if_expression(&mut self, standard_library: &StandardLibrary) -> Result<Expression, Error> {
         let (pos, _) = self.tokens.pop_front().unwrap();
-        let condition = self.parse_expression()?;
-        let code = Box::new(self.parse_expression()?);
+        let condition = self.parse_expression(standard_library)?;
+        let code = Box::new(self.parse_expression(standard_library)?);
         Ok(Expression::new(
             ExpressionKind::IfExpression(Box::new(condition), code),
             pos,
@@ -309,11 +310,11 @@ impl Parser {
     }
 
     /// Parses a term. A term is basically a factor + or - another factor.
-    fn parse_term(&mut self) -> Result<Expression, Error> {
-        let mut left = self.parse_factor()?;
+    fn parse_term(&mut self, standard_library: &StandardLibrary) -> Result<Expression, Error> {
+        let mut left = self.parse_factor(standard_library)?;
         while let Ok((pos, operation)) = self.parse_term_operator() {
             self.tokens.pop_front();
-            let right = self.parse_factor()?;
+            let right = self.parse_factor(standard_library)?;
             left = Expression::new(
                 ExpressionKind::InfixBinaryExpression(operation, Box::new(left), Box::new(right)),
                 pos,
@@ -346,11 +347,11 @@ impl Parser {
     }
 
     /// Parses a factor. A factor is basically a primary * or / by a primary.
-    fn parse_factor(&mut self) -> Result<Expression, Error> {
-        let mut left = self.parse_primary()?;
+    fn parse_factor(&mut self, standard_library: &StandardLibrary) -> Result<Expression, Error> {
+        let mut left = self.parse_primary(standard_library)?;
         while let Ok((pos, operation)) = self.parse_factor_operator() {
             self.tokens.pop_front();
-            let right = self.parse_primary()?;
+            let right = self.parse_primary(standard_library)?;
             left = Expression::new(
                 ExpressionKind::InfixBinaryExpression(operation, Box::new(left), Box::new(right)),
                 pos,
@@ -383,7 +384,7 @@ impl Parser {
     }
 
     /// Parses a primary expression. This can be a literal, or a parenthesized expression.
-    fn parse_primary(&mut self) -> Result<Expression, Error> {
+    fn parse_primary(&mut self, standard_library: &StandardLibrary) -> Result<Expression, Error> {
         match self.tokens.pop_front() {
             Some((pos, TokenKind::IntegerLiteral(value))) => {
                 self.last_position = pos;
@@ -408,7 +409,7 @@ impl Parser {
             }
             Some((pos, TokenKind::Plus)) => {
                 self.last_position = pos;
-                let value = self.parse_primary()?;
+                let value = self.parse_primary(standard_library)?;
                 Ok(Expression::new(
                     ExpressionKind::UnaryExpression(UnaryOperation::Positive, Box::new(value)),
                     pos,
@@ -416,7 +417,7 @@ impl Parser {
             }
             Some((pos, TokenKind::Minus)) => {
                 self.last_position = pos;
-                let value = self.parse_primary()?;
+                let value = self.parse_primary(standard_library)?;
                 Ok(Expression::new(
                     ExpressionKind::UnaryExpression(UnaryOperation::Negative, Box::new(value)),
                     pos,
@@ -424,7 +425,7 @@ impl Parser {
             }
             Some((pos, TokenKind::LeftParenthesis)) => {
                 self.last_position = pos;
-                let expr = self.parse_expression()?;
+                let expr = self.parse_expression(standard_library)?;
                 if let Some((_, TokenKind::RightParenthesis)) = self.tokens.front() {
                     self.last_position = pos;
                     self.tokens.pop_front();

@@ -4,12 +4,14 @@
 
 use super::standard_library::Return;
 use std::ops::Range;
+use crate::semantic_analyzer::types::Types;
 
 pub struct Function {
-    // name: String,
-    // number_of_args: Range<usize>,
-    // types: Vec<Type>,
-    function: fn(usize, &str, &[String]) -> Return,
+    pub name: String,
+    pub number_of_args: Range<usize>,
+    pub parameter_types: Vec<Types>,
+    pub return_type: Types,
+    pub function: fn(usize, &str, &[String]) -> Return,
 }
 
 impl Function {
@@ -20,19 +22,18 @@ impl Function {
     /// `number_of_args` - The number of arguments.
     /// `function` - The actual fuction to call.
     pub fn new(
-        _name: &str,
-        _number_of_args: Range<usize>,
+        name: &str,
+        number_of_args: Range<usize>,
+        parameter_types: Vec<Types>,
+        return_type: Types,
         function: fn(usize, &str, &[String]) -> Return,
     ) -> Function {
         Function {
-            // name: name.to_owned(),
-            // number_of_args,
+            name: name.to_owned(),
+            number_of_args,
+            parameter_types,
+            return_type,
             function,
         }
-    }
-
-    /// Returns the function associated with this struct.
-    pub fn get_function(&self) -> fn(usize, &str, &[String]) -> Return {
-        self.function
     }
 }

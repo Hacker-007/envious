@@ -1,15 +1,16 @@
 use super::repl_trait::Repl;
 use std::io::Write;
-use crate::{parser::Parser, lexer::Lexer, code_generation::CodeGenerator, errors::error::Error, tokens::classification::Classification, semantic_analyzer::type_checker::TypeChecker};
+use crate::{parser::Parser, lexer::Lexer, code_generation::CodeGenerator, errors::error::Error, tokens::classification::Classification};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use crossterm::style::Colorize;
 use dark_vm::vm::VM;
+use crate::{semantic_analyzer::type_checker::TypeChecker, std::standard_library::StandardLibrary};
 
 pub struct EnvyRepl {
     lexer: Lexer,
     parser: Option<Parser>,
-    type_checker: TypeChecker,
     code_gen: CodeGenerator,
+    standard_library: StandardLibrary,
     vm: Option<VM>,
 }
 
@@ -18,8 +19,8 @@ impl EnvyRepl {
         EnvyRepl {
             lexer: Lexer::default(),
             parser: None,
-            type_checker: TypeChecker::new(),
             code_gen: CodeGenerator::new(false),
+            standard_library: StandardLibrary::new(),
             vm: None,
         }
     }
@@ -40,16 +41,14 @@ impl Repl for EnvyRepl {
         };
 
         let ast = parser
-            .parse()
+            .parse(&self.standard_library)
             .map_err(|error| prettify(stdout, error, text))?;
-
-        // self.type_checker
-        //     .perform_type_checking(&ast)
-        //     .map_err(|error| prettify(stdout, error, text))?;
         
+        TypeChecker::new().perform_type_checking(&ast, &self.standard_library).map_err(|error| prettify(stdout, error, text))?;
+
         let mut generated_code = String::new();
         for expression in ast.iter() {
-            generated_code = format!("{}{}\n", generated_code, self.code_gen.compile_expression(expression, "").map_err(|error| prettify(stdout, error, text))?);
+            generated_code = format!("{}{}\n", generated_code, self.code_gen.compile_expression(expression, &self.standard_library, "").map_err(|error| prettify(stdout, error, text))?);
         }
         
         let tokens = dark_vm::lexer::Lexer::default()

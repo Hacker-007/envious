@@ -1,4 +1,4 @@
 @main
-push 'any'
-set x pop
+push 'Hello, World!'
+printn pop
 end

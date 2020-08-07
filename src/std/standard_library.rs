@@ -9,8 +9,14 @@
 //! ```
 
 use super::{function::Function, io};
-use crate::errors::{error::Error, error_kind::ErrorKind};
+use crate::{semantic_analyzer::types::Types, errors::{error::Error, error_kind::ErrorKind}};
 use std::collections::HashMap;
+
+macro_rules! initialize_functions {
+    ($function_mapper: ident, $(($name: expr, $num_params: expr, $parameter_types: expr, $return_types: expr, $function: path)),*) => {
+        $($function_mapper.insert($name.to_owned(), Function::new($name, $num_params, $parameter_types, $return_types, $function));)*
+    };
+}
 
 pub type Return = Result<String, Error>;
 
@@ -21,16 +27,38 @@ impl StandardLibrary {
     pub fn new() -> StandardLibrary {
         let mut function_mapper = HashMap::new();
         StandardLibrary::initialize_io_module(&mut function_mapper);
-
         StandardLibrary(function_mapper)
     }
 
     fn initialize_io_module(function_mapper: &mut HashMap<String, Function>) {
-        function_mapper.insert("print".to_owned(), Function::new("print", 1..2, io::print));
-        function_mapper.insert(
-            "println".to_owned(),
-            Function::new("println", 1..2, io::println),
+        initialize_functions!(
+            function_mapper,
+            (
+                "print",
+                1..2,
+                vec![Types::Any],
+                Types::Void,
+                io::print
+            ),
+            (
+                "println",
+                1..2,
+                vec![Types::Any],
+                Types::Void,
+                io::println
+            )
         );
+    }
+
+    /// Gets the function with the given name. An error is returned if the function does not exist.
+    ///
+    /// # Arguments
+    /// `pos` - The position where the function was called.
+    /// `name` - The name of the function.
+    pub fn get_function(&self, pos: usize, name: &str) -> Result<&Function, Error> {
+        self.0
+            .get(name)
+            .ok_or_else(|| Error::new(ErrorKind::UnknownFunction, pos))
     }
 
     /// Executes the function with the given name and returns the result.
@@ -49,21 +77,9 @@ impl StandardLibrary {
         parameters: &[String],
     ) -> Return {
         if let Some(function) = self.0.get(name) {
-            function.get_function()(pos, indent, parameters)
+            (function.function)(pos, indent, parameters)
         } else {
             Err(Error::new(ErrorKind::UnknownFunction, pos))
         }
     }
-
-    // /// Indents the code based on if the formatting feature was turned on and what the current indent size is.
-    // ///
-    // /// # Arguments
-    // /// `current_indent` - The current level of indentation.
-    // pub fn indent(format_code: bool, current_indent: &str) -> String {
-    //     if format_code {
-    //         format!("{}{}", current_indent, " ".repeat(4))
-    //     } else {
-    //         String::new()
-    //     }
-    // }
 }

@@ -31,7 +31,6 @@ pub struct CodeGenerator {
     label_value: usize,
     token_idx: usize,
     format_code: bool,
-    standard_library: StandardLibrary,
 }
 
 impl CodeGenerator {
@@ -44,7 +43,6 @@ impl CodeGenerator {
             label_value: 0,
             token_idx: 0,
             format_code,
-            standard_library: StandardLibrary::new(),
         }
     }
 
@@ -58,6 +56,7 @@ impl CodeGenerator {
         &mut self,
         dark_file_path: Option<&str>,
         ast: Vec<Expression>,
+        standard_library: &StandardLibrary,
     ) -> Result<String, Error> {
         let mut contents = "@main".to_owned();
         self.token_idx += 1;
@@ -66,7 +65,7 @@ impl CodeGenerator {
             contents = format!(
                 "{}\n{}",
                 contents,
-                self.compile_expression(expression, &self.indent(""))?
+                self.compile_expression(expression, standard_library, &self.indent(""))?
             );
         }
 
@@ -89,6 +88,7 @@ impl CodeGenerator {
     pub fn compile_expression(
         &mut self,
         expression: &Expression,
+        standard_library: &StandardLibrary,
         indent: &str,
     ) -> Result<String, Error> {
         match &expression.kind {
@@ -97,19 +97,19 @@ impl CodeGenerator {
             ExpressionKind::Boolean(value) => self.compile_boolean_expression(*value, indent),
             ExpressionKind::String(value) => self.compile_string_expression(value, indent),
             ExpressionKind::Identifier(name, _) => self.compile_identifier_expression(name, indent),
-            ExpressionKind::ParenthesizedExpression(expression) => self.compile_expression(expression, indent),
+            ExpressionKind::ParenthesizedExpression(expression) => self.compile_expression(expression, standard_library, indent),
             ExpressionKind::InfixBinaryExpression(operation, left, right) => {
-                self.compile_infix_binary_expression(operation, left, right, indent)
+                self.compile_infix_binary_expression(operation, left, right, standard_library, indent)
             }
             ExpressionKind::UnaryExpression(operation, expression) => {
-                self.compile_unary_expression(operation, expression, indent)
+                self.compile_unary_expression(operation, expression, standard_library, indent)
             }
             ExpressionKind::BinaryEqualityExpression(operation, left, right) => {
-                self.compile_binary_equality_expression(operation, left, right, indent)
+                self.compile_binary_equality_expression(operation, left, right, standard_library, indent)
             }
             ExpressionKind::LetExpression(name, type_to_get_value, value) => {
                 if let Some(value) = value {
-                    let value = self.compile_expression(value, indent)?;
+                    let value = self.compile_expression(value, standard_library, indent)?;
                     self.compile_let_expression(
                         name,
                         value.as_str(),
@@ -125,16 +125,17 @@ impl CodeGenerator {
                 }
             }
             ExpressionKind::BlockExpression(expressions) => {
-                self.compile_block_expression(expressions, indent)
+                self.compile_block_expression(expressions, standard_library, indent)
             }
             ExpressionKind::IfExpression(condition, expression) => {
-                self.compile_if_expression(condition, expression, indent)
+                self.compile_if_expression(condition, expression, standard_library, indent)
             }
             ExpressionKind::FunctionCallExpression(function_name, parameters) => self
                 .compile_function_call_expression(
                     expression.pos,
                     function_name,
                     parameters,
+                    standard_library,
                     indent,
                 ),
         }
@@ -217,6 +218,7 @@ impl CodeGenerator {
         operation: &BinaryOperation,
         left: &Expression,
         right: &Expression,
+        standard_library: &StandardLibrary,
         indent: &str,
     ) -> Result<String, Error> {
         let operation_instruction = match operation {
@@ -228,8 +230,8 @@ impl CodeGenerator {
 
         let compiled = format!(
             "{}\n{}\n{}push {}",
-            self.compile_expression(right, indent)?,
-            self.compile_expression(left, indent)?,
+            self.compile_expression(right, standard_library, indent)?,
+            self.compile_expression(left, standard_library, indent)?,
             indent,
             operation_instruction
         );
@@ -251,6 +253,7 @@ impl CodeGenerator {
         &mut self,
         operation: &UnaryOperation,
         expression: &Expression,
+        standard_library: &StandardLibrary,
         indent: &str,
     ) -> Result<String, Error> {
         let operation_instruction = match operation {
@@ -263,7 +266,7 @@ impl CodeGenerator {
 
         Ok(format!(
             "{}\n{}{}",
-            self.compile_expression(expression, indent)?,
+            self.compile_expression(expression, standard_library, indent)?,
             indent,
             operation_instruction
         ))
@@ -284,6 +287,7 @@ impl CodeGenerator {
         operation: &BinaryEqualityOperation,
         left: &Expression,
         right: &Expression,
+        standard_library: &StandardLibrary,
         indent: &str,
     ) -> Result<String, Error> {
         let operation_instruction = match operation {
@@ -292,8 +296,8 @@ impl CodeGenerator {
 
         let compiled = format!(
             "{}\n{}\n{}push {} pop pop",
-            self.compile_expression(right, indent)?,
-            self.compile_expression(left, indent)?,
+            self.compile_expression(right, standard_library, indent)?,
+            self.compile_expression(left, standard_library, indent)?,
             indent,
             operation_instruction
         );
@@ -338,6 +342,7 @@ impl CodeGenerator {
     fn compile_block_expression(
         &mut self,
         expressions: &[Expression],
+        standard_library: &StandardLibrary,
         indent: &str,
     ) -> Result<String, Error> {
         let label_value = self.label_value;
@@ -348,7 +353,7 @@ impl CodeGenerator {
             created_label = format!(
                 "{}\n{}",
                 created_label,
-                self.compile_expression(expression, &self.indent(indent))?
+                self.compile_expression(expression, standard_library, &self.indent(indent))?
             );
         }
 
@@ -372,10 +377,11 @@ impl CodeGenerator {
         &mut self,
         condition: &Expression,
         expression: &Expression,
+        standard_library: &StandardLibrary,
         indent: &str,
     ) -> Result<String, Error> {
-        let compiled_condition = self.compile_expression(condition, indent)?;
-        let compiled_expression = self.compile_expression(expression, indent)?;
+        let compiled_condition = self.compile_expression(condition, standard_library, indent)?;
+        let compiled_expression = self.compile_expression(expression, standard_library, indent)?;
 
         self.token_idx += 1;
         Ok(format!(
@@ -401,14 +407,15 @@ impl CodeGenerator {
         pos: usize,
         name: &str,
         parameters: &[Expression],
+        standard_library: &StandardLibrary,
         indent: &str,
     ) -> Result<String, Error> {
         let mut compiled_params = vec![];
         for parameter in parameters {
-            compiled_params.push(self.compile_expression(parameter, indent)?);
+            compiled_params.push(self.compile_expression(parameter, standard_library, indent)?);
         }
 
-        self.standard_library
+        standard_library
             .compile_function(pos, indent, name, &compiled_params)
     }
 
