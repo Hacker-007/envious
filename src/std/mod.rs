@@ -2,7 +2,7 @@
 pub mod standard_library;
 
 /// The function module, which contains the definition of functions.
-mod function;
+pub mod function;
 
 /// The io module, which contains standard library functions related to IO.
 mod io;

@@ -15,6 +15,7 @@
 //! # }
 //! ```
 
+use crate::ast::expression_kind::Parameter;
 use crate::{
     ast::{
         expression::Expression,
@@ -31,6 +32,7 @@ pub struct CodeGenerator {
     label_value: usize,
     token_idx: usize,
     format_code: bool,
+    pub user_defined_functions: Vec<String>,
 }
 
 impl CodeGenerator {
@@ -38,11 +40,12 @@ impl CodeGenerator {
     ///
     /// # Arguments
     /// `format_code` - Whether or not to format the outputted code.
-    pub fn new(format_code: bool) -> CodeGenerator {
+    pub fn new(format_code: bool, user_defined_functions: Vec<String>) -> CodeGenerator {
         CodeGenerator {
             label_value: 0,
             token_idx: 0,
             format_code,
+            user_defined_functions,
         }
     }
 
@@ -124,12 +127,6 @@ impl CodeGenerator {
                     )
                 }
             }
-            ExpressionKind::BlockExpression(expressions) => {
-                self.compile_block_expression(expressions, standard_library, indent)
-            }
-            ExpressionKind::IfExpression(condition, expression) => {
-                self.compile_if_expression(condition, expression, standard_library, indent)
-            }
             ExpressionKind::FunctionCallExpression(function_name, parameters) => self
                 .compile_function_call_expression(
                     expression.pos,
@@ -138,6 +135,15 @@ impl CodeGenerator {
                     standard_library,
                     indent,
                 ),
+            ExpressionKind::BlockExpression(expressions) => {
+                self.compile_block_expression(expressions, standard_library, indent)
+            }
+            ExpressionKind::IfExpression(condition, expression) => {
+                self.compile_if_expression(condition, expression, standard_library, indent)
+            }
+            ExpressionKind::DefineExpression(name, parameters, expression, _) => {
+                self.compile_define_expression(name, parameters, expression, standard_library, indent)
+            },
         }
     }
 
@@ -383,14 +389,45 @@ impl CodeGenerator {
         let compiled_condition = self.compile_expression(condition, standard_library, indent)?;
         let compiled_expression = self.compile_expression(expression, standard_library, indent)?;
 
-        self.token_idx += 1;
-        Ok(format!(
+        let compiled_code = format!(
             "{}\n{}jmpf {}\n{}",
             compiled_condition,
             indent,
-            self.token_idx + 2,
+            self.token_idx + 3,
             compiled_expression
-        ))
+        );
+
+        self.token_idx += 2;
+        Ok(compiled_code)
+    }
+
+    /// Converts a Define expression provided into a String.
+    /// It takes the name, the parameters, and the expression and then creates a label with the name.
+    /// The label is then given the parameters and the expression is then compiled.
+    /// 
+    /// # Arguments
+    /// `name` - The name of the function.
+    /// `paramters` - The parameters that the function depends on.
+    /// `expression` - The expression to run when the function is called.
+    fn compile_define_expression(
+        &mut self,
+        name: &str,
+        parameters: &[Parameter],
+        expression: &Expression,
+        standard_library: &StandardLibrary,
+        indent: &str,
+    ) -> Result<String, Error> {
+        let compiled = format!(
+            "{}@{} {}\n{}\n{}end",
+            indent,
+            name,
+            parameters.iter().map(|param| format!("#{}", param.name)).collect::<Vec<_>>().join(" "),
+            self.compile_expression(expression, standard_library, &self.indent(indent))?,
+            indent
+        );
+
+        self.token_idx += 2;
+        Ok(compiled)
     }
 
     /// Converts a Function Call expression provided into a String.
@@ -415,8 +452,22 @@ impl CodeGenerator {
             compiled_params.push(self.compile_expression(parameter, standard_library, indent)?);
         }
 
-        standard_library
-            .compile_function(pos, indent, name, &compiled_params)
+        if self.user_defined_functions.contains(&name.to_owned()) {
+            compiled_params.reverse();
+            self.token_idx += 2 + compiled_params.len();
+            Ok(format!(
+                "{}\n{}call {} {}",
+                compiled_params.join("\n"),
+                indent,
+                name,
+                vec!["pop"; compiled_params.len()].join(" "),
+            ))
+        } else {
+            let (compiled, count) = standard_library
+                .compile_function(pos, indent, name, &compiled_params)?;
+            self.token_idx += count;
+            Ok(compiled)
+        }
     }
 
     /// Indents the code based on if the formatting feature was turned on and what the current indent size is.

@@ -20,6 +20,7 @@ pub enum ExpressionKind {
     FunctionCallExpression(String, Vec<Expression>),
     BlockExpression(Vec<Expression>),
     IfExpression(Box<Expression>, Box<Expression>),
+    DefineExpression(String, Vec<Parameter>, Box<Expression>, Types)
 }
 
 #[derive(Debug)]
@@ -39,4 +40,21 @@ pub enum UnaryOperation {
 #[derive(Debug)]
 pub enum BinaryEqualityOperation {
     Equals,
+}
+
+#[derive(Debug)]
+pub struct Parameter {
+    pub pos: usize,
+    pub name: String,
+    pub expected_type: Types,
+}
+
+impl Parameter {
+    pub fn new(pos: usize, name: String, expected_type: Types) -> Parameter {
+        Parameter {
+            pos,
+            name,
+            expected_type,
+        }
+    }
 }

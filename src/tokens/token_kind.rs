@@ -36,6 +36,7 @@ pub enum TokenKind {
     Let,
     If,
     Else,
+    Define,
 }
 
 impl TokenKind {
@@ -72,6 +73,7 @@ impl TokenKind {
             TokenKind::Let => "Let Keyword",
             TokenKind::If => "If Keyword",
             TokenKind::Else => "Else Keyword",
+            TokenKind::Define => "Define Keyword",
         }
         .to_owned()
     }
@@ -91,6 +93,7 @@ impl TokenKind {
             TokenKind::BooleanLiteral(val) => val.to_string().len(),
             TokenKind::StringLiteral(val) => val.len(),
             TokenKind::Identifier(name) => name.len(),
+            
             TokenKind::LeftParenthesis => 1,
             TokenKind::RightParenthesis => 1,
             TokenKind::LeftCurlyBrace => 1,
@@ -104,9 +107,11 @@ impl TokenKind {
             TokenKind::Comma => 1,
             TokenKind::Colon => 1,
             TokenKind::ColonColon => 2,
+
             TokenKind::Let => 3,
             TokenKind::If => 2,
             TokenKind::Else => 4,
+            TokenKind::Define => 6,
         }
     }
     
@@ -143,6 +148,7 @@ impl TokenKind {
             TokenKind::Let => Classification::Keyword("let".to_owned()),
             TokenKind::If => Classification::Keyword("if".to_owned()),
             TokenKind::Else => Classification::Keyword("else".to_owned()),
+            TokenKind::Define => Classification::Keyword("define".to_owned()),
         }
     }
 }

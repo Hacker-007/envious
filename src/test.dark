@@ -1,4 +1,26 @@
 @main
-push 'Hello, World!'
-printn pop
+    @check_if_true #value
+        @__0__
+            push value
+            jmpf 15
+            @__1__
+                push 'Hi.'
+                printn pop
+            end
+
+            call __1__
+            push false
+            push value
+            push eq pop pop
+            jmpf 33
+            @__2__
+                push 'Bye.'
+                printn pop
+            end
+
+            call __2__
+        end
+
+        call __0__
+    end
 end

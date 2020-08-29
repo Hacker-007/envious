@@ -14,11 +14,11 @@ use std::collections::HashMap;
 
 macro_rules! initialize_functions {
     ($function_mapper: ident, $(($name: expr, $num_params: expr, $parameter_types: expr, $return_types: expr, $function: path)),*) => {
-        $($function_mapper.insert($name.to_owned(), Function::new($name, $num_params, $parameter_types, $return_types, $function));)*
+        $($function_mapper.insert($name.to_owned(), Function::new($name, $num_params, $parameter_types, $return_types, Some($function)));)*
     };
 }
 
-pub type Return = Result<String, Error>;
+pub type Return = Result<(String, usize), Error>;
 
 pub struct StandardLibrary(HashMap<String, Function>);
 
@@ -35,18 +35,26 @@ impl StandardLibrary {
             function_mapper,
             (
                 "print",
-                1..2,
+                1,
                 vec![Types::Any],
                 Types::Void,
                 io::print
             ),
             (
                 "println",
-                1..2,
+                1,
                 vec![Types::Any],
                 Types::Void,
                 io::println
             )
+            // ,
+            // (
+            //     "read_file",
+            //     1..2,
+            //     vec![Types::String],
+            //     Types::String,
+            //     io::read_file
+            // )
         );
     }
 
@@ -77,7 +85,7 @@ impl StandardLibrary {
         parameters: &[String],
     ) -> Return {
         if let Some(function) = self.0.get(name) {
-            (function.function)(pos, indent, parameters)
+            (function.function.unwrap())(pos, indent, parameters)
         } else {
             Err(Error::new(ErrorKind::UnknownFunction, pos))
         }

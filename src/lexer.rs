@@ -83,7 +83,7 @@ impl Lexer {
                     tokens.push_back(Token::new(TokenKind::ColonColon, self.current_position));
                 }
                 ':' => tokens.push_back(Token::new(TokenKind::Colon, self.current_position)),
-                letter if ch.is_ascii_alphabetic() => {
+                letter if ch.is_ascii_alphabetic() || ch == '_' => {
                     tokens.push_back(self.make_word(letter, &mut iter))
                 }
                 _ => {
@@ -151,7 +151,7 @@ impl Lexer {
         while let Some(ch) = iter.peek() {
             if ch.is_ascii_whitespace() {
                 break;
-            } else if !ch.is_ascii_punctuation() {
+            } else if !ch.is_ascii_punctuation() || ch == &'_' {
                 word.push(self.advance(iter));
             } else {
                 break;
@@ -170,6 +170,7 @@ impl Lexer {
             "let" => Token::new(TokenKind::Let, initial_point),
             "if" => Token::new(TokenKind::If, initial_point),
             "else" => Token::new(TokenKind::Else, initial_point),
+            "define" => Token::new(TokenKind::Define, initial_point),
             _ => Token::new(TokenKind::Identifier(word), initial_point),
         }
     }

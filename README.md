@@ -88,3 +88,21 @@ Here is an example:
 > Did you notice that we used an expression without even knowing about it? The **Function Call** expression.
 
 The print function that we used to print messages earlier was actually an expression.
+
+A common question is how does one create their one functions? Well, this is where the **Define Expression** comes in handy.
+
+The Define Expression allows us to create functions with parameters and return values from those functions.
+
+Here is an example:
+```
+define f(x: Int) :: Int = x * 2
+```
+
+The define expression has multiple parts:
+1. The name of the function. In this case, the name is f
+2. The parameters. The parameters are enclosed in parenthesis and have the following format, name: type
+3. The return type. This is optional. If the return value is omitted, then the type Void is chosen.
+4. Finally, the expression. This is the code to execute when the function is called. Because this is an expression,
+   any previous expressions that you learned about work here. For example, a block expression can be used to have 
+   multiple lines of code. Within the block expression, another define expression may be created to have a function 
+   within a function. The possibilities are endless.

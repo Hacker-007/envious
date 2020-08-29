@@ -19,7 +19,7 @@ impl EnvyRepl {
         EnvyRepl {
             lexer: Lexer::default(),
             parser: None,
-            code_gen: CodeGenerator::new(false),
+            code_gen: CodeGenerator::new(false, vec![]),
             standard_library: StandardLibrary::new(),
             vm: None,
         }
@@ -40,12 +40,14 @@ impl Repl for EnvyRepl {
             self.parser.as_mut().unwrap()
         };
 
+        let mut type_checker = TypeChecker::new();
         let ast = parser
-            .parse(&self.standard_library)
+            .parse(&self.standard_library, &mut type_checker)
             .map_err(|error| prettify(stdout, error, text))?;
         
-        TypeChecker::new().perform_type_checking(&ast, &self.standard_library).map_err(|error| prettify(stdout, error, text))?;
+        type_checker.perform_type_checking(&ast, &self.standard_library).map_err(|error| prettify(stdout, error, text))?;
 
+        self.code_gen.user_defined_functions = type_checker.user_defined_functions.keys().cloned().collect::<Vec<_>>();
         let mut generated_code = String::new();
         for expression in ast.iter() {
             generated_code = format!("{}{}\n", generated_code, self.code_gen.compile_expression(expression, &self.standard_library, "").map_err(|error| prettify(stdout, error, text))?);

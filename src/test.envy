@@ -1,1 +1,12 @@
-println(println("Hello, World!"))
+define check_if_true(value: Boolean) = {
+    if value {
+        println('Hi.')
+    }
+
+    if value = false {
+        println('Bye.')
+    }
+}
+
+check_if_true(true)
+check_if_true(false)

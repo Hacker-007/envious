@@ -50,17 +50,19 @@ fn run(contents: &str, path: &str, args: &Arguments) -> Result<String, String> {
     let tokens = Lexer::default()
         .lex(contents)
         .map_err(|error| error.prettify(contents))?;
-
+    
     let standard_library = StandardLibrary::new();
+    let mut type_checker = TypeChecker::new();
     let ast = Parser::new(tokens)
-        .parse(&standard_library)
+        .parse(&standard_library, &mut type_checker)
         .map_err(|error| error.prettify(contents))?;
 
-    TypeChecker::new()
+    
+    type_checker
         .perform_type_checking(&ast, &standard_library)
         .map_err(|error| error.prettify(contents))?;
 
-    CodeGenerator::new(args.format_output())
+    CodeGenerator::new(args.format_output(), type_checker.user_defined_functions.keys().cloned().collect())
         .generate_code(Some(&path.replace(".envy", ".dark")), ast, &standard_library)
         .map_err(|error| error.prettify(contents))
 }
