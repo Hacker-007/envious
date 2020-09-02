@@ -167,6 +167,7 @@ impl Lexer {
             "String" => Token::new(TokenKind::String, initial_point),
             "true" => Token::new(TokenKind::BooleanLiteral(true), initial_point),
             "false" => Token::new(TokenKind::BooleanLiteral(false), initial_point),
+            "not" => Token::new(TokenKind::Not, initial_point),
             "let" => Token::new(TokenKind::Let, initial_point),
             "if" => Token::new(TokenKind::If, initial_point),
             "else" => Token::new(TokenKind::Else, initial_point),

@@ -9,10 +9,9 @@
             end
 
             call __1__
-            push false
             push value
-            push eq pop pop
-            jmpf 33
+            push neq pop true
+            jmpf 31
             @__2__
                 push 'Bye.'
                 printn pop
@@ -23,4 +22,8 @@
 
         call __0__
     end
+    push true
+    call check_if_true pop
+    push false
+    call check_if_true pop
 end

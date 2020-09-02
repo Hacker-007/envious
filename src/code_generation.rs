@@ -268,6 +268,10 @@ impl CodeGenerator {
                 self.token_idx += 4;
                 format!("push -1\n{}push mul", indent)
             }
+            UnaryOperation::Not => {
+                self.token_idx += 4;
+                format!("push neq pop true")
+            }
         };
 
         Ok(format!(

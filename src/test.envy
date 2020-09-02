@@ -3,7 +3,7 @@ define check_if_true(value: Boolean) = {
         println('Hi.')
     }
 
-    if value = false {
+    if not value {
         println('Bye.')
     }
 }

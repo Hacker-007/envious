@@ -32,7 +32,8 @@ pub enum TokenKind {
     Comma,
     Colon,
     ColonColon,
-
+    
+    Not,
     Let,
     If,
     Else,
@@ -69,7 +70,8 @@ impl TokenKind {
             TokenKind::Comma => "Comma",
             TokenKind::Colon => "Colon",
             TokenKind::ColonColon => "Colon Colon",
-
+            
+            TokenKind::Not => "Not",
             TokenKind::Let => "Let Keyword",
             TokenKind::If => "If Keyword",
             TokenKind::Else => "Else Keyword",
@@ -108,6 +110,7 @@ impl TokenKind {
             TokenKind::Colon => 1,
             TokenKind::ColonColon => 2,
 
+            TokenKind::Not => 3,
             TokenKind::Let => 3,
             TokenKind::If => 2,
             TokenKind::Else => 4,
@@ -145,6 +148,7 @@ impl TokenKind {
             TokenKind::Colon => Classification::Punctuation(":".to_owned()),
             TokenKind::ColonColon => Classification::Punctuation("::".to_owned()),
             
+            TokenKind::Not => Classification::Keyword("not".to_owned()),
             TokenKind::Let => Classification::Keyword("let".to_owned()),
             TokenKind::If => Classification::Keyword("if".to_owned()),
             TokenKind::Else => Classification::Keyword("else".to_owned()),

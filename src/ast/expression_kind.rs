@@ -35,6 +35,7 @@ pub enum BinaryOperation {
 pub enum UnaryOperation {
     Positive,
     Negative,
+    Not,
 }
 
 #[derive(Debug)]

@@ -3,7 +3,7 @@
 
 use crate::std::function::Function;
 use std::collections::HashMap;
-use crate::{ast::{expression_kind::{BinaryOperation, ExpressionKind}, expression::Expression}, errors::{error_kind::ErrorKind, error::Error}};
+use crate::{ast::{expression_kind::{BinaryOperation, UnaryOperation, ExpressionKind}, expression::Expression}, errors::{error_kind::ErrorKind, error::Error}};
 use super::types::Types;
 use crate::std::standard_library::StandardLibrary;
 
@@ -106,12 +106,23 @@ impl TypeChecker {
                     }
                 }
             }
-            ExpressionKind::UnaryExpression(_, sub_expression) => {
-                match self.check_types(sub_expression, standard_library)? {
-                    Some(Types::Int) => Ok(Some(Types::Int)),
-                    Some(Types::Float) => Ok(Some(Types::Float)),
-                    Some(evaluated_type) => Err(Error::new(ErrorKind::TypeMismatch("An Int Or A Float".to_owned(), evaluated_type.into()), sub_expression.pos)),
-                    None => Err(Error::new(ErrorKind::Expected("An Int Or A Float".to_owned()), sub_expression.pos)),
+            ExpressionKind::UnaryExpression(operation, sub_expression) => {
+                match operation {
+                    UnaryOperation::Positive | UnaryOperation::Negative => {
+                        match self.check_types(sub_expression, standard_library)? {
+                            Some(Types::Int) => Ok(Some(Types::Int)),
+                            Some(Types::Float) => Ok(Some(Types::Float)),
+                            Some(evaluated_type) => Err(Error::new(ErrorKind::TypeMismatch("An Int Or A Float".to_owned(), evaluated_type.into()), sub_expression.pos)),
+                            None => Err(Error::new(ErrorKind::Expected("An Int Or A Float".to_owned()), sub_expression.pos)),
+                        }
+                    }
+                    UnaryOperation::Not => {
+                        match self.check_types(sub_expression, standard_library)? {
+                            Some(Types::Boolean) => Ok(Some(Types::Boolean)),
+                            Some(evaluated_type) => Err(Error::new(ErrorKind::TypeMismatch("A Boolean".to_owned(), evaluated_type.into()), sub_expression.pos)),
+                            None => Err(Error::new(ErrorKind::Expected("A Boolean".to_owned()), sub_expression.pos)),
+                        }
+                    }
                 }
             }
             ExpressionKind::BinaryEqualityExpression(_, left, right) => {

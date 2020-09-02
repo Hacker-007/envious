@@ -618,6 +618,14 @@ impl Parser {
                     pos,
                 ))
             }
+            Some((pos, TokenKind::Not)) => {
+                self.last_position = pos;
+                let value = self.parse_primary(standard_library, type_checker)?;
+                Ok(Expression::new(
+                    ExpressionKind::UnaryExpression(UnaryOperation::Not, Box::new(value)),
+                    pos,
+                ))
+            }
             Some((pos, TokenKind::LeftParenthesis)) => {
                 self.last_position = pos;
                 let expr = self.parse_expression(standard_library, type_checker)?;
