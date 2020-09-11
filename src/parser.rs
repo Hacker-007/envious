@@ -271,7 +271,7 @@ impl Parser {
                         self.last_position = left_pos;
                         let mut parameters = vec![];
                         let mut old_parameter_types = vec![];
-                        let mut return_type = Types::Void;
+                        let mut return_type = None;
                         if let Some((right_pos, TokenKind::RightParenthesis)) = self.tokens.front() {
                             self.last_position = *right_pos;
                             self.tokens.pop_front();
@@ -305,10 +305,10 @@ impl Parser {
                             self.last_position = *double_pos;
                             self.tokens.pop_front();
                             match self.tokens.pop_front() {
-                                Some((_, TokenKind::Int)) => return_type = Types::Int,
-                                Some((_, TokenKind::Float)) => return_type = Types::Float,
-                                Some((_, TokenKind::Boolean)) => return_type = Types::Boolean,
-                                Some((_, TokenKind::String)) => return_type = Types::String,
+                                Some((_, TokenKind::Int)) => return_type = Some(Types::Int),
+                                Some((_, TokenKind::Float)) => return_type = Some(Types::Float),
+                                Some((_, TokenKind::Boolean)) => return_type = Some(Types::Boolean),
+                                Some((_, TokenKind::String)) => return_type = Some(Types::String),
                                 Some((pos, kind)) => {
                                     return Err(Error::new(
                                         ErrorKind::TypeMismatch("A Type".to_owned(), kind.get_name()),
@@ -342,6 +342,10 @@ impl Parser {
                         }
                 
                         let expression = self.parse_expression(standard_library, type_checker)?;
+                        if return_type.is_none() {
+                            return_type = type_checker.check_types(&expression, standard_library)?;
+                        }
+
                         for parameter in &parameters {
                             self.identifier_mapping.remove(&parameter.name);
                         }
@@ -361,13 +365,13 @@ impl Parser {
                                         .iter()
                                         .map(|parameter| parameter.expected_type)
                                         .collect(), 
-                                    return_type, 
+                                    return_type.unwrap_or(Types::Void), 
                                     None
                                 )
                             );
 
                         Ok(Expression::new(
-                            ExpressionKind::DefineExpression(name, parameters, Box::new(expression), return_type),
+                            ExpressionKind::DefineExpression(name, parameters, Box::new(expression), return_type.unwrap_or(Types::Void)),
                             pos,
                         ))
                     }

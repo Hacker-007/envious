@@ -7,4 +7,9 @@ end
 push 1
 push 1
 call perform_math pop pop
+set x pop
+push 1
+push x
+push add
+printn pop
 end

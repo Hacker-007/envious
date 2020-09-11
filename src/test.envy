@@ -1,3 +1,4 @@
 define perform_math(x: Int, y: Int) :: Int = x * y
 
-perform_math(1, 1)
+let x := perform_math(1, 1)
+println(x + true)
