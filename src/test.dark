@@ -1,29 +1,10 @@
 @main
-    @check_if_true #value
-        @__0__
-            push value
-            jmpf 15
-            @__1__
-                push 'Hi.'
-                printn pop
-            end
-
-            call __1__
-            push value
-            push neq pop true
-            jmpf 31
-            @__2__
-                push 'Bye.'
-                printn pop
-            end
-
-            call __2__
-        end
-
-        call __0__
-    end
-    push true
-    call check_if_true pop
-    push false
-    call check_if_true pop
+@perform_math #x #y
+push y
+push x
+push mul
+end
+push 1
+push 1
+call perform_math pop pop
 end

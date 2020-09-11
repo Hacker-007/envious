@@ -1,0 +1,7 @@
+Time To Compile Code:
+
+- Averaged After 10 Attempts
+- Same Code Used
+
+Pre-Optimized: 1189.80 microseconds
+Optimized    :  517.11 microseconds

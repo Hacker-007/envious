@@ -55,6 +55,12 @@ impl Lexer {
                 '-' => tokens.push_back(Token::new(TokenKind::Minus, self.current_position)),
                 '*' => tokens.push_back(Token::new(TokenKind::Star, self.current_position)),
                 '/' => tokens.push_back(Token::new(TokenKind::Slash, self.current_position)),
+                '%' => tokens.push_back(Token::new(TokenKind::PercentSign, self.current_position)),
+                '!' if iter.peek().map_or(false, |ch| ch == &'=') => {
+                    iter.next();
+                    self.current_position += 1;
+                    tokens.push_back(Token::new(TokenKind::ExclamationEqualSign, self.current_position));
+                }
                 '=' => tokens.push_back(Token::new(TokenKind::EqualSign, self.current_position)),
                 '(' => tokens.push_back(Token::new(
                     TokenKind::LeftParenthesis,
@@ -96,6 +102,11 @@ impl Lexer {
         }
 
         Ok(tokens)
+    }
+
+    /// Resets the lexer's position
+    pub fn reset(&mut self) {
+        self.current_position = 0;
     }
 
     /// This function produces an int, a float, or an error.
@@ -168,6 +179,8 @@ impl Lexer {
             "true" => Token::new(TokenKind::BooleanLiteral(true), initial_point),
             "false" => Token::new(TokenKind::BooleanLiteral(false), initial_point),
             "not" => Token::new(TokenKind::Not, initial_point),
+            "or" => Token::new(TokenKind::Or, initial_point),
+            "and" => Token::new(TokenKind::And, initial_point),
             "let" => Token::new(TokenKind::Let, initial_point),
             "if" => Token::new(TokenKind::If, initial_point),
             "else" => Token::new(TokenKind::Else, initial_point),

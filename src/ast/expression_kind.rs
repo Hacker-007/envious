@@ -29,6 +29,10 @@ pub enum BinaryOperation {
     Minus,
     Multiply,
     Divide,
+    Modulus,
+
+    Or,
+    And,
 }
 
 #[derive(Debug)]
@@ -41,6 +45,7 @@ pub enum UnaryOperation {
 #[derive(Debug)]
 pub enum BinaryEqualityOperation {
     Equals,
+    NotEquals,
 }
 
 #[derive(Debug)]

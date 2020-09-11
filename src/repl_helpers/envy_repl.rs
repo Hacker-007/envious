@@ -28,9 +28,12 @@ impl EnvyRepl {
 
 impl Repl for EnvyRepl {
     fn evaluate_submission(&mut self, stdout: &mut std::io::Stdout, text: &String) -> crossterm::Result<()> {
+        self.lexer.reset();
         let tokens = self.lexer
             .lex(text)
             .map_err(|error| prettify(stdout, error, text))?;
+        
+        println!("{:?}", &tokens);
         
         let parser = if let Some(ref mut p) = self.parser {
             p.with_tokens(tokens);

@@ -232,6 +232,41 @@ impl CodeGenerator {
             BinaryOperation::Minus => "sub",
             BinaryOperation::Multiply => "mul",
             BinaryOperation::Divide => "div",
+            BinaryOperation::Modulus => "mod",
+            BinaryOperation::Or => {
+                let compiled = format!(
+                    "{}\n{}rjmpt ",
+                    self.compile_expression(left, standard_library, indent)?,
+                    indent,
+                );
+
+                self.token_idx += 1;
+                let current = self.token_idx;
+                let compiled_expression = self.compile_expression(right, standard_library, indent)?;
+                return Ok(format!(
+                    "{}{}\n{}",
+                    compiled,
+                    self.token_idx - current,
+                    compiled_expression,
+                ));
+            }
+            BinaryOperation::And => {
+                let compiled = format!(
+                    "{}\n{}rjmpf ",
+                    self.compile_expression(left, standard_library, indent)?,
+                    indent,
+                );
+
+                self.token_idx += 1;
+                let current = self.token_idx;
+                let compiled_expression = self.compile_expression(right, standard_library, indent)?;
+                return Ok(format!(
+                    "{}{}\n{}",
+                    compiled,
+                    self.token_idx - current,
+                    compiled_expression,
+                ));
+            }
         };
 
         let compiled = format!(
@@ -302,6 +337,7 @@ impl CodeGenerator {
     ) -> Result<String, Error> {
         let operation_instruction = match operation {
             BinaryEqualityOperation::Equals => "eq",
+            BinaryEqualityOperation::NotEquals => "neq",
         };
 
         let compiled = format!(
@@ -397,7 +433,7 @@ impl CodeGenerator {
             "{}\n{}jmpf {}\n{}",
             compiled_condition,
             indent,
-            self.token_idx + 3,
+            self.token_idx + 2,
             compiled_expression
         );
 

@@ -57,7 +57,6 @@ fn run(contents: &str, path: &str, args: &Arguments) -> Result<String, String> {
         .parse(&standard_library, &mut type_checker)
         .map_err(|error| error.prettify(contents))?;
 
-    
     type_checker
         .perform_type_checking(&ast, &standard_library)
         .map_err(|error| error.prettify(contents))?;

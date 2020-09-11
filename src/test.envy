@@ -1,12 +1,3 @@
-define check_if_true(value: Boolean) = {
-    if value {
-        println('Hi.')
-    }
+define perform_math(x: Int, y: Int) :: Int = x * y
 
-    if not value {
-        println('Bye.')
-    }
-}
-
-check_if_true(true)
-check_if_true(false)
+perform_math(1, 1)

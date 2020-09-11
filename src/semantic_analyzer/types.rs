@@ -7,6 +7,7 @@ pub enum Types {
     Float,
     Boolean,
     String,
+    // Function
     
     Any,
     Void
@@ -19,6 +20,7 @@ impl Into<String> for Types {
             Types::Float => "A Float",
             Types::Boolean => "A Boolean",
             Types::String => "A String",
+            // Types::Function => "A Function",
             Types::Any => "An Any",
             Types::Void => "A Void",
         }.to_owned()

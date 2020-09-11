@@ -79,13 +79,6 @@ impl Parser {
                 self.last_position = *pos;
                 self.parse_let_expression(standard_library, type_checker)
             }
-            Some((_, TokenKind::Identifier(_)))
-                if self.tokens.get(1).map_or(false, |(_, kind)| {
-                    matches!(kind, TokenKind::LeftParenthesis)
-                }) =>
-            {
-                self.parse_function_call_expression(standard_library, type_checker)
-            }
             Some((_, TokenKind::LeftCurlyBrace)) => self.parse_block_expression(standard_library, type_checker),
             Some((pos, TokenKind::If)) => {
                 self.last_position = *pos;
@@ -144,8 +137,24 @@ impl Parser {
                     let value = self.parse_expression(standard_library, type_checker)?;
                     if !self.identifier_mapping.contains_key(&name) {
                         self.identifier_mapping.insert(name.clone(), type_checker.check_types(&value, standard_library)?.ok_or_else(|| Error::new(ErrorKind::Expected("A Non-Void Type".to_owned()), value.pos))?);
+                    } else {
+                        let defined_type = self.identifier_mapping.get(&name).unwrap();
+                        if let Some(value_type) = type_checker.check_types(&value, standard_library)? {
+                            if *defined_type != value_type {
+                                return Err(Error::new(
+                                    ErrorKind::TypeMismatch((*defined_type).into(), value_type.into()),
+                                    value.pos,
+                                ));
+                            }
+                        } else if *defined_type != Types::Void {
+                            return Err(Error::new(
+                                ErrorKind::Expected((*defined_type).into()),
+                                value.pos,
+                            ));
+                        }
                     }
 
+                    // println!("{:?}", &self.identifier_mapping);
                     Ok(Expression::new(
                         ExpressionKind::LetExpression(name, var_type.unwrap_or(Types::Any), Some(Box::new(value))),
                         pos,
@@ -173,13 +182,7 @@ impl Parser {
     }
 
     /// Parses a function call expression. This only has a single form to parse, so it is much cleaner.
-    fn parse_function_call_expression(&mut self, standard_library: &StandardLibrary, type_checker: &mut TypeChecker) -> Result<Expression, Error> {
-        let (pos, function_name) =
-            if let (pos, TokenKind::Identifier(function_name)) = self.tokens.pop_front().unwrap() {
-                (pos, function_name)
-            } else {
-                unreachable!()
-            };
+    fn parse_function_call_expression(&mut self, pos: usize, function_name: String, standard_library: &StandardLibrary, type_checker: &mut TypeChecker) -> Result<Expression, Error> {
         match self.tokens.pop_front() {
             Some((paren_pos, TokenKind::LeftParenthesis)) => {
                 self.last_position = paren_pos;
@@ -493,6 +496,10 @@ impl Parser {
                 self.last_position = *pos;
                 Ok((*pos, BinaryEqualityOperation::Equals))
             }
+            Some((pos, TokenKind::ExclamationEqualSign)) => {
+                self.last_position = *pos;
+                Ok((*pos, BinaryEqualityOperation::NotEquals))
+            }
             Some((pos, kind)) => Err(Error::new(
                 ErrorKind::TypeMismatch("An Equal Sign".to_owned(), kind.get_name()),
                 *pos,
@@ -530,12 +537,20 @@ impl Parser {
                 self.last_position = *pos;
                 Ok((*pos, BinaryOperation::Minus))
             }
+            Some((pos, TokenKind::Or)) => {
+                self.last_position = *pos;
+                Ok((*pos, BinaryOperation::Or))
+            }
+            Some((pos, TokenKind::And)) => {
+                self.last_position = *pos;
+                Ok((*pos, BinaryOperation::And))
+            }
             Some((pos, kind)) => Err(Error::new(
-                ErrorKind::TypeMismatch("A Plus Or Minus Operator".to_owned(), kind.get_name()),
+                ErrorKind::TypeMismatch("A Plus, Minus, Or, or And Operator".to_owned(), kind.get_name()),
                 *pos,
             )),
             None => Err(Error::new(
-                ErrorKind::Expected("A Plus Or Minus Operator".to_owned()),
+                ErrorKind::Expected("A Plus, Minus, Or, or And Operator".to_owned()),
                 self.last_position,
             )),
         }
@@ -567,12 +582,16 @@ impl Parser {
                 self.last_position = *pos;
                 Ok((*pos, BinaryOperation::Divide))
             }
+            Some((pos, TokenKind::PercentSign)) => {
+                self.last_position = *pos;
+                Ok((*pos, BinaryOperation::Modulus))
+            }
             Some((pos, kind)) => Err(Error::new(
-                ErrorKind::TypeMismatch("A Multiply Or Divide Operator".to_owned(), kind.get_name()),
+                ErrorKind::TypeMismatch("A Multiply, Divide, or Modulus Operator".to_owned(), kind.get_name()),
                 *pos,
             )),
             None => Err(Error::new(
-                ErrorKind::Expected("A Multiply Or Divide Operator".to_owned()),
+                ErrorKind::Expected("A Multiply, Divide, or Modulus Operator".to_owned()),
                 self.last_position,
             )),
         }
@@ -596,6 +615,13 @@ impl Parser {
             Some((pos, TokenKind::StringLiteral(value))) => {
                 self.last_position = pos;
                 Ok(Expression::new(ExpressionKind::String(value), pos))
+            }
+            Some((pos, TokenKind::Identifier(name)))
+                if self.tokens.front().map_or(false, |(_, kind)| {
+                    matches!(kind, TokenKind::LeftParenthesis)
+                }) =>
+            {
+                self.parse_function_call_expression(pos, name, standard_library, type_checker)
             }
             Some((pos, TokenKind::Identifier(name))) => {
                 self.last_position = pos;

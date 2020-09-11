@@ -102,6 +102,36 @@ impl TypeChecker {
                                     (Types::Float, Types::Float => Types::Float)
                                 )
                             }
+                            BinaryOperation::Modulus => {
+                                allowed_binary_types!(
+                                    "Modulus",
+                                    expression.pos,
+                                    left_type,
+                                    right_type,
+                                    (Types::Int, Types::Int => Types::Int),
+                                    (Types::Int, Types::Float => Types::Float),
+                                    (Types::Float, Types::Int => Types::Float),
+                                    (Types::Float, Types::Float => Types::Float)
+                                )
+                            }
+                            BinaryOperation::Or => {
+                                allowed_binary_types!(
+                                    "Or",
+                                    expression.pos,
+                                    left_type,
+                                    right_type,
+                                    (Types::Boolean, Types::Boolean => Types::Boolean)
+                                )
+                            }
+                            BinaryOperation::And => {
+                                allowed_binary_types!(
+                                    "And",
+                                    expression.pos,
+                                    left_type,
+                                    right_type,
+                                    (Types::Boolean, Types::Boolean => Types::Boolean)
+                                )
+                            }
                         }
                     }
                 }
@@ -136,6 +166,7 @@ impl TypeChecker {
             }
             ExpressionKind::ParenthesizedExpression(expression) => self.check_types(expression, standard_library),
             ExpressionKind::LetExpression(_, var_type, value) => {
+                // println!("{:?} {:?}", &var_type, &value);
                 match (var_type, value) {
                     (defined_type, Some(expr)) => {
                         match self.check_types(expr, standard_library)? {

@@ -25,10 +25,12 @@ pub fn runner<F: Fn(&str, &str, &Arguments) -> Result<String, String>>(
         let contents = fs::read_to_string(path)
             .map_err(|_| "An Error Occurred.\nThe Path Provided Is Not Valid.".to_owned())?;
         let start = Instant::now();
-        if let Err(error) = envy(&contents, path, &args) {
+        let result = envy(&contents, path, &args);
+        let elapsed = start.elapsed();
+        if let Err(error) = result {
             return Err(error);
         } else if args.show_time() {
-            println!("Time Taken: {:#?}", start.elapsed())
+            println!("Time Taken: {:#?}", elapsed)
         }
 
         Ok(())
