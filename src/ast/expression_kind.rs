@@ -19,7 +19,7 @@ pub enum ExpressionKind {
     LetExpression(String, Types, Option<Box<Expression>>),
     FunctionCallExpression(String, Vec<Expression>),
     BlockExpression(Vec<Expression>),
-    IfExpression(Box<Expression>, Box<Expression>),
+    IfExpression(Box<Expression>, Box<Expression>, Option<Box<Expression>>),
     DefineExpression(String, Vec<Parameter>, Box<Expression>, Types)
 }
 

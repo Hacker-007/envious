@@ -73,6 +73,13 @@ In the example above, the condition can be seen as 1 = 1. The action can be thou
 
 The only restriction is that the condition must result in a boolean value.
 
+What if you want to run an expression when the condition is false? Use the else part of the If Expression.
+
+Here is an example:
+```
+if 1 = 2 print('1 Is Equal To 2!') else print('1 Is Not Equal To 2!')
+```
+
 Sometimes, you want to run more than one line of code. In these cases, you can use the **Block Expression**.
 
 A Block Expression is just a bunch of expressions surrounded by a pair of curly braces.

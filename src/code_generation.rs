@@ -138,8 +138,8 @@ impl CodeGenerator {
             ExpressionKind::BlockExpression(expressions) => {
                 self.compile_block_expression(expressions, standard_library, indent)
             }
-            ExpressionKind::IfExpression(condition, expression) => {
-                self.compile_if_expression(condition, expression, standard_library, indent)
+            ExpressionKind::IfExpression(condition, expression, else_expression) => {
+                self.compile_if_expression(condition, expression, else_expression, standard_library, indent)
             }
             ExpressionKind::DefineExpression(name, parameters, expression, _) => {
                 self.compile_define_expression(name, parameters, expression, standard_library, indent)
@@ -196,7 +196,11 @@ impl CodeGenerator {
     /// `indent` - The current level of indent.
     fn compile_string_expression(&mut self, value: &str, indent: &str) -> Result<String, Error> {
         self.token_idx += 2;
-        Ok(format!("{}push '{}'", indent, value))
+        if value.contains("'") {
+            Ok(format!("{}push \"{}\"", indent, value))
+        } else {
+            Ok(format!("{}push '{}'", indent, value))
+        }
     }
 
     /// Converts the Identifier expression provided into a String.
@@ -423,21 +427,38 @@ impl CodeGenerator {
         &mut self,
         condition: &Expression,
         expression: &Expression,
+        else_expression: &Option<Box<Expression>>,
         standard_library: &StandardLibrary,
         indent: &str,
     ) -> Result<String, Error> {
         let compiled_condition = self.compile_expression(condition, standard_library, indent)?;
         let compiled_expression = self.compile_expression(expression, standard_library, indent)?;
 
-        let compiled_code = format!(
-            "{}\n{}jmpf {}\n{}",
-            compiled_condition,
-            indent,
-            self.token_idx + 2,
-            compiled_expression
-        );
+        let compiled_code = if let Some(else_expression) = else_expression {
+            self.token_idx += 4;
+            let current_token_idx = self.token_idx;
+            let compiled_else_expression = self.compile_expression(else_expression, standard_library, indent)?;
+            format!(
+                "{}\n{}jmpf {}\n{}\n{}jmp {}\n{}",
+                compiled_condition,
+                indent,
+                current_token_idx,
+                compiled_expression,
+                indent,
+                self.token_idx,
+                compiled_else_expression
+            )
+        } else {
+            self.token_idx += 2;
+            format!(
+                "{}\n{}jmpf {}\n{}",
+                compiled_condition,
+                indent,
+                self.token_idx,
+                compiled_expression
+            )
+        };
 
-        self.token_idx += 2;
         Ok(compiled_code)
     }
 
@@ -457,6 +478,7 @@ impl CodeGenerator {
         standard_library: &StandardLibrary,
         indent: &str,
     ) -> Result<String, Error> {
+        self.token_idx += 1;
         let compiled = format!(
             "{}@{} {}\n{}\n{}end",
             indent,
@@ -466,7 +488,7 @@ impl CodeGenerator {
             indent
         );
 
-        self.token_idx += 2;
+        self.token_idx += 1;
         Ok(compiled)
     }
 

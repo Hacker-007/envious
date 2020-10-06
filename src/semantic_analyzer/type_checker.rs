@@ -216,11 +216,23 @@ impl TypeChecker {
                     |_, expression| Ok(self.check_types(expression, standard_library)?)
                 )
             }
-            ExpressionKind::IfExpression(condition, expression) => {
+            ExpressionKind::IfExpression(condition, if_expression, else_expression) => {
                 match self.check_types(condition, standard_library)? {
                     None => Err(Error::new(ErrorKind::TypeMismatch(Types::Boolean.into(), Types::Void.into()), condition.pos)),
                     Some(condition_type) if condition_type != Types::Boolean => Err(Error::new(ErrorKind::TypeMismatch(Types::Boolean.into(), condition_type.into()), condition.pos)),
-                    Some(_) => self.check_types(expression, standard_library),
+                    Some(_) => if let Some(else_expression) = else_expression {
+                        let expression_type = self.check_types(if_expression, standard_library)?;
+                        let else_type = self.check_types(else_expression, standard_library)?;
+                        match (expression_type, else_type) {
+                            (None, None) => Ok(None),
+                            (None, Some(x)) => Err(Error::new(ErrorKind::TypeMismatch(Types::Void.into(), x.into()), else_expression.pos)),
+                            (Some(x), None) => Err(Error::new(ErrorKind::TypeMismatch(Types::Void.into(), x.into()), else_expression.pos)),
+                            (Some(x), Some(y)) if x != y => Err(Error::new(ErrorKind::TypeMismatch(x.into(), y.into()), else_expression.pos)),
+                            _ => Ok(expression_type)
+                        }
+                    } else {
+                        self.check_types(if_expression, standard_library)
+                    }
                 }
             }
             ExpressionKind::DefineExpression(_, _, expression, return_type) => {

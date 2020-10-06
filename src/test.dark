@@ -1,15 +1,24 @@
 @main
-@perform_math #x #y
-push y
-push x
-push mul
-end
-push 1
-push 1
-call perform_math pop pop
-set x pop
-push 1
-push x
-push add
-printn pop
+    @random #rand
+        push rand
+        jmpf 18
+        @__0__
+            push 'If.'
+            printn pop
+            push 'This is sooo cool'
+        end
+
+        call __0__
+        jmp 28
+        @__1__
+            push 'Else.'
+            printn pop
+            push 'This is cool!'
+        end
+
+        call __1__
+    end
+    push false
+    call random pop
+    print pop
 end

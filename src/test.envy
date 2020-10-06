@@ -1,4 +1,9 @@
-define perform_math(x: Int, y: Int) :: Int = x * y
+define random(rand: Boolean) = if rand {
+    println("If.")
+    "This is sooo cool"
+} else {
+    println("Else.")
+    "This is cool!"
+}
 
-let x := perform_math(1, 1)
-println(x + true)
+print(random(false))

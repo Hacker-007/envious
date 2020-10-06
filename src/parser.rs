@@ -255,8 +255,16 @@ impl Parser {
         let (pos, _) = self.tokens.pop_front().unwrap();
         let condition = self.parse_expression(standard_library, type_checker)?;
         let code = Box::new(self.parse_expression(standard_library, type_checker)?);
+        let else_expression = match self.tokens.front() {
+            Some((_, TokenKind::Else)) => {
+                self.tokens.pop_front();
+                Some(Box::new(self.parse_expression(standard_library, type_checker)?))
+            },
+            _ => None
+        };
+
         Ok(Expression::new(
-            ExpressionKind::IfExpression(Box::new(condition), code),
+            ExpressionKind::IfExpression(Box::new(condition), code, else_expression),
             pos,
         ))
     }
