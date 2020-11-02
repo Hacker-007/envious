@@ -4,9 +4,13 @@ expressions -> expression*
 
 expression -> let_expression 
             | function_call_expression
+            | if_expression
+            | define_expression
             | block_expression
             | equality_expression
-            | if_expression
+            
+
+identifier -> [a-zA-Z][a-zA-Z0-9]*
 
 let_expression -> "let" identifier (":=" expression)?
 
@@ -16,13 +20,22 @@ arguments -> argument ("," argument)*
 
 argument -> expression
 
+if_expression -> "if" expression expression ("else" expression)?
+
+define_expression -> "define" identifier "(" parameters ")" (":" type)? "=" expression
+
+parameters -> parameter ("," parameter)*
+
+parameter -> identifier ":" type
+
+type -> "Int"
+      | "Float"
+      | "Boolean"
+      | "String"
+
 block_expression -> "{" expression* "}"
 
-equality_expression -> term "=" term
-
-if_expression -> "if" expression block_expression ("else if" expression block_expression)* ("else" block_expression)?
-
-identifier -> [a-zA-Z][a-zA-Z0-9]*
+equality_expression -> term ("=" | "!=" | "<" | ">" | "<=" | ">=") term
 
 term -> factor (("+" | "-") factor)*
 
@@ -32,5 +45,6 @@ primary -> Int
          | Float
          | Boolean
          | String
+         | identifier
          | ("-" | "+") primary
          | "(" expression ")"

@@ -77,6 +77,24 @@ impl Lexer {
                     TokenKind::RightCurlyBrace,
                     self.current_position,
                 )),
+                '<' if iter.peek().map_or(false, |ch| ch == &'=') => {
+                    iter.next();
+                    self.current_position += 1;
+                    tokens.push_back(Token::new(TokenKind::LessThanEqualSign, self.current_position));
+                }
+                '<' => tokens.push_back(Token::new(
+                    TokenKind::LeftAngleBracket,
+                    self.current_position,
+                )),
+                '>' if iter.peek().map_or(false, |ch| ch == &'=') => {
+                    iter.next();
+                    self.current_position += 1;
+                    tokens.push_back(Token::new(TokenKind::GreaterThanEqualSign, self.current_position));
+                }
+                '>' => tokens.push_back(Token::new(
+                    TokenKind::RightAngleBracket,
+                    self.current_position,
+                )),
                 ',' => tokens.push_back(Token::new(TokenKind::Comma, self.current_position)),
                 ':' if iter.peek().map_or(false, |ch| ch == &'=') => {
                     iter.next();

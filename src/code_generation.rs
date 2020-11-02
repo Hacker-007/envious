@@ -342,6 +342,10 @@ impl CodeGenerator {
         let operation_instruction = match operation {
             BinaryEqualityOperation::Equals => "eq",
             BinaryEqualityOperation::NotEquals => "neq",
+            BinaryEqualityOperation::LessThan => "lt",
+            BinaryEqualityOperation::LessThanEqual => "lte",
+            BinaryEqualityOperation::GreaterThan => "gt",
+            BinaryEqualityOperation::GreaterThanEqual => "gte",
         };
 
         let compiled = format!(

@@ -512,6 +512,22 @@ impl Parser {
                 self.last_position = *pos;
                 Ok((*pos, BinaryEqualityOperation::NotEquals))
             }
+            Some((pos, TokenKind::LeftAngleBracket)) => {
+                self.last_position = *pos;
+                Ok((*pos, BinaryEqualityOperation::LessThan))
+            }
+            Some((pos, TokenKind::LessThanEqualSign)) => {
+                self.last_position = *pos;
+                Ok((*pos, BinaryEqualityOperation::LessThanEqual))
+            }
+            Some((pos, TokenKind::RightAngleBracket)) => {
+                self.last_position = *pos;
+                Ok((*pos, BinaryEqualityOperation::GreaterThan))
+            }
+            Some((pos, TokenKind::GreaterThanEqualSign)) => {
+                self.last_position = *pos;
+                Ok((*pos, BinaryEqualityOperation::GreaterThanEqual))
+            }
             Some((pos, kind)) => Err(Error::new(
                 ErrorKind::TypeMismatch("An Equal Sign".to_owned(), kind.get_name()),
                 *pos,

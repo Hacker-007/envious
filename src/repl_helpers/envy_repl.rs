@@ -33,8 +33,6 @@ impl Repl for EnvyRepl {
             .lex(text)
             .map_err(|error| prettify(stdout, error, text))?;
         
-        println!("{:?}", &tokens);
-        
         let parser = if let Some(ref mut p) = self.parser {
             p.with_tokens(tokens);
             p

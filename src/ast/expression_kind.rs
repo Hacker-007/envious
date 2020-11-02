@@ -46,6 +46,10 @@ pub enum UnaryOperation {
 pub enum BinaryEqualityOperation {
     Equals,
     NotEquals,
+    LessThan,
+    LessThanEqual,
+    GreaterThan,
+    GreaterThanEqual,
 }
 
 #[derive(Debug)]

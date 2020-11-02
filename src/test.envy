@@ -1,9 +1,6 @@
-define random(rand: Boolean) = if rand {
-    println("If.")
-    "This is sooo cool"
-} else {
-    println("Else.")
-    "This is cool!"
-}
+define repeat(s: String, n: Int) = s * n
+define repeat_with_seperator(s: String, sep: String, n: Int) = (s + sep) * (n - 1) + s
 
-print(random(false))
+let x := 'A'
+println(repeat(x, 3))
+println(repeat_with_seperator(x, " ", 3))
