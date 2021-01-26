@@ -1,6 +1,8 @@
+pub mod token;
+
 use crate::{error::Error, span::Span};
 
-use super::token::{Token, TokenKind};
+use self::token::{Token, TokenKind};
 
 type LexResult = Result<Token, Error>;
 
@@ -18,6 +20,89 @@ impl<'a> Lexer<'a> {
             index: 0,
             current_line: 1,
             current_column: 0,
+        }
+    }
+
+    pub fn get_tokens(&mut self) -> Result<Vec<Token>, Vec<Error>> {
+        let mut tokens = vec![];
+        let mut errors = vec![];
+        while let Some(byte) = self.next() {
+            match byte {
+            whitespace if whitespace.is_ascii_whitespace() => {
+                tokens.push((self.make_span(self.current_column), TokenKind::Whitespace));
+                if whitespace == b'\n' {
+                    self.current_line += 1;
+                    self.current_column = 0;
+                }
+            }
+            b'-' if self.peek().map_or(false, |digit| digit.is_ascii_digit()) => {
+                let start_column = self.current_column;
+                let digit: i64 = (self.next().unwrap() - b'0').into();
+                match self.form_number(-digit, start_column) {
+                    Ok(token) => tokens.push(token),
+                    Err(error) => errors.push(error),
+                }
+            }
+            digit if digit.is_ascii_digit() => match self.form_number((digit - b'0').into(), self.current_column) {
+                Ok(token) => tokens.push(token),
+                    Err(error) => errors.push(error),
+            },
+            string_start @ b'\'' | string_start @ b'"' => match self.form_string(string_start) {
+Ok(token) => tokens.push(token),
+                    Err(error) => errors.push(error),
+            },
+            letter if letter.is_ascii_alphabetic() || letter == b'_' => match self.form_word(letter as char) {
+Ok(token) => tokens.push(token),
+                    Err(error) => errors.push(error),
+            },
+            b'+' => tokens.push((self.make_span(self.current_column), TokenKind::Plus)),
+            b'-' => tokens.push((self.make_span(self.current_column), TokenKind::Minus)),
+            b'*' => tokens.push((self.make_span(self.current_column), TokenKind::Star)),
+            b'/' => tokens.push((self.make_span(self.current_column), TokenKind::Slash)),
+            b'%' => tokens.push((self.make_span(self.current_column), TokenKind::PercentSign)),
+            b'!' if self.peek() == Some(b'=') => {
+                let start_column = self.current_column;
+                self.next();
+                tokens.push((self.make_span(start_column), TokenKind::ExclamationEqualSign))
+            }
+            b'=' => tokens.push((self.make_span(self.current_column), TokenKind::EqualSign)),
+            b'(' => tokens.push((self.make_span(self.current_column), TokenKind::LeftParenthesis)),
+            b')' => tokens.push((self.make_span(self.current_column), TokenKind::RightParenthesis)),
+            b'{' => tokens.push((self.make_span(self.current_column), TokenKind::LeftCurlyBrace)),
+            b'}' => tokens.push((self.make_span(self.current_column), TokenKind::RightCurlyBrace)),
+            b'<' if self.peek() == Some(b'=') => {
+                let start_column = self.current_column;
+                self.next();
+                tokens.push((self.make_span(start_column), TokenKind::LessThanEqualSign))
+            }
+            b'<' => tokens.push((self.make_span(self.current_column), TokenKind::LeftAngleBracket)),
+            b'>' if self.peek() == Some(b'=') => {
+                let start_column = self.current_column;
+                self.next();
+                tokens.push((self.make_span(start_column), TokenKind::GreaterThanEqualSign))
+            }
+            b'>' => tokens.push((self.make_span(self.current_column), TokenKind::RightAngleBracket)),
+            b',' => tokens.push((self.make_span(self.current_column), TokenKind::Comma)),
+            b':' if self.peek() == Some(b'=') => {
+                let start_column = self.current_column;
+                self.next();
+                tokens.push((self.make_span(start_column), TokenKind::ColonEqualSign))
+            }
+            b':' if self.peek() == Some(b':') => {
+                let start_column = self.current_column;
+                self.next();
+                tokens.push((self.make_span(start_column), TokenKind::ColonColon))
+            }
+            b':' => tokens.push((self.make_span(self.current_column), TokenKind::Colon)),
+            b'\0' => break,
+            _ => errors.push(Error::UnrecognizedCharacter(self.make_span(self.current_column))),
+            }
+        }
+
+        if errors.len() != 0 {
+            Err(errors)
+        } else {
+            Ok(tokens)
         }
     }
 
@@ -83,7 +168,8 @@ impl<'a> Lexer<'a> {
         if !is_terminated {
             Err(Error::UnterminatedString(span))
         } else {
-            Ok((span, TokenKind::StringLiteral(string)))
+            // Ok((span, TokenKind::StringLiteral(string)))
+            Ok((span, TokenKind::StringLiteral(1)))
         }
     }
 
@@ -118,7 +204,8 @@ impl<'a> Lexer<'a> {
             "else" => Ok((self.make_span(start_column), TokenKind::Else)),
             "while" => Ok((self.make_span(start_column), TokenKind::While)),
             "define" => Ok((self.make_span(start_column), TokenKind::Define)),
-            _ => Ok((self.make_span(start_column), TokenKind::Identifier(word))),
+            // _ => Ok((self.make_span(start_column), TokenKind::Identifier(word))),
+            _ => Ok((self.make_span(start_column), TokenKind::Identifier(1))),
         }
     }
 
@@ -134,72 +221,5 @@ impl<'a> Lexer<'a> {
 
     fn make_span(&self, start_column: usize) -> Span {
         Span::new(self.current_line, start_column, self.current_line, self.current_column)
-    }
-}
-
-impl<'a> Iterator for Lexer<'a> {
-    type Item = LexResult;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.next()? {
-            whitespace if whitespace.is_ascii_whitespace() => {
-                let token = Some(Ok((self.make_span(self.current_column), TokenKind::Whitespace)));
-                if whitespace == b'\n' {
-                    self.current_line += 1;
-                    self.current_column = 0;
-                }
-
-                token
-            }
-            b'-' if self.peek().map_or(false, |digit| digit.is_ascii_digit()) => {
-                let start_column = self.current_column;
-                let digit: i64 = (self.next().unwrap() - b'0').into();
-                Some(self.form_number(-digit, start_column))
-            }
-            digit if digit.is_ascii_digit() => Some(self.form_number((digit - b'0').into(), self.current_column)),
-            string_start @ b'\'' | string_start @ b'"' => Some(self.form_string(string_start)),
-            letter if letter.is_ascii_alphabetic() || letter == b'_' => Some(self.form_word(letter as char)),
-            b'+' => Some(Ok((self.make_span(self.current_column), TokenKind::Plus))),
-            b'-' => Some(Ok((self.make_span(self.current_column), TokenKind::Minus))),
-            b'*' => Some(Ok((self.make_span(self.current_column), TokenKind::Star))),
-            b'/' => Some(Ok((self.make_span(self.current_column), TokenKind::Slash))),
-            b'%' => Some(Ok((self.make_span(self.current_column), TokenKind::PercentSign))),
-            b'!' if self.peek() == Some(b'=') => {
-                let start_column = self.current_column;
-                self.next();
-                Some(Ok((self.make_span(start_column), TokenKind::ExclamationEqualSign)))
-            }
-            b'=' => Some(Ok((self.make_span(self.current_column), TokenKind::EqualSign))),
-            b'(' => Some(Ok((self.make_span(self.current_column), TokenKind::LeftParenthesis))),
-            b')' => Some(Ok((self.make_span(self.current_column), TokenKind::RightParenthesis))),
-            b'{' => Some(Ok((self.make_span(self.current_column), TokenKind::LeftCurlyBrace))),
-            b'}' => Some(Ok((self.make_span(self.current_column), TokenKind::RightCurlyBrace))),
-            b'<' if self.peek() == Some(b'=') => {
-                let start_column = self.current_column;
-                self.next();
-                Some(Ok((self.make_span(start_column), TokenKind::LessThanEqualSign)))
-            }
-            b'<' => Some(Ok((self.make_span(self.current_column), TokenKind::LeftAngleBracket))),
-            b'>' if self.peek() == Some(b'=') => {
-                let start_column = self.current_column;
-                self.next();
-                Some(Ok((self.make_span(start_column), TokenKind::GreaterThanEqualSign)))
-            }
-            b'>' => Some(Ok((self.make_span(self.current_column), TokenKind::RightAngleBracket))),
-            b',' => Some(Ok((self.make_span(self.current_column), TokenKind::Comma))),
-            b':' if self.peek() == Some(b'=') => {
-                let start_column = self.current_column;
-                self.next();
-                Some(Ok((self.make_span(start_column), TokenKind::ColonEqualSign)))
-            }
-            b':' if self.peek() == Some(b':') => {
-                let start_column = self.current_column;
-                self.next();
-                Some(Ok((self.make_span(start_column), TokenKind::ColonColon)))
-            }
-            b':' => Some(Ok((self.make_span(self.current_column), TokenKind::Colon))),
-            b'\0' => None,
-            _ => Some(Err(Error::UnrecognizedCharacter(self.make_span(self.current_column)))),
-        }
     }
 }

@@ -2,7 +2,7 @@ use crate::span::Span;
 
 pub type Token = (Span, TokenKind);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TokenKind {
     Whitespace,
 
@@ -15,8 +15,8 @@ pub enum TokenKind {
     IntegerLiteral(i64),
     FloatLiteral(f64),
     BooleanLiteral(bool),
-    StringLiteral(String),
-    Identifier(String),
+    StringLiteral(usize),
+    Identifier(usize),
 
     LeftParenthesis,
     RightParenthesis,
