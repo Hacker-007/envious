@@ -1,6 +1,6 @@
 pub mod token;
 
-use crate::{error::Error, span::Span};
+use crate::{error::Error, interner::Interner, span::Span};
 
 use self::token::{Token, TokenKind};
 
@@ -25,7 +25,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn get_tokens(&mut self) -> (Vec<Token>, Vec<Error>) {
+    pub fn get_tokens(&mut self, interner: &mut Interner<String>) -> (Vec<Token>, Vec<Error>) {
         let mut tokens = vec![];
         let mut errors = vec![];
         while let Some(byte) = self.next() {
@@ -52,13 +52,13 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 string_start @ b'\'' | string_start @ b'"' => {
-                    match self.form_string(string_start) {
+                    match self.form_string(string_start, interner) {
                         Ok(token) => tokens.push(token),
                         Err(error) => errors.push(error),
                     }
                 }
                 letter if letter.is_ascii_alphabetic() || letter == b'_' => {
-                    match self.form_word(letter as char) {
+                    match self.form_word(letter as char, interner) {
                         Ok(token) => tokens.push(token),
                         Err(error) => errors.push(error),
                     }
@@ -181,7 +181,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn form_string(&mut self, string_start: u8) -> LexResult {
+    fn form_string(&mut self, string_start: u8, interner: &mut Interner<String>) -> LexResult {
         let (start_line, start_column) = (self.current_line, self.current_column);
         let mut string = String::new();
         let mut is_terminated = false;
@@ -206,12 +206,12 @@ impl<'a> Lexer<'a> {
         if !is_terminated {
             Err(Error::UnterminatedString(span))
         } else {
-            // Ok((span, TokenKind::StringLiteral(string)))
-            Ok((span, TokenKind::StringLiteral(1)))
+            let id = interner.insert(string);
+            Ok((span, TokenKind::StringLiteral(id)))
         }
     }
 
-    fn form_word(&mut self, letter: char) -> LexResult {
+    fn form_word(&mut self, letter: char, interner: &mut Interner<String>) -> LexResult {
         let start_column = self.current_column;
         let mut word = letter.to_string();
         while let Some(next) = self.peek() {
@@ -248,8 +248,10 @@ impl<'a> Lexer<'a> {
             "else" => Ok((self.make_span(start_column), TokenKind::Else)),
             "while" => Ok((self.make_span(start_column), TokenKind::While)),
             "define" => Ok((self.make_span(start_column), TokenKind::Define)),
-            // _ => Ok((self.make_span(start_column), TokenKind::Identifier(word))),
-            _ => Ok((self.make_span(start_column), TokenKind::Identifier(1))),
+            _ => {
+                let id = interner.insert(word);
+                Ok((self.make_span(start_column), TokenKind::Identifier(id)))
+            }
         }
     }
 
