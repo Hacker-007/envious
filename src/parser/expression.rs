@@ -11,18 +11,18 @@ pub enum ExpressionKind {
     Identifier(usize),
     Unary {
         operation: UnaryOperation,
-        expression: Box<Expression>
+        expression: Box<Expression>,
     },
     Binary {
         operation: BinaryOperation,
         left: Box<Expression>,
-        right:Box<Expression>
+        right: Box<Expression>,
     },
     If {
         condition: Box<Expression>,
         then_branch: Box<Expression>,
         else_branch: Box<Expression>,
-    }
+    },
 }
 
 #[derive(Debug)]

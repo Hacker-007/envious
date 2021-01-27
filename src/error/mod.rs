@@ -10,13 +10,13 @@ pub enum Error {
 
     ExpectedPrefixExpression {
         span: Span,
-        found_kind: TokenKind
+        found_kind: TokenKind,
     },
     ExpectedKind {
         span: Span,
         expected_kind: TokenKind,
         actual_kind: TokenKind,
-    }
+    },
 }
 
 impl Error {

@@ -1,3 +1,20 @@
-pub mod prefix_parselet;
+pub mod binary_operation_parselet;
+pub mod boolean_parselet;
+pub mod float_parselet;
+pub mod identifier_parselet;
+pub mod if_parselet;
 pub mod infix_parselet;
+pub mod int_parselet;
 pub mod precedence;
+pub mod prefix_operation_parselet;
+pub mod prefix_parselet;
+pub mod string_parselet;
+
+pub use binary_operation_parselet::BinaryOperationParselet;
+pub use boolean_parselet::BooleanParselet;
+pub use float_parselet::FloatParselet;
+pub use identifier_parselet::IdentifierParselet;
+pub use if_parselet::IfParselet;
+pub use int_parselet::IntParselet;
+pub use prefix_operation_parselet::PrefixOperationParselet;
+pub use string_parselet::StringParselet;

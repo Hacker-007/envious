@@ -2,9 +2,16 @@ use std::{iter::Peekable, vec::IntoIter};
 
 use expression::Expression;
 
-use crate::{error::Error, lexer::token::{Token, TokenKind}};
+use crate::{
+    error::Error,
+    lexer::token::{Token, TokenKind},
+};
 
-use self::parselets::{infix_parselet::{BinaryOperationParselet, InfixParselet}, precedence::Precedence, prefix_parselet::{BooleanParselet, FloatParselet, IdentifierParselet, IfParselet, IntParselet, PrefixOperationParselet, PrefixParselet, StringParselet}};
+use self::parselets::{
+    infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet,
+    BinaryOperationParselet, BooleanParselet, FloatParselet, IdentifierParselet, IfParselet,
+    IntParselet, PrefixOperationParselet, StringParselet,
+};
 
 pub mod expression;
 pub mod parselets;
@@ -20,7 +27,7 @@ impl Parser {
         }
     }
 
-    pub fn parse_program(&mut self) -> Result<Vec<Expression>, Vec<Error>> {
+    pub fn parse_program(&mut self) -> (Vec<Expression>, Vec<Error>) {
         let mut expressions = vec![];
         let mut errors = vec![];
         while self.tokens.peek().is_some() {
@@ -30,11 +37,7 @@ impl Parser {
             }
         }
 
-        if errors.len() != 0 {
-            Err(errors)
-        } else {
-            Ok(expressions)
-        }
+        (expressions, errors)
     }
 
     fn parse_expression(&mut self, precedence: usize) -> Result<Expression, Error> {
@@ -55,7 +58,9 @@ impl Parser {
             TokenKind::BooleanLiteral(_) => BooleanParselet.parse(self, token),
             TokenKind::StringLiteral(_) => StringParselet.parse(self, token),
             TokenKind::Identifier(_) => IdentifierParselet.parse(self, token),
-            TokenKind::Plus | TokenKind::Minus | TokenKind::Not => PrefixOperationParselet::new(Precedence::Unary).parse(self, token),
+            TokenKind::Plus | TokenKind::Minus | TokenKind::Not => {
+                PrefixOperationParselet::new(Precedence::Unary).parse(self, token)
+            }
             TokenKind::If => IfParselet.parse(self, token),
             _ => Err(Error::ExpectedPrefixExpression {
                 span: token.0,
@@ -66,8 +71,13 @@ impl Parser {
 
     fn parse_infix(&mut self, left: Expression, token: Token) -> Result<Expression, Error> {
         match token.1 {
-            TokenKind::Plus | TokenKind::Minus => BinaryOperationParselet::new(Precedence::Addition, false).parse(self, left, token),
-            TokenKind::Star | TokenKind::Slash => BinaryOperationParselet::new(Precedence::Multiplication, false).parse(self, left, token),
+            TokenKind::Plus | TokenKind::Minus => {
+                BinaryOperationParselet::new(Precedence::Addition, false).parse(self, left, token)
+            }
+            TokenKind::Star | TokenKind::Slash => {
+                BinaryOperationParselet::new(Precedence::Multiplication, false)
+                    .parse(self, left, token)
+            }
             _ => unreachable!(),
         }
     }
@@ -87,7 +97,7 @@ impl Parser {
     fn consume(&mut self) -> Result<Token, Error> {
         match self.tokens.next() {
             Some(token) => Ok(token),
-            None => Err(Error::UnexpectedEndOfInput)
+            None => Err(Error::UnexpectedEndOfInput),
         }
     }
 
@@ -99,22 +109,8 @@ impl Parser {
             Err(Error::ExpectedKind {
                 span: token.0,
                 expected_kind,
-                actual_kind: token.1, 
+                actual_kind: token.1,
             })
         }
-    }
-}
-
-impl Iterator for Parser {
-    type Item = Result<Expression, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while let Some((_, TokenKind::Whitespace)) = self.tokens.peek() {
-            self.next();
-        }
-
-        let next = self.tokens.peek()?;
-        println!("{:#?}", next);
-        Some(self.parse_expression(0))
     }
 }
