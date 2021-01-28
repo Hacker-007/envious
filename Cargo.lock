@@ -7,7 +7,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f92b72b8f03128773278bf74418b9205f3d2a12c39a61f92395f47af390c32bf"
 
 [[package]]
-name = "envious-upgraded"
+name = "dark"
+version = "0.1.0"
+
+[[package]]
+name = "envious"
 version = "0.1.0"
 dependencies = [
  "bimap",
