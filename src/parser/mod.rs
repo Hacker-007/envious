@@ -94,6 +94,10 @@ impl Parser {
         }
     }
 
+    fn peek(&mut self) -> Option<&Token> {
+        self.tokens.peek()
+    }
+
     fn consume(&mut self) -> Result<Token, Error> {
         match self.tokens.next() {
             Some(token) => Ok(token),

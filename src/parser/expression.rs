@@ -21,7 +21,7 @@ pub enum ExpressionKind {
     If {
         condition: Box<Expression>,
         then_branch: Box<Expression>,
-        else_branch: Box<Expression>,
+        else_branch: Option<Box<Expression>>,
     },
 }
 

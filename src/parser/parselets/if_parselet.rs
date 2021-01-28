@@ -15,14 +15,18 @@ impl PrefixParselet for IfParselet {
         let condition = parser.parse_expression(0)?;
         parser.expect(TokenKind::Then)?;
         let then_branch = parser.parse_expression(0)?;
-        parser.expect(TokenKind::Else)?;
-        let else_branch = parser.parse_expression(0)?;
+        let mut else_branch = None;
+        if let Some((_, TokenKind::Else)) = parser.peek() {
+            parser.consume().unwrap();
+            else_branch = Some(Box::new(parser.parse_expression(0)?));
+        }
+        
         Ok((
             token.0,
             ExpressionKind::If {
                 condition: Box::new(condition),
                 then_branch: Box::new(then_branch),
-                else_branch: Box::new(else_branch),
+                else_branch,
             },
         ))
     }
