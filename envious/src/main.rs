@@ -28,10 +28,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Vec<_>>();
     let (expressions, errors) = Parser::new(filtered_tokens).parse_program();
     errors.iter().for_each(|error| error.report_error());
-    for expression in expressions {
-        if let Err(error) = TypeChecker::analyze(&expression) {
+    for mut expression in expressions {
+        if let Err(error) = TypeChecker::analyze(&mut interner, &mut expression) {
             error.report_error();
         }
+
+        println!("{:#?}", expression);
     }
 
     Ok(())

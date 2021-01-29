@@ -32,7 +32,12 @@ pub enum Error {
         first_type: Type,
         second_span: Span,
         second_type: Type,
-    }
+    },
+    IllegalCast {
+        span: Span,
+        from_type: Type,
+        to_type: Type,
+    },
 }
 
 impl Error {
