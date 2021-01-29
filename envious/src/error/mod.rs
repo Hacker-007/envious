@@ -1,4 +1,4 @@
-use crate::{lexer::token::TokenKind, span::Span};
+use crate::{lexer::token::TokenKind, semantic_analyzer::types::Type, span::Span};
 
 #[derive(Debug)]
 pub enum Error {
@@ -17,6 +17,22 @@ pub enum Error {
         expected_kind: TokenKind,
         actual_kind: TokenKind,
     },
+
+    UnsupportedOperation {
+        operation_span: Span,
+        operands: Vec<(Span, Type)>,
+    },
+    TypeMismatch {
+        span: Span,
+        expected_type: Type,
+        actual_type: Type,
+    },
+    ConflictingType {
+        first_span: Span,
+        first_type: Type,
+        second_span: Span,
+        second_type: Type,
+    }
 }
 
 impl Error {

@@ -19,7 +19,10 @@ impl<T: Hash + Eq> Interner<T> {
     }
 }
 
-impl<T> Default for Interner<T> where T: Hash + Eq {
+impl<T> Default for Interner<T>
+where
+    T: Hash + Eq,
+{
     fn default() -> Self {
         Self {
             next_id: 0,

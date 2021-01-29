@@ -20,7 +20,7 @@ impl PrefixParselet for IfParselet {
             parser.consume().unwrap();
             else_branch = Some(Box::new(parser.parse_expression(0)?));
         }
-        
+
         Ok((
             token.0,
             ExpressionKind::If {
