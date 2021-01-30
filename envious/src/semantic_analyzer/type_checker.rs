@@ -1,8 +1,7 @@
 use crate::{
-    error::Error,
+    error::{Error, Span},
     interner::Interner,
     parser::expression::{BinaryOperation, Expression, ExpressionKind, UnaryOperation},
-    span::Span,
 };
 
 use super::{caster::Caster, types::Type};

@@ -1,4 +1,4 @@
-use crate::span::Span;
+use crate::error::Span;
 
 pub type Expression = (Span, ExpressionKind);
 

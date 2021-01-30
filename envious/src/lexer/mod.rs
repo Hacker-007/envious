@@ -1,16 +1,32 @@
 pub mod token;
 
-use crate::{error::Error, interner::Interner, span::Span};
+use crate::{error::Error, interner::Interner, error::Span};
 
 use self::token::{Token, TokenKind};
 
+/// Represents an internal type to simplify the code.
 type LexResult = Result<Token, Error>;
 
+/// Struct that transforms the input into a vector of tokens.
+/// The `Lexer` maintains operates on the slice of bytes to 
+/// diversify the possible sources of input to the program.
+/// 
+/// The `Lexer` follows a simple procedure: first, it gets
+/// and decodes the next byte; then, consecutive bytes of 
+/// the same token type are grouped together; finally, the
+/// `Token` is constructed.
 pub struct Lexer<'a> {
+    // The name of the file currently being analyzed.
     file_name: String,
+    // The bytes of the file being analyzed.
     bytes: &'a [u8],
+    // The current index in the bytes slice.
     index: usize,
+    // The current line in the input.
+    // This, along with the current_column, is used to construct
+    // `Span` information.
     current_line: usize,
+    // The current column in the input.
     current_column: usize,
 }
 
@@ -25,6 +41,12 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Performs the lexical analysis process and constructs a vector of tokens or
+    /// a vector of errors. The `Interner` is used to cache different `String` literals
+    /// and minimizes the memory used.
+    ///
+    /// # Arguments
+    /// * `interner` - The `Interner` used to store different `String` literals.
     pub fn get_tokens(&mut self, interner: &mut Interner<String>) -> (Vec<Token>, Vec<Error>) {
         let mut tokens = vec![];
         let mut errors = vec![];
@@ -136,6 +158,13 @@ impl<'a> Lexer<'a> {
         (tokens, errors)
     }
 
+    /// Greedily walks through consecutive bytes and forms the largest possible number,
+    /// either an int or a float. There are two possible errors that can occur: both involve
+    /// forming a number that is greater than the highest possible value for the given type.
+    ///
+    /// # Arguments
+    /// * `digit` - The first digit of the number.
+    /// * `start_column` - The starting column of the number. This changes when dealing with negative numbers.
     fn form_number(&mut self, digit: i64, start_column: usize) -> LexResult {
         let mut number = digit;
         let mut floating_point: Option<i64> = None;
@@ -181,6 +210,13 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Greedily walks through consecutive bytes and forms the largest possible string.
+    /// A string can start with either a ' or a ". However, the string must end with the same
+    /// character that it started with.
+    ///
+    /// # Arguments
+    /// * `string_start` - The character with which the string started with.
+    /// * `interner` - The `Interner` which stores the different string literals.
     fn form_string(&mut self, string_start: u8, interner: &mut Interner<String>) -> LexResult {
         let (start_line, start_column) = (self.current_line, self.current_column);
         let mut string = String::new();
@@ -211,6 +247,12 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Greedily walks through consecutive bytes and forms the largest possible word.
+    /// This word may represent a type, a literal, or an identifier.
+    ///
+    /// # Arguments
+    /// * `leter` - The character with which the word started with.
+    /// * `interner` - The `Interner` which stores the different string literals.
     fn form_word(&mut self, letter: char, interner: &mut Interner<String>) -> LexResult {
         let start_column = self.current_column;
         let mut word = letter.to_string();
@@ -255,16 +297,24 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Peeks at the next byte without consuming it.
     fn peek(&self) -> Option<u8> {
         self.bytes.get(self.index).copied()
     }
 
+    /// Consumes the next byte and increment both the index and
+    /// the current column.
     fn next(&mut self) -> Option<u8> {
         self.index += 1;
         self.current_column += 1;
         self.bytes.get(self.index - 1).copied()
     }
 
+    /// Helper method that creates a `Span` based on
+    /// the start_column.
+    ///
+    /// # Arguments
+    /// `start_column` - The starting column of the `Token`.
     fn make_span(&self, start_column: usize) -> Span {
         Span::new(
             self.file_name.clone(),

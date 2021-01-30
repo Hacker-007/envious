@@ -2,12 +2,20 @@ use std::hash::Hash;
 
 use bimap::BiMap;
 
+/// Struct that caches values and provides a id
+/// to reference the value in the future.
 pub struct Interner<T: Hash + Eq> {
     next_id: usize,
     intern_map: BiMap<usize, T>,
 }
 
 impl<T: Hash + Eq> Interner<T> {
+    /// Inserts the given value in the `Interner`. If the value
+    /// already exists in the map, then the id of the value is 
+    /// returned.
+    ///
+    /// # Arguments
+    /// `value` - The value to insert into the map.
     pub fn insert(&mut self, value: T) -> usize {
         if let Some(id) = self.intern_map.get_by_right(&value) {
             *id
