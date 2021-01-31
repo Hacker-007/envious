@@ -6,9 +6,17 @@ use crate::{
 
 use super::{caster::Caster, types::Type};
 
+/// Struct that verifies the types of the expressions
+/// and ensures that the types of the program are sound. 
 pub struct TypeChecker;
 
 impl TypeChecker {
+    /// Analyzes the expression given and ensures that the
+    /// resultant types of the subexpressions match.
+    /// 
+    /// # Arguments
+    /// * `interner` - The `Interner` used to store all string literals.
+    /// * `expression` - The `Expression` to type check.
     pub fn analyze(
         interner: &mut Interner<String>,
         expression: &mut Expression,
@@ -55,6 +63,16 @@ impl TypeChecker {
         }
     }
 
+    /// Analyzes a unary expression for proper types.
+    /// This function checks the operator and the operand
+    /// to make sure that the operands can be applied to the
+    /// given operand.
+    ///
+    /// # Arguments
+    /// * `interner` - The `Interner` used to store all string literals.
+    /// * `operation_span` - The span of the operation.
+    /// * `operation` - The unary operation used.
+    /// * `expression` - The `Expression` that the unary operation was applied to.
     fn analyze_unary_expression(
         interner: &mut Interner<String>,
         operation_span: &Span,
@@ -90,6 +108,17 @@ impl TypeChecker {
         }
     }
 
+    /// Analyzes a binary expression for proper types.
+    /// This function checks the operator and the operands
+    /// to make sure that the operands can be applied to the
+    /// given operands.
+    ///
+    /// # Arguments
+    /// * `interner` - The `Interner` used to store all string literals.
+    /// * `operation_span` - The span of the operation.
+    /// * `operation` - The binary operation used.
+    /// * `left` - The left `Expression` that the binary operation was applied to.
+    /// * `right` - The right `Expression` that the binary operation was applied to.
     fn analyze_binary_expression(
         interner: &mut Interner<String>,
         operation_span: &Span,
@@ -237,6 +266,16 @@ impl TypeChecker {
         }
     }
 
+    /// Analyzes an if expression for proper types.
+    /// This function checks the condition and the two branches
+    /// to make sure that the condition results in a boolean type
+    /// and that the two branches match in type.
+    ///
+    /// # Arguments
+    /// * `interner` - The `Interner` used to store all string literals.
+    /// * `condition` - The `Expression` used as the condition to the if.
+    /// * `then_branch` - The `Expression` used for the then branch of the if.
+    /// * `else_branch` - The optional `Expression` used for the else branch of the if.
     fn analyze_if_expression(
         interner: &mut Interner<String>,
         condition: &mut Expression,

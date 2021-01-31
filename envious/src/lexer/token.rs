@@ -5,7 +5,7 @@ use crate::error::Span;
 /// and the kind of the token.
 pub type Token = (Span, TokenKind);
 
-/// Enum that details the differen types of tokens that can be produced
+/// Enum that details the different types of tokens that can be produced
 /// by the `Lexer`. The `TokenKind` should strive to only store types that
 /// are small in nature and any other types (i.e. String) should be stored in the
 /// `Interner`.

@@ -16,6 +16,11 @@ use self::parselets::{
 pub mod expression;
 pub mod parselets;
 
+/// Struct that transforms the vector of tokens into a vector of expressions.
+///
+/// The `Parser` uses a mixture of the Pratt parsing technique and the
+/// recursive descent algorithm. It achieves this through the mini parsers
+/// called parselets.
 pub struct Parser {
     tokens: Peekable<IntoIter<Token>>,
 }
@@ -27,6 +32,8 @@ impl Parser {
         }
     }
 
+    /// Walks through the tokens and constructs a program, or a vector
+    /// of expressions.
     pub fn parse_program(&mut self) -> (Vec<Expression>, Vec<Error>) {
         let mut expressions = vec![];
         let mut errors = vec![];
@@ -40,6 +47,11 @@ impl Parser {
         (expressions, errors)
     }
 
+    /// Parses a single expression. This function follows the Pratt parsing technique
+    /// to handle operator precedence and infix operations.
+    ///
+    /// # Arguments
+    /// * `precendence` - The current precedence to use when evaluating expressions.
     fn parse_expression(&mut self, precedence: usize) -> Result<Expression, Error> {
         let token = self.consume()?;
         let mut left = self.parse_prefix(token)?;
@@ -51,6 +63,12 @@ impl Parser {
         Ok(left)
     }
 
+    /// Parses a prefix expression by analyzing the type of the token.
+    /// This function looks through the kind of the token to determine which
+    /// parselet to use. Then, it runs the parselet and returns the result of the execution.
+    ///
+    /// # Arguments
+    /// * `token` - The token to parse into a prefix expression.
     fn parse_prefix(&mut self, token: Token) -> Result<Expression, Error> {
         match token.1 {
             TokenKind::IntegerLiteral(_) => IntParselet.parse(self, token),
@@ -69,6 +87,13 @@ impl Parser {
         }
     }
 
+    /// Parses an infix expression by analyzing the type of the token.
+    /// This function looks through the kind of the token to determine which
+    /// parselet to use. Then, it runs the parselet and returns the result of the execution.
+    ///
+    /// # Arguments
+    /// * `left` - The first part of the infix expression that was already parsed.
+    /// * `token` - The token to parse into a prefix expression.
     fn parse_infix(&mut self, left: Expression, token: Token) -> Result<Expression, Error> {
         match token.1 {
             TokenKind::Plus | TokenKind::Minus => {
@@ -82,6 +107,8 @@ impl Parser {
         }
     }
 
+    /// Analyzes the type of the next token without consuming i
+    /// and then returns the precedence associated with the token.
     fn get_precedence(&mut self) -> usize {
         if let Some((_, kind)) = self.tokens.peek() {
             match kind {
@@ -94,10 +121,15 @@ impl Parser {
         }
     }
 
+    /// Returns an immutable reference to the next token 
+    /// without consuming it.
     fn peek(&mut self) -> Option<&Token> {
         self.tokens.peek()
     }
 
+    /// Consumes the next token in the `token` iterator.
+    /// This function may result in an error if there are no
+    /// more token remaining, but one was requested.
     fn consume(&mut self) -> Result<Token, Error> {
         match self.tokens.next() {
             Some(token) => Ok(token),
@@ -105,6 +137,13 @@ impl Parser {
         }
     }
 
+    /// Consumes the next token and then verifies that the kind of the
+    /// token matches the expected_kind. This function results in an error
+    /// if there are no more tokens remaining or if the kind of the current token
+    /// does not match the expected_kind.
+    ///
+    /// # Arguments
+    /// * `expected_kind` - The kind expected of the next token.
     fn expect(&mut self, expected_kind: TokenKind) -> Result<Token, Error> {
         let token = self.consume()?;
         if token.1 == expected_kind {

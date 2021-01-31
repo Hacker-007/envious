@@ -8,7 +8,7 @@ use self::token::{Token, TokenKind};
 type LexResult = Result<Token, Error>;
 
 /// Struct that transforms the input into a vector of tokens.
-/// The `Lexer` maintains operates on the slice of bytes to 
+/// The `Lexer` operates on the slice of bytes to 
 /// diversify the possible sources of input to the program.
 /// 
 /// The `Lexer` follows a simple procedure: first, it gets

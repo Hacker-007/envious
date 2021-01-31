@@ -16,9 +16,19 @@ macro_rules! internal_cast {
     };
 }
 
+/// Struct that handles implicit casting between two types.
 pub struct Caster;
 
 impl Caster {
+    /// Casts the given expression from the starting_type to the
+    /// final_type. This operation modifies the given expression
+    /// in-place as opposed to creating a new expression.
+    ///
+    /// # Arguments
+    /// * `interner` - The `Interner` used to store all string literals.
+    /// * `expression` - The `Expression` to cast.
+    /// * `starting_type` - The starting type of the `Expression`.
+    /// * `final_type` - The final type of the `Expression`.
     pub fn cast(
         interner: &mut Interner<String>,
         (span, kind): &mut Expression,
