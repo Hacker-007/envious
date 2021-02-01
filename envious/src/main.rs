@@ -43,15 +43,16 @@ fn run_envy(file_name: &str, bytes: &[u8]) {
     let errors = TypeChecker::analyze_program(&mut interner, &mut expressions);
     handle_errors!(errors);
 
-    let context = Context::create();
-    let module = context.create_module("envious");
-    let builder = context.create_builder();
+    println!("{:#?}", expressions);
+    // let context = Context::create();
+    // let module = context.create_module("envious");
+    // let builder = context.create_builder();
 
-    let return_type = context.i64_type();
-    let main_function_type = return_type.fn_type(&[], false);
-    let main_function = Some(module.add_function("main", main_function_type, None));
-    let mut code_generator = CodeGenerator::new(&context, &module, &builder, &main_function);
-    if let Err(error) = code_generator.compile(&mut interner, &expressions) {
-        error.report_error();
-    }
+    // let return_type = context.i64_type();
+    // let main_function_type = return_type.fn_type(&[], false);
+    // let main_function = Some(module.add_function("main", main_function_type, None));
+    // let mut code_generator = CodeGenerator::new(&context, &module, &builder, &main_function);
+    // if let Err(error) = code_generator.compile(&mut interner, &expressions) {
+    //     error.report_error();
+    // }
 }

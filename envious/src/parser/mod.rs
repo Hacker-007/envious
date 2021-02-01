@@ -1,6 +1,7 @@
-use std::{iter::Peekable, vec::IntoIter};
+use std::{iter::Peekable, mem, vec::IntoIter};
 
 use expression::Expression;
+use parselets::LetParselet;
 
 use crate::{
     error::Error,
@@ -80,6 +81,7 @@ impl Parser {
                 PrefixOperationParselet::new(Precedence::Unary).parse(self, token)
             }
             TokenKind::If => IfParselet.parse(self, token),
+            TokenKind::Let => LetParselet.parse(self, token),
             _ => Err(Error::ExpectedPrefixExpression {
                 span: token.0,
                 found_kind: token.1,
@@ -146,12 +148,13 @@ impl Parser {
     /// * `expected_kind` - The kind expected of the next token.
     fn expect(&mut self, expected_kind: TokenKind) -> Result<Token, Error> {
         let token = self.consume()?;
-        if token.1 == expected_kind {
+        
+        if mem::discriminant(&token.1) == mem::discriminant(&expected_kind) {
             Ok(token)
         } else {
             Err(Error::ExpectedKind {
                 span: token.0,
-                expected_kind,
+                expected_kinds: vec![expected_kind],
                 actual_kind: token.1,
             })
         }

@@ -28,7 +28,7 @@ pub enum Error {
     // a different token was found.
     ExpectedKind {
         span: Span,
-        expected_kind: TokenKind,
+        expected_kinds: Vec<TokenKind>,
         actual_kind: TokenKind,
     },
 

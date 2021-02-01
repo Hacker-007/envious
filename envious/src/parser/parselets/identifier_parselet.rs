@@ -22,7 +22,7 @@ macro_rules! get {
 pub struct IdentifierParselet;
 impl PrefixParselet for IdentifierParselet {
     fn parse(&self, _: &mut Parser, token: Token) -> Result<Expression, Error> {
-        let name = get!(token, TokenKind::Identifier(value), value);
-        Ok((token.0, ExpressionKind::Identifier(name)))
+        let id = get!(token, TokenKind::Identifier(id), id);
+        Ok((token.0, ExpressionKind::Identifier(id)))
     }
 }

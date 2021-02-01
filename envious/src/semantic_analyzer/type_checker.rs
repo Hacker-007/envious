@@ -80,6 +80,16 @@ impl TypeChecker {
                 then_branch,
                 else_branch.as_mut(),
             ),
+            ExpressionKind::Let {
+                ref name,
+                ref given_type,
+                expression: ref mut sub_expression,
+            } => TypeChecker::analyze_let_expression(
+                interner,
+                name,
+                given_type,
+                sub_expression,
+            )
         }
     }
 
@@ -330,6 +340,39 @@ impl TypeChecker {
             }
         } else {
             Ok(Type::Void)
+        }
+    }
+
+    /// Analyzes a let expression for proper types.
+    /// This function checks the given type of the let expression and
+    /// the type of the resulting expression and makes sure
+    /// that they are the same.
+    ///
+    /// # Arguments
+    /// * `interner` - The `Interner` used to store all string literals.
+    /// * `name` - The id of the identifier used for the name.
+    /// * `given_type` - The `Type` assigned to the variable.
+    /// * `expression` - The `Expression` or value of this variable.
+    fn analyze_let_expression(
+        interner: &mut Interner<String>,
+        name: &(Span, usize),
+        given_type: &Option<Type>,
+        expression: &mut Expression,
+    ) -> Result<Type, Error> {
+        let value_type = TypeChecker::analyze(interner, expression)?;
+        if let Some(given_type) = given_type {
+            if given_type == &value_type {
+                Ok(value_type)
+            } else {
+                Err(Error::ConflictingType {
+                    first_span: name.0.clone(),
+                    first_type: *given_type,
+                    second_span: expression.0.clone(),
+                    second_type: value_type, 
+                })
+            }
+        } else {
+            Ok(value_type)
         }
     }
 }
