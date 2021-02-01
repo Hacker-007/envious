@@ -7,13 +7,33 @@ use crate::{
 use super::{caster::Caster, types::Type};
 
 /// Struct that verifies the types of the expressions
-/// and ensures that the types of the program are sound. 
+/// and ensures that the types of the program are sound.
 pub struct TypeChecker;
 
 impl TypeChecker {
+    /// Analyzes the entire program given and ensures that
+    /// each expression is valid.
+    ///
+    /// # Arguments
+    /// * `interner` - The `Interner` used to store all string literals.
+    /// * `expressions` - The `Expression`'s that constitute the program.
+    pub fn analyze_program(
+        interner: &mut Interner<String>,
+        program: &mut [Expression],
+    ) -> Vec<Error> {
+        let mut errors = vec![];
+        for expression in program {
+            if let Err(error) = TypeChecker::analyze(interner, expression) {
+                errors.push(error);
+            }
+        }
+
+        errors
+    }
+
     /// Analyzes the expression given and ensures that the
     /// resultant types of the subexpressions match.
-    /// 
+    ///
     /// # Arguments
     /// * `interner` - The `Interner` used to store all string literals.
     /// * `expression` - The `Expression` to type check.
@@ -309,7 +329,7 @@ impl TypeChecker {
                 Err(error)
             }
         } else {
-            Ok(then_type)
+            Ok(Type::Void)
         }
     }
 }

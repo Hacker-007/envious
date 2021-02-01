@@ -7,7 +7,7 @@ use crate::{
 /// Trait used by prefix parselets to parse different expressions.
 pub trait PrefixParselet {
     /// This method parses the given token into a prefix expression.
-    /// 
+    ///
     /// This method assumes that the token provided is the correct token for
     /// the given parselet. For example, the `IfParselet` expects that the
     /// token provided is the `If` token. If the proper token is not provided,

@@ -118,6 +118,13 @@ impl Caster {
                 *kind = new_expression;
             }
             Type::String => {}
+            Type::Void => {
+                return Some(Error::IllegalCast {
+                    span: span.clone(),
+                    from_type: Type::Void,
+                    to_type: final_type,
+                })
+            }
         }
 
         None

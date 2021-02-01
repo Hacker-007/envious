@@ -11,7 +11,7 @@ pub struct Interner<T: Hash + Eq> {
 
 impl<T: Hash + Eq> Interner<T> {
     /// Inserts the given value in the `Interner`. If the value
-    /// already exists in the map, then the id of the value is 
+    /// already exists in the map, then the id of the value is
     /// returned.
     ///
     /// # Arguments
@@ -24,6 +24,17 @@ impl<T: Hash + Eq> Interner<T> {
             self.next_id += 1;
             self.next_id - 1
         }
+    }
+
+    /// Gets the value in the `Interner` with the given id.
+    /// This function assumes that the id exists within the
+    /// `Interner`. Using this function without that check
+    /// will cause it to panic.
+    ///
+    /// # Arguments
+    /// * `id` - The id of the value in the `Interner`.
+    pub fn get(&self, id: usize) -> &T {
+        self.intern_map.get_by_left(&id).unwrap()
     }
 }
 

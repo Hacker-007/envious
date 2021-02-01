@@ -1,6 +1,6 @@
 pub mod token;
 
-use crate::{error::Error, interner::Interner, error::Span};
+use crate::{error::Error, error::Span, interner::Interner};
 
 use self::token::{Token, TokenKind};
 
@@ -8,11 +8,11 @@ use self::token::{Token, TokenKind};
 type LexResult = Result<Token, Error>;
 
 /// Struct that transforms the input into a vector of tokens.
-/// The `Lexer` operates on the slice of bytes to 
+/// The `Lexer` operates on the slice of bytes to
 /// diversify the possible sources of input to the program.
-/// 
+///
 /// The `Lexer` follows a simple procedure: first, it gets
-/// and decodes the next byte; then, consecutive bytes of 
+/// and decodes the next byte; then, consecutive bytes of
 /// the same token type are grouped together; finally, the
 /// `Token` is constructed.
 pub struct Lexer<'a> {

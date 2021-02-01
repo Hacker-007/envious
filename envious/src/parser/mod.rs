@@ -121,7 +121,7 @@ impl Parser {
         }
     }
 
-    /// Returns an immutable reference to the next token 
+    /// Returns an immutable reference to the next token
     /// without consuming it.
     fn peek(&mut self) -> Option<&Token> {
         self.tokens.peek()

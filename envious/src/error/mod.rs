@@ -1,8 +1,10 @@
 use crate::{lexer::token::TokenKind, semantic_analyzer::types::Type};
 
 /// Enum used by compiler to construct the various errors.
-/// Every error needs to keep a track of the span of the error,
-/// to provide a better representation when reported to the user.
+/// Every error needs to keep a track of the span of the error
+/// to provide a better representation when reported to the user,
+/// unless the error stems from the LLVM compiler, which is not
+/// derived from the user's code.
 #[derive(Debug)]
 pub enum Error {
     // Occurs when an integer that exceeeds the maximum possible value of an integer.
@@ -13,9 +15,9 @@ pub enum Error {
     UnterminatedString(Span),
     // Occurs when a character that is not recognized by the `Lexer`.
     UnrecognizedCharacter(Span),
-    
-    // Occurs when an expression was expected by the `Parser` but 
-    // there were no more tokens to inspect. 
+
+    // Occurs when an expression was expected by the `Parser` but
+    // there were no more tokens to inspect.
     UnexpectedEndOfInput,
     // Occurs when a token does not have a corresponding expression.
     ExpectedPrefixExpression {
@@ -42,7 +44,7 @@ pub enum Error {
         actual_type: Type,
     },
     // Occurs when the type of two branches do not match. For example, if the type
-    // of the then branch and the type of the else branch do not match, this error 
+    // of the then branch and the type of the else branch do not match, this error
     // is returned.
     ConflictingType {
         first_span: Span,
@@ -57,6 +59,9 @@ pub enum Error {
         from_type: Type,
         to_type: Type,
     },
+
+    /// Occurs when a function was expected during the LLVM compilation.
+    ExpectedFunction,
 }
 
 impl Error {

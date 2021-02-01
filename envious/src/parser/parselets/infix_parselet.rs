@@ -7,7 +7,7 @@ use crate::{
 pub trait InfixParselet {
     /// This method parses the given token and the expression into an
     /// infix expression.
-    /// 
+    ///
     /// This method assumes that the token and the expression provided
     /// are the correct token and expression for the given parselet.
     /// For example, the `BinaryOperationParselet` expects that the

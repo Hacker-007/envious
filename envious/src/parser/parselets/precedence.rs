@@ -1,6 +1,6 @@
 /// Enum that details the precedence for
 /// different expressions. This is used in the
-/// Pratt parsing algorithm utilized by the 
+/// Pratt parsing algorithm utilized by the
 /// `Parser`.
 pub enum Precedence {
     Constant,
