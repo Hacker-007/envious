@@ -37,7 +37,7 @@ pub enum ExpressionKind {
         name: (Span, usize),
         given_type: Option<Type>,
         expression: Box<Expression>,
-    }
+    },
 }
 
 /// Enum that details the different unary operations

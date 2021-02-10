@@ -1,3 +1,5 @@
+//! The compiler for the Envious programming language.
+
 use std::{fs, path::PathBuf};
 
 use codegen::CodeGenerator;

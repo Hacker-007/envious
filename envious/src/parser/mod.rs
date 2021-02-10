@@ -148,7 +148,7 @@ impl Parser {
     /// * `expected_kind` - The kind expected of the next token.
     fn expect(&mut self, expected_kind: TokenKind) -> Result<Token, Error> {
         let token = self.consume()?;
-        
+
         if mem::discriminant(&token.1) == mem::discriminant(&expected_kind) {
             Ok(token)
         } else {

@@ -84,12 +84,7 @@ impl TypeChecker {
                 ref name,
                 ref given_type,
                 expression: ref mut sub_expression,
-            } => TypeChecker::analyze_let_expression(
-                interner,
-                name,
-                given_type,
-                sub_expression,
-            )
+            } => TypeChecker::analyze_let_expression(interner, name, given_type, sub_expression),
         }
     }
 
@@ -368,7 +363,7 @@ impl TypeChecker {
                     first_span: name.0.clone(),
                     first_type: *given_type,
                     second_span: expression.0.clone(),
-                    second_type: value_type, 
+                    second_type: value_type,
                 })
             }
         } else {

@@ -1,7 +1,12 @@
-use crate::{error::Error, lexer::token::{Token, TokenKind}, parser::{
+use crate::{
+    error::Error,
+    lexer::token::{Token, TokenKind},
+    parser::{
         expression::{Expression, ExpressionKind},
         Parser,
-    }, semantic_analyzer::types::Type};
+    },
+    semantic_analyzer::types::Type,
+};
 
 use super::prefix_parselet::PrefixParselet;
 
@@ -30,11 +35,20 @@ impl PrefixParselet for LetParselet {
                     (_, TokenKind::Float) => Some(Type::Float),
                     (_, TokenKind::Boolean) => Some(Type::Boolean),
                     (_, TokenKind::String) => Some(Type::String),
-                    (span, actual_kind) => return Err(Error::ExpectedKind {
-                        span,
-                        expected_kinds: vec![TokenKind::Any, TokenKind::Void, TokenKind::Int, TokenKind::Float, TokenKind::Boolean, TokenKind::String],
-                        actual_kind,
-                    })
+                    (span, actual_kind) => {
+                        return Err(Error::ExpectedKind {
+                            span,
+                            expected_kinds: vec![
+                                TokenKind::Any,
+                                TokenKind::Void,
+                                TokenKind::Int,
+                                TokenKind::Float,
+                                TokenKind::Boolean,
+                                TokenKind::String,
+                            ],
+                            actual_kind,
+                        })
+                    }
                 }
             } else {
                 None
@@ -44,10 +58,13 @@ impl PrefixParselet for LetParselet {
         parser.expect(TokenKind::EqualSign)?;
         let expression = parser.parse_expression(0)?;
 
-        Ok((token.0, ExpressionKind::Let {
-            name: (identifier.0, id),
-            given_type,
-            expression: Box::new(expression),
-        }))
+        Ok((
+            token.0,
+            ExpressionKind::Let {
+                name: (identifier.0, id),
+                given_type,
+                expression: Box::new(expression),
+            },
+        ))
     }
 }

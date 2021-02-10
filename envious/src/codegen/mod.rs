@@ -57,7 +57,9 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> {
         let entry = self.context.append_basic_block(main_function, "entry");
         self.builder.position_at_end(entry);
         let last = expressions.iter().fold(
-            Ok(BasicValueEnum::IntValue(self.context.i64_type().const_int(0, false))),
+            Ok(BasicValueEnum::IntValue(
+                self.context.i64_type().const_int(0, false),
+            )),
             |_, expression| self.compile_expression(interner, expression),
         );
         let return_value: &dyn BasicValue<'ctx> = &last?;
@@ -120,7 +122,12 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> {
                 ref condition,
                 ref then_branch,
                 ref else_branch,
-            } => self.compile_if_expression(interner, condition, then_branch, else_branch.as_ref())?,
+            } => self.compile_if_expression(
+                interner,
+                condition,
+                then_branch,
+                else_branch.as_deref(),
+            )?,
             _ => todo!(),
         };
 
@@ -244,7 +251,7 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> {
         interner: &mut Interner<String>,
         condition: &Expression,
         then_branch: &Expression,
-        else_branch: Option<&Box<Expression>>,
+        else_branch: Option<&Expression>,
     ) -> Result<BasicValueEnum<'ctx>, Error> {
         let function = self.get_function()?;
         if let Some(else_branch) = else_branch {
@@ -253,7 +260,11 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> {
             let end_block = self.context.append_basic_block(function, "if_end");
 
             let condition = self.compile_expression(interner, condition)?;
-            self.builder.build_conditional_branch(condition.into_int_value(), then_block, else_block);
+            self.builder.build_conditional_branch(
+                condition.into_int_value(),
+                then_block,
+                else_block,
+            );
 
             self.builder.position_at_end(then_block);
             let then_branch = self.compile_expression(interner, then_branch)?;
@@ -270,16 +281,22 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> {
         } else {
             let then_block = self.context.append_basic_block(function, "if_true");
             let end_block = self.context.append_basic_block(function, "if_end");
-            
+
             let condition = self.compile_expression(interner, condition)?;
-            self.builder.build_conditional_branch(condition.into_int_value(), then_block, end_block);
+            self.builder.build_conditional_branch(
+                condition.into_int_value(),
+                then_block,
+                end_block,
+            );
 
             self.builder.position_at_end(then_block);
             self.compile_expression(interner, then_branch)?;
             self.builder.build_unconditional_branch(end_block);
 
             self.builder.position_at_end(end_block);
-            Ok(BasicValueEnum::IntValue(self.context.i64_type().const_zero()))
+            Ok(BasicValueEnum::IntValue(
+                self.context.i64_type().const_zero(),
+            ))
         }
     }
 
