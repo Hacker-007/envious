@@ -78,6 +78,7 @@ impl Error {
             Error::IntegerOverflow(span) => self.handle_integer_overflow(input, span),
             Error::FloatOverflow(span) => self.handle_float_overflow(input, span),
             Error::UnterminatedString(span) => self.handle_unterminated_string(input, span),
+            Error::UnrecognizedCharacter(span) => self.handle_unrecognized_character(input, span),
             error => todo!("{:#?}", error),
         }
     }
@@ -168,7 +169,7 @@ impl Error {
             label: Some("unterminated string"),
             annotation_type: AnnotationType::Error,
         });
-        
+
         let (source, start_column, end_column) = Error::construct_source(input, span);
         snippet.slices.push(Slice {
             source: &source,
@@ -182,11 +183,44 @@ impl Error {
             fold: true,
         });
 
-        let help = format!("try ending the string with a {}", source.chars().nth(0).unwrap());
+        let help = format!(
+            "try ending the string with a {}",
+            source.chars().next().unwrap()
+        );
         snippet.footer.push(Annotation {
             id: None,
             label: Some(&help),
             annotation_type: AnnotationType::Help,
+        });
+
+        let display_list = DisplayList::from(snippet);
+        println!("{}", display_list);
+    }
+
+    /// Handles an unrecognized character error.
+    ///
+    /// # Arguments
+    /// `input` - The source code or the input given to the compiler.
+    /// `span` - The span of this error.
+    fn handle_unrecognized_character(&self, input: &[u8], span: &Span) {
+        let mut snippet = self.generate_empty_snippet();
+        snippet.title = Some(Annotation {
+            id: None,
+            label: Some("unrecognized character"),
+            annotation_type: AnnotationType::Error,
+        });
+
+        let (source, start_column, end_column) = Error::construct_source(input, span);
+        snippet.slices.push(Slice {
+            source: &source,
+            line_start: span.line_start,
+            origin: Some(&span.file_name),
+            annotations: vec![SourceAnnotation {
+                label: "",
+                annotation_type: AnnotationType::Error,
+                range: (start_column, end_column),
+            }],
+            fold: true,
         });
 
         let display_list = DisplayList::from(snippet);
@@ -224,32 +258,28 @@ impl Error {
         if span_bytes.len() == 1 {
             span_bytes[0]
                 .iter()
+                .take(span.column_end)
                 .map(|byte| *byte as char)
                 .for_each(|char| {
                     constructed_string.push(char);
                 });
-            
+
             let end_column = constructed_string.len();
-            return (
-                constructed_string,
-                span.column_start - 1,
-                end_column,
-            )
+            return (constructed_string, span.column_start - 1, end_column);
         }
 
         let mut offset = 0;
-        for line_idx in 0..(span.line_end - 1) {
-            span_bytes[line_idx].iter()
+        for line in span_bytes.iter().take(span.line_end) {
+            line
+                .iter()
                 .map(|byte| *byte as char)
                 .for_each(|char| {
                     constructed_string.push(char);
                     offset += 1;
                 });
 
-            if !span_bytes[line_idx].is_empty() {
-                constructed_string.push('\n');
-                offset += 1;
-            }
+            constructed_string.push('\n');
+            offset += 1;
         }
 
         let mut end_column = offset;
@@ -264,11 +294,7 @@ impl Error {
             end_column -= 1;
         }
 
-        (
-            constructed_string,
-            span.column_start - 1,
-            end_column,
-        )
+        (constructed_string, span.column_start - 1, end_column)
     }
 }
 
