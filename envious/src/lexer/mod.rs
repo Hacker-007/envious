@@ -166,31 +166,16 @@ impl<'a> Lexer<'a> {
     /// * `digit` - The first digit of the number.
     /// * `start_column` - The starting column of the number. This changes when dealing with negative numbers.
     fn form_number(&mut self, digit: i64, start_column: usize) -> LexResult {
-        let mut number = digit;
-        let mut floating_point: Option<i64> = None;
+        let mut number = digit.to_string();
+        let mut seen_decimal_point = false;
         while let Some(next) = self.peek() {
             match next {
                 digit if digit.is_ascii_digit() => {
-                    if let Some(decimals) = floating_point {
-                        floating_point = Some(
-                            decimals
-                                .checked_mul(10)
-                                .ok_or_else(|| Error::FloatOverflow(self.make_span(start_column)))?
-                                .checked_add((digit - b'0').into())
-                                .ok_or_else(|| {
-                                    Error::FloatOverflow(self.make_span(start_column))
-                                })?,
-                        );
-                    } else {
-                        number = number
-                            .checked_mul(10)
-                            .ok_or_else(|| Error::IntegerOverflow(self.make_span(start_column)))?
-                            .checked_add((digit - b'0').into())
-                            .ok_or_else(|| Error::IntegerOverflow(self.make_span(start_column)))?;
-                    }
+                    number.push(digit.into());
                 }
-                b'.' if floating_point.is_none() => {
-                    floating_point = Some(0);
+                b'.' if !seen_decimal_point => {
+                    number.push('.');
+                    seen_decimal_point = true;
                 }
                 _ => break,
             }
@@ -199,14 +184,16 @@ impl<'a> Lexer<'a> {
         }
 
         let span = self.make_span(start_column);
-        if let Some(decimals) = floating_point {
-            let float = format!("{}.{}", number, decimals).parse();
-            match float {
+        if seen_decimal_point {
+            match number.parse::<f64>() {
                 Ok(float) => Ok((span, TokenKind::FloatLiteral(float))),
                 Err(_) => Err(Error::FloatOverflow(span)),
             }
         } else {
-            Ok((span, TokenKind::IntegerLiteral(number)))
+            match number.parse::<i64>() {
+                Ok(int) => Ok((span, TokenKind::IntegerLiteral(int))),
+                Err(_) => Err(Error::IntegerOverflow(span)),
+            }
         }
     }
 
@@ -228,6 +215,11 @@ impl<'a> Lexer<'a> {
                 break;
             } else {
                 string.push(next as char);
+                if next == b'\n' {
+                    self.current_line += 1;
+                    self.current_column = 0;
+                }
+
                 self.next();
             }
         }
@@ -239,6 +231,7 @@ impl<'a> Lexer<'a> {
             self.current_line,
             self.current_column,
         );
+
         if !is_terminated {
             Err(Error::UnterminatedString(span))
         } else {

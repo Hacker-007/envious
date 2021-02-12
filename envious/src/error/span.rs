@@ -4,15 +4,15 @@
 #[derive(Debug, Clone)]
 pub struct Span {
     // The name of the file.
-    file_name: String,
+    pub file_name: String,
     // The line where this span starts.
-    line_start: usize,
+    pub line_start: usize,
     // The column where this span starts.
-    column_start: usize,
+    pub column_start: usize,
     // The line where this span ends.
-    line_end: usize,
+    pub line_end: usize,
     // The column where this span ends.
-    column_end: usize,
+    pub column_end: usize,
 }
 
 impl Span {

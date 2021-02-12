@@ -128,7 +128,7 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> {
                 then_branch,
                 else_branch.as_deref(),
             )?,
-            _ => todo!(),
+            ref expression => todo!("{:#?}", expression),
         };
 
         Ok(value)

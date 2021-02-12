@@ -17,9 +17,12 @@ mod parser;
 mod semantic_analyzer;
 
 macro_rules! handle_errors {
-    ($errors: ident) => {
-        $errors.iter().for_each(|error| error.report_error());
-    };
+    ($errors: ident, $input: expr) => {{
+        $errors.iter().for_each(|error| error.report_error($input));
+        if $errors.len() != 0 {
+            return;
+        }
+    }};
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -33,17 +36,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn run_envy(file_name: &str, bytes: &[u8]) {
     let mut interner = Interner::default();
     let (tokens, errors) = Lexer::new(file_name.to_string(), bytes).get_tokens(&mut interner);
-    handle_errors!(errors);
+    handle_errors!(errors, bytes);
 
     let filtered_tokens = tokens
         .into_iter()
         .filter(|token| token.1 != TokenKind::Whitespace)
         .collect::<Vec<_>>();
     let (mut expressions, errors) = Parser::new(filtered_tokens).parse_program();
-    handle_errors!(errors);
+    handle_errors!(errors, bytes);
 
     let errors = TypeChecker::analyze_program(&mut interner, &mut expressions);
-    handle_errors!(errors);
+    handle_errors!(errors, bytes);
 
     let context = Context::create();
     let module = context.create_module("envious");
@@ -54,6 +57,6 @@ fn run_envy(file_name: &str, bytes: &[u8]) {
     let main_function = Some(module.add_function("main", main_function_type, None));
     let mut code_generator = CodeGenerator::new(&context, &module, &builder, &main_function);
     if let Err(error) = code_generator.compile(&mut interner, &expressions) {
-        error.report_error();
+        error.report_error(bytes);
     }
 }
