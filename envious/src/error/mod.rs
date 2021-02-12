@@ -221,6 +221,22 @@ impl Error {
             .collect::<Vec<_>>();
 
         let mut constructed_string = String::new();
+        if span_bytes.len() == 1 {
+            span_bytes[0]
+                .iter()
+                .map(|byte| *byte as char)
+                .for_each(|char| {
+                    constructed_string.push(char);
+                });
+            
+            let end_column = constructed_string.len();
+            return (
+                constructed_string,
+                span.column_start - 1,
+                end_column,
+            )
+        }
+
         let mut offset = 0;
         for line_idx in 0..(span.line_end - 1) {
             span_bytes[line_idx].iter()
@@ -230,20 +246,28 @@ impl Error {
                     offset += 1;
                 });
 
-            constructed_string.push('\n');
-            offset += 1;
+            if !span_bytes[line_idx].is_empty() {
+                constructed_string.push('\n');
+                offset += 1;
+            }
         }
 
-        span_bytes[span.line_end - 1][0..(span.column_end - 1)]
-            .iter()
-            .map(|byte| *byte as char)
-            .for_each(|char| constructed_string.push(char));
-            
+        let mut end_column = offset;
+        let line = span_bytes[span.line_end - 1];
+        if !line.is_empty() {
+            line[0..(span.column_end - 1)]
+                .iter()
+                .map(|byte| *byte as char)
+                .for_each(|char| constructed_string.push(char));
+            end_column += span.column_end - 1;
+        } else {
+            end_column -= 1;
+        }
 
         (
             constructed_string,
             span.column_start - 1,
-            offset + span.column_end - 1,
+            end_column,
         )
     }
 }
