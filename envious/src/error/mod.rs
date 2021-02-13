@@ -299,7 +299,7 @@ impl Error {
         }
 
         let mut offset = 0;
-        for line in span_bytes.iter().take(span.line_end) {
+        for line in span_bytes.iter().take(span.line_end - 1) {
             line.iter().map(|byte| *byte as char).for_each(|char| {
                 constructed_string.push(char);
                 offset += 1;
@@ -321,6 +321,8 @@ impl Error {
             end_column -= 1;
         }
 
+        dbg!(input);
+        dbg!(&constructed_string);
         (constructed_string, span.column_start - 1, end_column)
     }
 }
