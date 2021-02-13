@@ -3,10 +3,7 @@ use std::{iter::Peekable, mem, vec::IntoIter};
 use expression::Expression;
 use parselets::LetParselet;
 
-use crate::{
-    error::Error,
-    lexer::token::{Token, TokenKind},
-};
+use crate::{error::{Error, Span}, lexer::token::{Token, TokenKind}};
 
 use self::parselets::{
     infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet,
@@ -38,8 +35,9 @@ impl Parser {
     pub fn parse_program(&mut self) -> (Vec<Expression>, Vec<Error>) {
         let mut expressions = vec![];
         let mut errors = vec![];
-        while self.tokens.peek().is_some() {
-            match self.parse_expression(0) {
+        let dummy_span = Span::new(String::new(), 1, 1, 1, 1);
+        while let Some((_, _)) = self.tokens.peek() {
+            match self.parse_expression(0, &dummy_span) {
                 Ok(expression) => expressions.push(expression),
                 Err(error) => errors.push(error),
             }
@@ -53,11 +51,12 @@ impl Parser {
     ///
     /// # Arguments
     /// * `precendence` - The current precedence to use when evaluating expressions.
-    fn parse_expression(&mut self, precedence: usize) -> Result<Expression, Error> {
-        let token = self.consume()?;
+    /// * `span` - The `Span` of the current token.
+    fn parse_expression(&mut self, precedence: usize, span: &Span) -> Result<Expression, Error> {
+        let token = self.consume(span)?;
         let mut left = self.parse_prefix(token)?;
         while precedence < self.get_precedence() {
-            let token = self.consume()?;
+            let token = self.consume(&left.0)?;
             left = self.parse_infix(left, token)?;
         }
 
@@ -132,10 +131,13 @@ impl Parser {
     /// Consumes the next token in the `token` iterator.
     /// This function may result in an error if there are no
     /// more token remaining, but one was requested.
-    fn consume(&mut self) -> Result<Token, Error> {
+    ///
+    /// # Arguments
+    /// `span` - The `Span` of the previous token.
+    fn consume(&mut self, span: &Span) -> Result<Token, Error> {
         match self.tokens.next() {
             Some(token) => Ok(token),
-            None => Err(Error::UnexpectedEndOfInput),
+            None => Err(Error::UnexpectedEndOfInput(span.clone())),
         }
     }
 
@@ -146,8 +148,9 @@ impl Parser {
     ///
     /// # Arguments
     /// * `expected_kind` - The kind expected of the next token.
-    fn expect(&mut self, expected_kind: TokenKind) -> Result<Token, Error> {
-        let token = self.consume()?;
+    /// `span` - The `Span` of the previous token.
+    fn expect(&mut self, expected_kind: TokenKind, span: &Span) -> Result<Token, Error> {
+        let token = self.consume(span)?;
 
         if mem::discriminant(&token.1) == mem::discriminant(&expected_kind) {
             Ok(token)

@@ -21,7 +21,7 @@ pub enum Error {
 
     // Occurs when an expression was expected by the `Parser` but
     // there were no more tokens to inspect.
-    UnexpectedEndOfInput,
+    UnexpectedEndOfInput(Span),
     // Occurs when a token does not have a corresponding expression.
     ExpectedPrefixExpression {
         span: Span,
@@ -79,6 +79,7 @@ impl Error {
             Error::FloatOverflow(span) => self.handle_float_overflow(input, span),
             Error::UnterminatedString(span) => self.handle_unterminated_string(input, span),
             Error::UnrecognizedCharacter(span) => self.handle_unrecognized_character(input, span),
+            Error::UnexpectedEndOfInput(span) => self.handle_end_of_input(input, span),
             error => todo!("{:#?}", error),
         }
     }
@@ -207,6 +208,35 @@ impl Error {
         snippet.title = Some(Annotation {
             id: None,
             label: Some("unrecognized character"),
+            annotation_type: AnnotationType::Error,
+        });
+
+        let (source, start_column, end_column) = Error::construct_source(input, span);
+        snippet.slices.push(Slice {
+            source: &source,
+            line_start: span.line_start,
+            origin: Some(&span.file_name),
+            annotations: vec![SourceAnnotation {
+                label: "",
+                annotation_type: AnnotationType::Error,
+                range: (start_column, end_column),
+            }],
+            fold: true,
+        });
+
+        let display_list = DisplayList::from(snippet);
+        println!("{}", display_list);
+    }
+
+    /// Handles an unexpected end of input error.
+    ///
+    /// # Arguments
+    /// `input` - The source code or the input given to the compiler.
+    fn handle_end_of_input(&self, input: &[u8], span: &Span) {
+        let mut snippet = self.generate_empty_snippet();
+        snippet.title = Some(Annotation {
+            id: None,
+            label: Some("expected an expression"),
             annotation_type: AnnotationType::Error,
         });
 

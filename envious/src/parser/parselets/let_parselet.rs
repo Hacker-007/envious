@@ -23,18 +23,18 @@ macro_rules! get {
 pub struct LetParselet;
 impl PrefixParselet for LetParselet {
     fn parse(&self, parser: &mut Parser, token: Token) -> Result<Expression, Error> {
-        let identifier = parser.expect(TokenKind::Identifier(0))?;
+        let identifier = parser.expect(TokenKind::Identifier(0), &token.0)?;
         let id = get!(identifier, TokenKind::Identifier(id), id);
-        let given_type = {
+        let (given_type, type_span) = {
             if let Some((_, TokenKind::Colon)) = parser.peek() {
-                parser.consume()?;
-                match parser.consume()? {
-                    (_, TokenKind::Any) => None,
-                    (_, TokenKind::Void) => Some(Type::Void),
-                    (_, TokenKind::Int) => Some(Type::Int),
-                    (_, TokenKind::Float) => Some(Type::Float),
-                    (_, TokenKind::Boolean) => Some(Type::Boolean),
-                    (_, TokenKind::String) => Some(Type::String),
+                let (colon_span, _) = parser.consume(&identifier.0)?;
+                match parser.consume(&colon_span)? {
+                    (span, TokenKind::Any) => (None, Some(span)),
+                    (span, TokenKind::Void) => (Some(Type::Void), Some(span)),
+                    (span, TokenKind::Int) => (Some(Type::Int), Some(span)),
+                    (span, TokenKind::Float) => (Some(Type::Float), Some(span)),
+                    (span, TokenKind::Boolean) => (Some(Type::Boolean), Some(span)),
+                    (span, TokenKind::String) => (Some(Type::String), Some(span)),
                     (span, actual_kind) => {
                         return Err(Error::ExpectedKind {
                             span,
@@ -51,12 +51,18 @@ impl PrefixParselet for LetParselet {
                     }
                 }
             } else {
-                None
+                (None, None)
             }
         };
 
-        parser.expect(TokenKind::EqualSign)?;
-        let expression = parser.parse_expression(0)?;
+        let last_span = if let Some(_) = type_span {
+            type_span.as_ref().unwrap()
+        } else {
+            &identifier.0
+        };
+
+        let (equal_span, _) = parser.expect(TokenKind::EqualSign, last_span)?;
+        let expression = parser.parse_expression(0, &equal_span)?;
 
         Ok((
             token.0,

@@ -31,7 +31,7 @@ impl InfixParselet for BinaryOperationParselet {
         token: Token,
     ) -> Result<Expression, Error> {
         let right = parser
-            .parse_expression(self.precedence - if self.is_right_associative { 1 } else { 0 })?;
+            .parse_expression(self.precedence - if self.is_right_associative { 1 } else { 0 }, &token.0)?;
         let kind = match &token.1 {
             TokenKind::Plus => ExpressionKind::Binary {
                 operation: BinaryOperation::Plus,

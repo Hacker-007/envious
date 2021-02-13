@@ -12,13 +12,13 @@ use super::prefix_parselet::PrefixParselet;
 pub struct IfParselet;
 impl PrefixParselet for IfParselet {
     fn parse(&self, parser: &mut Parser, token: Token) -> Result<Expression, Error> {
-        let condition = parser.parse_expression(0)?;
-        parser.expect(TokenKind::Then)?;
-        let then_branch = parser.parse_expression(0)?;
+        let condition = parser.parse_expression(0, &token.0)?;
+        let (then_span, _) = parser.expect(TokenKind::Then, &condition.0)?;
+        let then_branch = parser.parse_expression(0, &then_span)?;
         let mut else_branch = None;
         if let Some((_, TokenKind::Else)) = parser.peek() {
-            parser.consume().unwrap();
-            else_branch = Some(Box::new(parser.parse_expression(0)?));
+            let (else_span, _) = parser.consume(&then_span)?;
+            else_branch = Some(Box::new(parser.parse_expression(0, &else_span)?));
         }
 
         Ok((
