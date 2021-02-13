@@ -300,13 +300,10 @@ impl Error {
 
         let mut offset = 0;
         for line in span_bytes.iter().take(span.line_end) {
-            line
-                .iter()
-                .map(|byte| *byte as char)
-                .for_each(|char| {
-                    constructed_string.push(char);
-                    offset += 1;
-                });
+            line.iter().map(|byte| *byte as char).for_each(|char| {
+                constructed_string.push(char);
+                offset += 1;
+            });
 
             constructed_string.push('\n');
             offset += 1;

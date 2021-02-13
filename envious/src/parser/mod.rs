@@ -3,7 +3,10 @@ use std::{iter::Peekable, mem, vec::IntoIter};
 use expression::Expression;
 use parselets::LetParselet;
 
-use crate::{error::{Error, Span}, lexer::token::{Token, TokenKind}};
+use crate::{
+    error::{Error, Span},
+    lexer::token::{Token, TokenKind},
+};
 
 use self::parselets::{
     infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet,
