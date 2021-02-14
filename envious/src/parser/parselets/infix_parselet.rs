@@ -20,7 +20,7 @@ pub trait InfixParselet {
     /// * `token` - The token associated with the given infix parselet.
     fn parse(
         &self,
-        parser: &mut Parser,
+        parser: &mut Parser<impl Iterator<Item = Token>>,
         left: Expression,
         token: Token,
     ) -> Result<Expression, Error>;

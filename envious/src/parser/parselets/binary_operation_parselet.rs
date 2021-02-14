@@ -26,7 +26,7 @@ impl BinaryOperationParselet {
 impl InfixParselet for BinaryOperationParselet {
     fn parse(
         &self,
-        parser: &mut Parser,
+        parser: &mut Parser<impl Iterator<Item = Token>>,
         left: Expression,
         token: Token,
     ) -> Result<Expression, Error> {

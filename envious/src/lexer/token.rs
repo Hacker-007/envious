@@ -11,7 +11,7 @@ pub type Token = (Span, TokenKind);
 /// `Interner`.
 #[derive(Debug, PartialEq)]
 pub enum TokenKind {
-    Whitespace,
+    Whitespace(char),
 
     Void,
     Any,

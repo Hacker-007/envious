@@ -36,8 +36,8 @@ fn run_envy(file_name: &str, input: String) {
 
     let filtered_tokens = tokens
         .into_iter()
-        .filter(|token| token.1 != TokenKind::Whitespace)
-        .collect::<Vec<_>>();
+        .filter(|token| !matches!(token.1, TokenKind::Whitespace(_)))
+        .peekable();
     let (mut expressions, errors) = Parser::new(filtered_tokens).parse_program();
     if errors.report(&error_reporter) {
         return;

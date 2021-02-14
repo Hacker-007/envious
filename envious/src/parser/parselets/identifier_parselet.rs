@@ -21,7 +21,7 @@ macro_rules! get {
 
 pub struct IdentifierParselet;
 impl PrefixParselet for IdentifierParselet {
-    fn parse(&self, _: &mut Parser, token: Token) -> Result<Expression, Error> {
+    fn parse(&self, _: &mut Parser<impl Iterator<Item = Token>>, token: Token) -> Result<Expression, Error> {
         let id = get!(token, TokenKind::Identifier(id), id);
         Ok((token.0, ExpressionKind::Identifier(id)))
     }

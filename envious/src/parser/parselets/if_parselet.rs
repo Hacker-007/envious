@@ -11,7 +11,7 @@ use super::prefix_parselet::PrefixParselet;
 
 pub struct IfParselet;
 impl PrefixParselet for IfParselet {
-    fn parse(&self, parser: &mut Parser, token: Token) -> Result<Expression, Error> {
+    fn parse(&self, parser: &mut Parser<impl Iterator<Item = Token>>, token: Token) -> Result<Expression, Error> {
         let condition = parser.parse_expression(0, &token.0)?;
         let (then_span, _) = parser.expect(TokenKind::Then, &condition.0)?;
         let then_branch = parser.parse_expression(0, &then_span)?;

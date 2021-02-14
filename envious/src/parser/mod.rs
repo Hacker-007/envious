@@ -1,4 +1,4 @@
-use std::{iter::Peekable, mem, vec::IntoIter};
+use std::{iter::Peekable, mem};
 
 use expression::Expression;
 use parselets::LetParselet;
@@ -22,14 +22,14 @@ pub mod parselets;
 /// The `Parser` uses a mixture of the Pratt parsing technique and the
 /// recursive descent algorithm. It achieves this through the mini parsers
 /// called parselets.
-pub struct Parser {
-    tokens: Peekable<IntoIter<Token>>,
+pub struct Parser<T: Iterator<Item = Token>> {
+    tokens: Peekable<T>,
 }
 
-impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
+impl<T: Iterator<Item = Token>> Parser<T> {
+    pub fn new(tokens: Peekable<T>) -> Self {
         Self {
-            tokens: tokens.into_iter().peekable(),
+            tokens,
         }
     }
 

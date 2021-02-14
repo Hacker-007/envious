@@ -95,11 +95,16 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> {
         expression: &Expression,
     ) -> Result<BasicValueEnum<'ctx>, Error> {
         let value = match expression.1 {
-            ExpressionKind::Int(value) => BasicValueEnum::IntValue(
-                self.context
+            ExpressionKind::Int(value) => {
+                let llvm_int = self.context
                     .i64_type()
-                    .const_int(value.abs() as u64, value < 0),
-            ),
+                    .const_int(value.abs() as u64, false);
+                if value < 0 {
+                    BasicValueEnum::IntValue(llvm_int.const_neg())
+                } else {
+                    BasicValueEnum::IntValue(llvm_int)
+                }
+            }
             ExpressionKind::Float(value) => {
                 BasicValueEnum::FloatValue(self.context.f64_type().const_float(value))
             }
