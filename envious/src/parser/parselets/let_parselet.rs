@@ -22,7 +22,11 @@ macro_rules! get {
 
 pub struct LetParselet;
 impl PrefixParselet for LetParselet {
-    fn parse(&self, parser: &mut Parser<impl Iterator<Item = Token>>, token: Token) -> Result<Expression, Error> {
+    fn parse(
+        &self,
+        parser: &mut Parser<impl Iterator<Item = Token>>,
+        token: Token,
+    ) -> Result<Expression, Error> {
         let identifier = parser.expect(TokenKind::Identifier(0), &token.0)?;
         let id = get!(identifier, TokenKind::Identifier(id), id);
         let (given_type, type_span) = {

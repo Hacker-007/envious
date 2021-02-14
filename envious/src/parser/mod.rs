@@ -28,9 +28,7 @@ pub struct Parser<T: Iterator<Item = Token>> {
 
 impl<T: Iterator<Item = Token>> Parser<T> {
     pub fn new(tokens: Peekable<T>) -> Self {
-        Self {
-            tokens,
-        }
+        Self { tokens }
     }
 
     /// Walks through the tokens and constructs a program, or a vector

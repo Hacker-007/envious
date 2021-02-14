@@ -22,7 +22,11 @@ impl PrefixOperationParselet {
 }
 
 impl PrefixParselet for PrefixOperationParselet {
-    fn parse(&self, parser: &mut Parser<impl Iterator<Item = Token>>, token: Token) -> Result<Expression, Error> {
+    fn parse(
+        &self,
+        parser: &mut Parser<impl Iterator<Item = Token>>,
+        token: Token,
+    ) -> Result<Expression, Error> {
         let operand = parser.parse_expression(self.precedence, &token.0)?;
         let kind = match &token.1 {
             TokenKind::Plus => return Ok(operand),

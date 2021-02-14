@@ -3,4 +3,5 @@
 members = [
     "dark",
     "envious",
+    "envious-cli",
 ]

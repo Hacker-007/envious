@@ -15,5 +15,9 @@ pub trait PrefixParselet {
     ///
     /// # Arguments
     /// * `token` - The token associated with the given prefix parselet.
-    fn parse(&self, parser: &mut Parser<impl Iterator<Item = Token>>, token: Token) -> Result<Expression, Error>;
+    fn parse(
+        &self,
+        parser: &mut Parser<impl Iterator<Item = Token>>,
+        token: Token,
+    ) -> Result<Expression, Error>;
 }

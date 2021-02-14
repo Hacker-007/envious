@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use codespan_reporting::{diagnostic::{Diagnostic, Label}, files::SimpleFiles, term::termcolor::{ColorChoice, StandardStream}};
+use codespan_reporting::{
+    diagnostic::{Diagnostic, Label},
+    files::SimpleFiles,
+    term::termcolor::{ColorChoice, StandardStream},
+};
 
 use super::{Error, Span};
 
@@ -23,10 +27,17 @@ impl<'a> ErrorReporter<'a> {
             file_ids.insert(name.to_string(), id);
         }
 
-        Self {
-            files,
-            file_ids,
-        }
+        Self { files, file_ids }
+    }
+
+    /// Adds a file to the input files.
+    ///
+    /// # Arguments
+    /// * `file_name` - THe name of the file.
+    /// * `source` - The source of the input.
+    pub fn add(&mut self, file_name: &'a str, source: String) {
+        let id = self.files.add(file_name, source);
+        self.file_ids.insert(file_name.to_string(), id);
     }
 
     /// Reports the error to the user. Note that this method does not consume the error.
@@ -38,33 +49,30 @@ impl<'a> ErrorReporter<'a> {
         let diagnostic = match error {
             Error::IntegerOverflow(span) => self.handle_integer_overflow(span),
             Error::FloatOverflow(span) => self.handle_float_overflow(span),
-            Error::UnterminatedString(span) => {
-                self.handle_unterminated_string(span)
-            }
-            Error::UnrecognizedCharacter(span) => {
-                self.handle_unrecognized_character(span)
-            }
+            Error::UnterminatedString(span) => self.handle_unterminated_string(span),
+            Error::UnrecognizedCharacter(span) => self.handle_unrecognized_character(span),
             Error::UnexpectedEndOfInput(span) => self.handle_end_of_input(span),
             error => todo!("{:#?}", error),
         };
 
         let writer = StandardStream::stderr(ColorChoice::Always);
         let config = codespan_reporting::term::Config::default();
-        codespan_reporting::term::emit(&mut writer.lock(), &config, &self.files, &diagnostic).unwrap();
+        codespan_reporting::term::emit(&mut writer.lock(), &config, &self.files, &diagnostic)
+            .unwrap();
     }
 
     /// Handles an integer overflow error.
     ///
     /// # Arguments
     /// `span` - The span of this error.
-    fn handle_integer_overflow(
-        &self,
-        span: &Span,
-    ) -> Diagnostic<usize> {
+    fn handle_integer_overflow(&self, span: &Span) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
             .with_message("integer overflowed")
-            .with_labels(vec![Label::primary(self.get_file_id(&span.file_name), start_column..end_column)])
+            .with_labels(vec![Label::primary(
+                self.get_file_id(&span.file_name),
+                start_column..end_column,
+            )])
             .with_notes(vec![format!(
                 "integers must be >= {} and <= {}",
                 i64::MIN,
@@ -76,14 +84,14 @@ impl<'a> ErrorReporter<'a> {
     ///
     /// # Arguments
     /// `span` - The span of this error.
-    fn handle_float_overflow(
-        &self,
-        span: &Span,
-    ) -> Diagnostic<usize> {
+    fn handle_float_overflow(&self, span: &Span) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
             .with_message("float overflow")
-            .with_labels(vec![Label::primary(self.get_file_id(&span.file_name), start_column..end_column)])
+            .with_labels(vec![Label::primary(
+                self.get_file_id(&span.file_name),
+                start_column..end_column,
+            )])
             .with_notes(vec![format!(
                 "floats must be >= {} and <= {}",
                 f64::MIN,
@@ -95,15 +103,19 @@ impl<'a> ErrorReporter<'a> {
     ///
     /// # Arguments
     /// `span` - The span of this error.
-    fn handle_unterminated_string(
-        &self,
-        span: &Span,
-    ) -> Diagnostic<usize> {
+    fn handle_unterminated_string(&self, span: &Span) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
-        let string_start = self.get_file_source(&span.file_name).chars().nth(start_column).unwrap();
+        let string_start = self
+            .get_file_source(&span.file_name)
+            .chars()
+            .nth(start_column)
+            .unwrap();
         Diagnostic::error()
             .with_message("unterminated string")
-            .with_labels(vec![Label::primary(self.get_file_id(&span.file_name), start_column..end_column)])
+            .with_labels(vec![Label::primary(
+                self.get_file_id(&span.file_name),
+                start_column..end_column,
+            )])
             .with_notes(vec![format!(
                 "try ending the string with a {}",
                 string_start
@@ -114,28 +126,28 @@ impl<'a> ErrorReporter<'a> {
     ///
     /// # Arguments
     /// `span` - The span of this error.
-    fn handle_unrecognized_character(
-        &self,
-        span: &Span,
-    ) -> Diagnostic<usize> {
+    fn handle_unrecognized_character(&self, span: &Span) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
             .with_message("unrecognized character")
-            .with_labels(vec![Label::primary(self.get_file_id(&span.file_name), start_column..end_column)])
+            .with_labels(vec![Label::primary(
+                self.get_file_id(&span.file_name),
+                start_column..end_column,
+            )])
     }
 
     /// Handles an unexpected end of input error.
     ///
     /// # Arguments
     /// `span` - The span of this error.
-    fn handle_end_of_input(
-        &self,
-        span: &Span,
-    ) -> Diagnostic<usize> {
+    fn handle_end_of_input(&self, span: &Span) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
             .with_message("expected an expression")
-            .with_labels(vec![Label::primary(self.get_file_id(&span.file_name), start_column..end_column)])
+            .with_labels(vec![Label::primary(
+                self.get_file_id(&span.file_name),
+                start_column..end_column,
+            )])
     }
 
     /// Takes the span of the error and

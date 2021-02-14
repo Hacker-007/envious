@@ -64,6 +64,6 @@ pub enum Error {
     ExpectedFunction,
 }
 
-pub mod span;
 pub mod reporter;
+pub mod span;
 pub use span::Span;

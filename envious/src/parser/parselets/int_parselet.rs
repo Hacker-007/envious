@@ -21,7 +21,11 @@ macro_rules! get {
 
 pub struct IntParselet;
 impl PrefixParselet for IntParselet {
-    fn parse(&self, _: &mut Parser<impl Iterator<Item = Token>>, token: Token) -> Result<Expression, Error> {
+    fn parse(
+        &self,
+        _: &mut Parser<impl Iterator<Item = Token>>,
+        token: Token,
+    ) -> Result<Expression, Error> {
         let value = get!(token, TokenKind::IntegerLiteral(value), value);
         Ok((token.0, ExpressionKind::Int(value)))
     }

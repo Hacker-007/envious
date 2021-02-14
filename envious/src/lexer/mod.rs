@@ -53,7 +53,10 @@ impl<'a> Lexer<'a> {
         while let Some(byte) = self.next() {
             match byte {
                 whitespace if whitespace.is_ascii_whitespace() => {
-                    tokens.push((self.make_span(self.current_column), TokenKind::Whitespace(whitespace as char)));
+                    tokens.push((
+                        self.make_span(self.current_column),
+                        TokenKind::Whitespace(whitespace as char),
+                    ));
                     if whitespace == b'\n' {
                         self.current_line += 1;
                         self.current_column = 0;
