@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use bimap::BiMap;
 
-/// Struct that caches values and provides a id
+/// Struct that caches values and provides an id
 /// to reference the value in the future.
 pub struct Interner<T: Hash + Eq> {
     next_id: usize,

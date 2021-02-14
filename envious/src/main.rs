@@ -3,6 +3,7 @@
 use std::{fs, path::PathBuf};
 
 use codegen::CodeGenerator;
+use error::reporter::{ErrorReporter, Reporter};
 use inkwell::context::Context;
 use interner::Interner;
 use lexer::{token::TokenKind, Lexer};
@@ -16,37 +17,36 @@ mod lexer;
 mod parser;
 mod semantic_analyzer;
 
-macro_rules! handle_errors {
-    ($errors: ident, $input: expr) => {{
-        $errors.iter().for_each(|error| error.report_error($input));
-        if $errors.len() != 0 {
-            return;
-        }
-    }};
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path: PathBuf = "envious/src/test.envy".into();
     let input = fs::read_to_string(&path)?;
     let file_name = path.file_name().unwrap().to_str().unwrap();
-    run_envy(file_name, input.as_bytes());
+    run_envy(file_name, input);
     Ok(())
 }
 
-fn run_envy(file_name: &str, bytes: &[u8]) {
+fn run_envy(file_name: &str, input: String) {
+    let error_reporter = ErrorReporter::new(vec![(file_name, input.clone())]);
     let mut interner = Interner::default();
+    let bytes = input.as_bytes();
     let (tokens, errors) = Lexer::new(file_name.to_string(), bytes).get_tokens(&mut interner);
-    handle_errors!(errors, bytes);
+    if errors.report(&error_reporter) {
+        return;
+    }
 
     let filtered_tokens = tokens
         .into_iter()
         .filter(|token| token.1 != TokenKind::Whitespace)
         .collect::<Vec<_>>();
     let (mut expressions, errors) = Parser::new(filtered_tokens).parse_program();
-    handle_errors!(errors, bytes);
+    if errors.report(&error_reporter) {
+        return;
+    }
 
     let errors = TypeChecker::analyze_program(&mut interner, &mut expressions);
-    handle_errors!(errors, bytes);
+    if errors.report(&error_reporter) {
+        return;
+    }
 
     let context = Context::create();
     let module = context.create_module("envious");
@@ -56,7 +56,5 @@ fn run_envy(file_name: &str, bytes: &[u8]) {
     let main_function_type = return_type.fn_type(&[], false);
     let main_function = Some(module.add_function("main", main_function_type, None));
     let mut code_generator = CodeGenerator::new(&context, &module, &builder, &main_function);
-    if let Err(error) = code_generator.compile(&mut interner, &expressions) {
-        error.report_error(bytes);
-    }
+    code_generator.compile(&mut interner, &expressions).report(&error_reporter);
 }
