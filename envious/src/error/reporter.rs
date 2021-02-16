@@ -33,7 +33,7 @@ impl<'a> ErrorReporter<'a> {
     /// Adds a file to the input files.
     ///
     /// # Arguments
-    /// * `file_name` - THe name of the file.
+    /// * `file_name` - The name of the file.
     /// * `source` - The source of the input.
     pub fn add(&mut self, file_name: &'a str, source: String) {
         let id = self.files.add(file_name, source);
@@ -214,40 +214,74 @@ impl<'a> ErrorReporter<'a> {
 
 /// Trait to provide blanket implementations for containers of errors.
 pub trait Reporter {
+    /// The value returned by the reporter once used.
+    type Output;
+
     /// Reports errors using a reference to the error reporter.
-    /// Return whether or not an error was reported.
+    /// Return the output if there were no errors.
     ///
     /// # Arguments
     /// `error_reporter` - The `ErrorReporter` reference to use to report errors.
-    fn report(&self, error_reporter: &ErrorReporter) -> bool;
+    fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output>;
 }
 
 impl Reporter for Vec<Error> {
-    fn report(&self, error_reporter: &ErrorReporter) -> bool {
-        for error in self {
+    type Output = ();
+
+    fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
+        for error in &self {
             error_reporter.report(error);
         }
 
-        self.len() != 0
+        if self.len() != 0 {
+            None
+        } else {
+            Some(())
+        }
+    }
+}
+
+impl<T> Reporter for (T, Vec<Error>) {
+    type Output = T;
+
+    fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
+        for error in &self.1 {
+            error_reporter.report(error);
+        }
+
+        if self.1.len() != 0 {
+            None
+        } else {
+            Some(self.0)
+        }
     }
 }
 
 impl Reporter for Option<Error> {
-    fn report(&self, error_reporter: &ErrorReporter) -> bool {
-        if let Some(error) = self {
+    type Output = ();
+
+    fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
+        if let Some(ref error) = self {
             error_reporter.report(error);
         }
 
-        self.is_some()
+        if self.is_some() {
+            None
+        } else {
+            Some(())
+        }
     }
 }
 
 impl<T> Reporter for Result<T, Error> {
-    fn report(&self, error_reporter: &ErrorReporter) -> bool {
-        if let Err(error) = self {
-            error_reporter.report(error);
-        }
+    type Output = T;
 
-        self.is_err()
+    fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
+        if let Err(ref error) = self {
+            error_reporter.report(error);
+            None
+        } else {
+            Some(self.unwrap())
+        }
     }
 }
