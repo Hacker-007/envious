@@ -24,6 +24,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     let mut error_reporter = ErrorReporter::new(vec![]);
     let mut interner = Interner::default();
+    let mut sources = vec![];
     for file in &options.files {
         if !file.exists() {
             println!(
@@ -34,12 +35,19 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         }
 
         let source = fs::read_to_string(&file)?;
+        sources.push(source);
+    }
+
+    for (file, source) in options.files.iter().zip(sources.iter()) {
         let file_name = file.file_name().unwrap().to_str().unwrap();
-        error_reporter.add(file_name, source.clone());
+        error_reporter.add(file_name, source);
         let bytes = source.as_bytes();
         let compilation_start = Instant::now();
         compile_code(&error_reporter, &mut interner, file_name.to_string(), bytes);
-        println!("Finished compiling code after {} seconds", compilation_start.elapsed().as_secs_f64());
+        println!(
+            "Finished full compilation process after {} seconds",
+            compilation_start.elapsed().as_secs_f64()
+        );
     }
 
     Ok(())

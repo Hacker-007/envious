@@ -6,25 +6,27 @@ use codespan_reporting::{
     term::termcolor::{ColorChoice, StandardStream},
 };
 
+use crate::lexer::token::TokenKind;
+
 use super::{Error, Span};
 
 /// Struct that handles reporting the different errors that occur.
 pub struct ErrorReporter<'a> {
     /// The files being reported.
-    files: SimpleFiles<&'a str, String>,
+    files: SimpleFiles<&'a str, &'a str>,
     /// The ids of the files compiled.
     /// This is used by the codespan_reporting crate.
     /// This map goes from the name of the file to its id.
-    file_ids: HashMap<String, usize>,
+    file_ids: HashMap<&'a str, usize>,
 }
 
 impl<'a> ErrorReporter<'a> {
-    pub fn new(input_files: Vec<(&'a str, String)>) -> Self {
+    pub fn new(input_files: Vec<(&'a str, &'a str)>) -> Self {
         let mut files = SimpleFiles::new();
         let mut file_ids = HashMap::new();
         for (name, source) in input_files {
             let id = files.add(name, source);
-            file_ids.insert(name.to_string(), id);
+            file_ids.insert(name, id);
         }
 
         Self { files, file_ids }
@@ -35,9 +37,9 @@ impl<'a> ErrorReporter<'a> {
     /// # Arguments
     /// * `file_name` - The name of the file.
     /// * `source` - The source of the input.
-    pub fn add(&mut self, file_name: &'a str, source: String) {
+    pub fn add(&mut self, file_name: &'a str, source: &'a str) {
         let id = self.files.add(file_name, source);
-        self.file_ids.insert(file_name.to_string(), id);
+        self.file_ids.insert(file_name, id);
     }
 
     /// Reports the error to the user. Note that this method does not consume the error.
@@ -52,6 +54,15 @@ impl<'a> ErrorReporter<'a> {
             Error::UnterminatedString(span) => self.handle_unterminated_string(span),
             Error::UnrecognizedCharacter(span) => self.handle_unrecognized_character(span),
             Error::UnexpectedEndOfInput(span) => self.handle_end_of_input(span),
+            Error::ExpectedPrefixExpression {
+                span,
+                found_kind: kind,
+            } => self.handle_expected_prefix_expression(span, kind),
+            Error::ExpectedKind {
+                span,
+                expected_kinds,
+                actual_kind
+            } => self.handle_expected_kind(span, expected_kinds, actual_kind),
             error => todo!("{:#?}", error),
         };
 
@@ -64,7 +75,7 @@ impl<'a> ErrorReporter<'a> {
     /// Handles an integer overflow error.
     ///
     /// # Arguments
-    /// `span` - The span of this error.
+    /// `span` - The `Span` of this error.
     fn handle_integer_overflow(&self, span: &Span) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
@@ -83,7 +94,7 @@ impl<'a> ErrorReporter<'a> {
     /// Handles a float overflow error.
     ///
     /// # Arguments
-    /// `span` - The span of this error.
+    /// `span` - The `Span` of this error.
     fn handle_float_overflow(&self, span: &Span) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
@@ -102,7 +113,7 @@ impl<'a> ErrorReporter<'a> {
     /// Handles an unterminated string error.
     ///
     /// # Arguments
-    /// `span` - The span of this error.
+    /// `span` - The `Span` of this error.
     fn handle_unterminated_string(&self, span: &Span) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
         let string_start = self
@@ -125,7 +136,7 @@ impl<'a> ErrorReporter<'a> {
     /// Handles an unrecognized character error.
     ///
     /// # Arguments
-    /// `span` - The span of this error.
+    /// `span` - The `Span` of this error.
     fn handle_unrecognized_character(&self, span: &Span) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
@@ -139,7 +150,7 @@ impl<'a> ErrorReporter<'a> {
     /// Handles an unexpected end of input error.
     ///
     /// # Arguments
-    /// `span` - The span of this error.
+    /// `span` - The `Span` of this error.
     fn handle_end_of_input(&self, span: &Span) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
@@ -148,6 +159,56 @@ impl<'a> ErrorReporter<'a> {
                 self.get_file_id(&span.file_name),
                 start_column..end_column,
             )])
+    }
+
+    /// Handles an expected prefix expression error.
+    ///
+    /// # Arguments
+    /// `span` - The `Span` of this error.
+    /// `kind` - The `TokenKind` found.
+    fn handle_expected_prefix_expression(
+        &self,
+        span: &Span,
+        kind: &TokenKind,
+    ) -> Diagnostic<usize> {
+        let (start_column, end_column) = self.construct_source(span);
+        Diagnostic::error()
+            .with_message("expected prefix expression")
+            .with_labels(vec![Label::primary(
+                self.get_file_id(&span.file_name),
+                start_column..end_column,
+            )
+            .with_message(format!(
+                "the token `{}` does not correspond to any prefix expression",
+                kind
+            ))])
+    }
+
+    /// Handles an expected kind error.
+    ///
+    /// # Arguments
+    /// `span` - The `Span` of this error.
+    /// `expected_kinds` - The `TokenKind`'s expected.
+    /// `actual_kind` - The `TokenKind` found.
+    fn handle_expected_kind(
+        &self,
+        span: &Span,
+        expected_kinds: &[TokenKind],
+        actual_kind: &TokenKind,
+    ) -> Diagnostic<usize> {
+        let (start_column, end_column) = self.construct_source(span);
+        let expected_kinds = expected_kinds
+            .iter()
+            .map(|kind| format!("{}", kind))
+            .collect::<Vec<_>>()
+            .join(", or ");
+        Diagnostic::error()
+            .with_message(format!("expected {}", expected_kinds))
+            .with_labels(vec![Label::primary(
+                self.get_file_id(&span.file_name),
+                start_column..end_column,
+            )
+            .with_message(format!("but found {}", actual_kind))])
     }
 
     /// Takes the span of the error and
@@ -174,7 +235,12 @@ impl<'a> ErrorReporter<'a> {
                 found_start = true;
                 continue;
             } else if current_line == span.line_end {
-                end_column += span.column_end;
+                if current_line != span.line_start {
+                    end_column += span.column_end;
+                } else if span.line_start == span.line_end {
+                    end_column += span.column_end - span.column_start;
+                }
+
                 break;
             }
 
