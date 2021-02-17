@@ -61,7 +61,7 @@ impl<'a> ErrorReporter<'a> {
             Error::ExpectedKind {
                 span,
                 expected_kinds,
-                actual_kind
+                actual_kind,
             } => self.handle_expected_kind(span, expected_kinds, actual_kind),
             error => todo!("{:#?}", error),
         };
@@ -315,7 +315,7 @@ impl<T> Reporter for (T, Vec<Error>) {
             error_reporter.report(error);
         }
 
-        if self.1.len() != 0 {
+        if !self.1.is_empty() {
             None
         } else {
             Some(self.0)
