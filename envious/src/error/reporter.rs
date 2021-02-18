@@ -6,7 +6,7 @@ use codespan_reporting::{
     term::termcolor::{ColorChoice, StandardStream},
 };
 
-use crate::lexer::token::TokenKind;
+use crate::{lexer::token::TokenKind, semantic_analyzer::types::Type};
 
 use super::{Error, Span};
 
@@ -63,7 +63,30 @@ impl<'a> ErrorReporter<'a> {
                 expected_kinds,
                 actual_kind,
             } => self.handle_expected_kind(span, expected_kinds, actual_kind),
-            error => todo!("{:#?}", error),
+            Error::UnsupportedOperation {
+                operation_span,
+                operands,
+            } => self.handle_unsupported_operation(operation_span, operands),
+            Error::TypeMismatch {
+                span,
+                expected_type,
+                actual_type,
+            } => self.handle_type_mismatch(span, expected_type, actual_type),
+            Error::ConflictingType {
+                first_span,
+                first_type,
+                second_span,
+                second_type,
+            } => self.handle_conflicting_type(first_span, first_type, second_span, second_type),
+            Error::IllegalCast {
+                span,
+                to_type,
+                from_type,
+            } => self.handle_illegal_cast(span, to_type, from_type),
+            Error::ExpectedFunction => {
+                println!("Expected a function to be selected when compiling to LLVM.");
+                return;
+            }
         };
 
         let writer = StandardStream::stderr(ColorChoice::Always);
@@ -209,6 +232,99 @@ impl<'a> ErrorReporter<'a> {
                 start_column..end_column,
             )
             .with_message(format!("but found {}", actual_kind))])
+    }
+
+    /// Handles an unsupported operation error.
+    ///
+    /// # Arguments
+    /// `operation_span` - The `Span` of this error.
+    /// `operands` - The `Span` and the `Type` of the operands.
+    fn handle_unsupported_operation(
+        &self,
+        operation_span: &Span,
+        operands: &[(Span, Type)],
+    ) -> Diagnostic<usize> {
+        let (operation_start, operation_end) = self.construct_source(operation_span);
+        let mut labels = vec![Label::primary(self.get_file_id(&operation_span.file_name), operation_start..operation_end)];
+        for operand in operands {
+            let (operand_start, operand_end) = self.construct_source(&operand.0);
+            labels.push(
+                Label::secondary(self.get_file_id(&operand.0.file_name), operand_start..operand_end)
+                    .with_message(format!("has a type of {}", operand.1))
+            )
+        }
+
+        Diagnostic::error()
+            .with_message("unsupported operation")
+            .with_labels(labels)
+    }
+
+    /// Handles a type mismatch error.
+    ///
+    /// # Arguments
+    /// `span` - The `Span` of this error.
+    /// `expected_type` - The `Type` expected.
+    /// `actual_type` - The `Type` found.
+    fn handle_type_mismatch(
+        &self,
+        span: &Span,
+        expected_type: &Type,
+        actual_type: &Type,
+    ) -> Diagnostic<usize> {
+        let (start_column, end_column) = self.construct_source(span);
+        Diagnostic::error()
+            .with_message("type mismatch")
+            .with_labels(vec![
+                Label::primary(self.get_file_id(&span.file_name), start_column..end_column)
+                    .with_message(format!("expected `{}` but found `{}`", expected_type, actual_type))
+            ])
+    }
+
+    /// Handles a conflicting type error.
+    ///
+    /// # Arguments
+    /// `first_span` - The `Span` of the first branch.
+    /// `first_type` - The `Type` of the first branch.
+    /// `second_span` - The `Span` of th second branch.
+    /// `second_type` - The `Type` of the second branch.
+    fn handle_conflicting_type(
+        &self,
+        first_span: &Span,
+        first_type: &Type,
+        second_span: &Span,
+        second_type: &Type,
+    ) -> Diagnostic<usize> {
+        let (first_start_column, first_end_column) = self.construct_source(first_span);
+        let (second_start_column, second_end_column) = self.construct_source(second_span);
+        Diagnostic::error()
+            .with_message("type conflict occurred")
+            .with_labels(vec![
+                Label::primary(self.get_file_id(&first_span.file_name), first_start_column..first_end_column)
+                    .with_message(format!("results in `{}`", first_type)),
+                Label::primary(self.get_file_id(&second_span.file_name), second_start_column..second_end_column)
+                    .with_message(format!("results in `{}`", second_type))
+            ])
+    }
+
+    /// Handles an illegal cast error.
+    ///
+    /// # Arguments
+    /// `span` - The `Span` of this error.
+    /// `from_type` - The from `Type` of the cast.
+    /// `to_type` - The to `Type` of the cast.
+    fn handle_illegal_cast(
+        &self,
+        span: &Span,
+        from_type: &Type,
+        to_type: &Type,
+    ) -> Diagnostic<usize> {
+        let (start_column, end_column) = self.construct_source(span);
+        Diagnostic::error()
+            .with_message("attempted to perform an illegal cast")
+            .with_labels(vec![
+                Label::primary(self.get_file_id(&span.file_name), start_column..end_column)
+                    .with_message(format!("tried to convert from `{}` to `{}`", from_type, to_type))
+            ])
     }
 
     /// Takes the span of the error and

@@ -1,1 +1,1 @@
-let x: aaaaaaaa = 123
+if true then 1 else 'test'
