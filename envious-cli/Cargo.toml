@@ -7,4 +7,3 @@ edition = "2018"
 [dependencies]
 structopt = "0.3.21"
 envious = { path = "../envious" }
-inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm10-0"] }

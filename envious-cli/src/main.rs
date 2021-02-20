@@ -1,14 +1,6 @@
 use std::{error::Error, fs, time::Instant};
 
-use envious::{
-    codegen::CodeGenerator,
-    error::reporter::{ErrorReporter, Reporter},
-    interner::Interner,
-    lexer::{token::TokenKind, Lexer},
-    parser::Parser,
-    semantic_analyzer::type_checker::TypeChecker,
-};
-use inkwell::context::Context;
+use envious::{codegen::Runner, error::reporter::{ErrorReporter, Reporter}, interner::Interner, lexer::{token::TokenKind, Lexer}, parser::Parser, semantic_analyzer::type_checker::TypeChecker};
 use options::Options;
 
 mod options;
@@ -76,16 +68,8 @@ fn compile_code(
         TypeChecker::analyze_program(interner, &mut ast)
     })?;
 
-    let context = Context::create();
-    let module = context.create_module("envious");
-    let builder = context.create_builder();
-
-    let return_type = context.i64_type();
-    let main_function_type = return_type.fn_type(&[], false);
-    let main_function = Some(module.add_function("main", main_function_type, None));
-
     time("compilation", &error_reporter, || {
-        CodeGenerator::new(&context, &module, &builder, &main_function).compile(interner, &ast)
+        Runner::new(ast).run("envious", interner)
     })?;
 
     Some(())
