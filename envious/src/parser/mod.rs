@@ -1,6 +1,6 @@
 use std::{iter::Peekable, mem};
 
-use expression::Expression;
+use expression::{Expression, UnaryOperation, BinaryOperation};
 use parselets::LetParselet;
 
 use crate::{
@@ -77,8 +77,14 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             TokenKind::BooleanLiteral(_) => BooleanParselet.parse(self, token),
             TokenKind::StringLiteral(_) => StringParselet.parse(self, token),
             TokenKind::Identifier(_) => IdentifierParselet.parse(self, token),
-            TokenKind::Plus | TokenKind::Minus | TokenKind::Not => {
-                PrefixOperationParselet::new(Precedence::Unary).parse(self, token)
+            TokenKind::Plus => {
+                PrefixOperationParselet::new(Precedence::Unary, UnaryOperation::Plus).parse(self, token)
+            }
+            TokenKind::Minus  => {
+                PrefixOperationParselet::new(Precedence::Unary, UnaryOperation::Minus).parse(self, token)
+            }
+            TokenKind::Not => {
+                PrefixOperationParselet::new(Precedence::Unary, UnaryOperation::Not).parse(self, token)
             }
             TokenKind::If => IfParselet.parse(self, token),
             TokenKind::Let => LetParselet.parse(self, token),
@@ -98,11 +104,18 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     /// * `token` - The token to parse into a prefix expression.
     fn parse_infix(&mut self, left: Expression, token: Token) -> Result<Expression, Error> {
         match token.1 {
-            TokenKind::Plus | TokenKind::Minus => {
-                BinaryOperationParselet::new(Precedence::Addition, false).parse(self, left, token)
+            TokenKind::Plus => {
+                BinaryOperationParselet::new(Precedence::Addition, BinaryOperation::Divide, false).parse(self, left, token)
             }
-            TokenKind::Star | TokenKind::Slash => {
-                BinaryOperationParselet::new(Precedence::Multiplication, false)
+            TokenKind::Minus => {
+                BinaryOperationParselet::new(Precedence::Addition, BinaryOperation::Divide, false).parse(self, left, token)
+            }
+            TokenKind::Star => {
+                BinaryOperationParselet::new(Precedence::Multiplication, BinaryOperation::Divide, false)
+                    .parse(self, left, token)
+            }
+            TokenKind::Slash => {
+                BinaryOperationParselet::new(Precedence::Multiplication, BinaryOperation::Divide,  false)
                     .parse(self, left, token)
             }
             _ => unreachable!(),

@@ -106,6 +106,18 @@ impl TypeChecker {
     ) -> Result<Type, Error> {
         let expression_type = TypeChecker::analyze(interner, expression)?;
         match operation {
+            UnaryOperation::Plus => {
+                if matches!(expression_type, Type::Int | Type::Float) {
+                    Ok(expression_type)
+                } else {
+                    let error = Error::UnsupportedOperation {
+                        operation_span: operation_span.clone(),
+                        operands: vec![(expression.0.clone(), expression_type)],
+                    };
+
+                    Err(error)
+                }
+            }
             UnaryOperation::Minus => {
                 if matches!(expression_type, Type::Int | Type::Float) {
                     Ok(expression_type)
@@ -154,7 +166,7 @@ impl TypeChecker {
         let left_type = TypeChecker::analyze(interner, left)?;
         let right_type = TypeChecker::analyze(interner, right)?;
         match operation {
-            BinaryOperation::Plus => match (left_type, right_type) {
+            BinaryOperation::Plus => match (&left_type, &right_type) {
                 (Type::Int, Type::Int) => Ok(Type::Int),
                 (Type::Float, Type::Float) => Ok(Type::Float),
                 (Type::String, Type::String) => Ok(Type::String),
@@ -195,7 +207,7 @@ impl TypeChecker {
                     Err(error)
                 }
             },
-            BinaryOperation::Minus => match (left_type, right_type) {
+            BinaryOperation::Minus => match (&left_type, &right_type) {
                 (Type::Int, Type::Int) => Ok(Type::Int),
                 (Type::Float, Type::Float) => Ok(Type::Float),
                 (Type::String, Type::String) => Ok(Type::String),
@@ -236,7 +248,7 @@ impl TypeChecker {
                     Err(error)
                 }
             },
-            BinaryOperation::Multiply => match (left_type, right_type) {
+            BinaryOperation::Multiply => match (&left_type, &right_type) {
                 (Type::Int, Type::Int) => Ok(Type::Int),
                 (Type::Float, Type::Float) => Ok(Type::Float),
                 (Type::Int, Type::Float) => {
@@ -262,7 +274,7 @@ impl TypeChecker {
                     Err(error)
                 }
             },
-            BinaryOperation::Divide => match (left_type, right_type) {
+            BinaryOperation::Divide => match (&left_type, &right_type) {
                 (Type::Int, Type::Int) => Ok(Type::Int),
                 (Type::Float, Type::Float) => Ok(Type::Float),
                 (Type::Int, Type::Float) => {
@@ -361,7 +373,7 @@ impl TypeChecker {
             } else {
                 Err(Error::ConflictingType {
                     first_span: name.0.clone(),
-                    first_type: *given_type,
+                    first_type: given_type.clone(),
                     second_span: expression.0.clone(),
                     second_type: value_type,
                 })

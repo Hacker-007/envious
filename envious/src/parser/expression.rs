@@ -44,8 +44,9 @@ pub enum ExpressionKind {
 /// that can be applied to any expression.
 /// Note that this enum should not contain any subexpressions.
 /// It should exist to only describe the operations possible.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum UnaryOperation {
+    Plus,
     Minus,
     Not,
 }
@@ -54,7 +55,7 @@ pub enum UnaryOperation {
 /// that can be applied to any expression.
 /// Note that this enum should not contain any subexpressions.
 /// It should exist to only describe the operations possible.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum BinaryOperation {
     Plus,
     Minus,
