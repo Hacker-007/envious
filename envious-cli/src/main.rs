@@ -1,6 +1,12 @@
 use std::{error::Error, fs, time::Instant};
 
-use envious::{codegen::Runner, error::reporter::{ErrorReporter, Reporter}, interner::Interner, lexer::{token::TokenKind, Lexer}, parser::Parser, semantic_analyzer::type_checker::TypeChecker};
+use envious::{codegen::Runner, error::reporter::{
+        ErrorReporter, 
+        Reporter
+    }, interner::Interner, lexer::{
+        token::TokenKind, 
+        Lexer
+    }, parser::Parser, semantic_analyzer::type_checker::TypeChecker};
 use options::Options;
 
 mod options;

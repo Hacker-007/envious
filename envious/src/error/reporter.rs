@@ -6,7 +6,10 @@ use codespan_reporting::{
     term::termcolor::{ColorChoice, StandardStream},
 };
 
-use crate::{lexer::token::TokenKind, semantic_analyzer::types::Type};
+use crate::{
+    lexer::token::TokenKind,
+    semantic_analyzer::types::Type
+};
 
 use super::{Error, Span};
 
@@ -423,22 +426,6 @@ impl Reporter for Vec<Error> {
     }
 }
 
-impl<T> Reporter for (T, Vec<Error>) {
-    type Output = T;
-
-    fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
-        for error in &self.1 {
-            error_reporter.report(error);
-        }
-
-        if !self.1.is_empty() {
-            None
-        } else {
-            Some(self.0)
-        }
-    }
-}
-
 impl Reporter for Option<Error> {
     type Output = ();
 
@@ -459,11 +446,26 @@ impl<T> Reporter for Result<T, Error> {
     type Output = T;
 
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
-        if let Err(ref error) = self {
-            error_reporter.report(error);
-            None
-        } else {
-            Some(self.unwrap())
+        match self {
+            Ok(val) => Some(val),
+            Err(error) => {
+                error_reporter.report(&error);
+                None
+            }
+        }
+    }
+}
+
+impl<T> Reporter for Result<T, Vec<Error>> {
+    type Output = T;
+
+    fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
+        match self {
+            Ok(val) => Some(val),
+            Err(errors) => {
+                errors.iter().for_each(|error| error_reporter.report(error));
+                None
+            }
         }
     }
 }

@@ -1,4 +1,7 @@
-use crate::{lexer::token::TokenKind, semantic_analyzer::types::Type};
+use crate::{
+    lexer::token::TokenKind,
+    semantic_analyzer::types::Type
+};
 
 /// Enum used by compiler to construct the various errors.
 /// Every error needs to keep a track of the span of the error
@@ -37,7 +40,7 @@ pub enum Error {
         operation_span: Span,
         operands: Vec<(Span, Type)>,
     },
-    // Occurs when the type of an expression does not match the expected type.
+    // // Occurs when the type of an expression does not match the expected type.
     TypeMismatch {
         span: Span,
         expected_type: Type,
@@ -52,8 +55,8 @@ pub enum Error {
         second_span: Span,
         second_type: Type,
     },
-    // Occurs when a cast could not be performed between the original type and the new
-    // type.
+    // // Occurs when a cast could not be performed between the original type and the new
+    // // type.
     IllegalCast {
         span: Span,
         from_type: Type,

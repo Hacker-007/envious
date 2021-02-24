@@ -33,7 +33,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     /// Walks through the tokens and constructs a program, or a vector
     /// of expressions.
-    pub fn parse_program(&mut self) -> (Vec<Expression>, Vec<Error>) {
+    pub fn parse_program(&mut self) -> Result<Vec<Expression>, Vec<Error>> {
         let mut expressions = vec![];
         let mut errors = vec![];
         let dummy_span = Span::new(String::new(), 1, 1, 1, 1);
@@ -44,7 +44,11 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             }
         }
 
-        (expressions, errors)
+        if !errors.is_empty() {
+            Err(errors)
+        } else {
+            Ok(expressions)
+        }
     }
 
     /// Parses a single expression. This function follows the Pratt parsing technique
@@ -105,13 +109,13 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn parse_infix(&mut self, left: Expression, token: Token) -> Result<Expression, Error> {
         match token.1 {
             TokenKind::Plus => {
-                BinaryOperationParselet::new(Precedence::Addition, BinaryOperation::Divide, false).parse(self, left, token)
+                BinaryOperationParselet::new(Precedence::Addition, BinaryOperation::Plus, false).parse(self, left, token)
             }
             TokenKind::Minus => {
-                BinaryOperationParselet::new(Precedence::Addition, BinaryOperation::Divide, false).parse(self, left, token)
+                BinaryOperationParselet::new(Precedence::Addition, BinaryOperation::Minus, false).parse(self, left, token)
             }
             TokenKind::Star => {
-                BinaryOperationParselet::new(Precedence::Multiplication, BinaryOperation::Divide, false)
+                BinaryOperationParselet::new(Precedence::Multiplication, BinaryOperation::Multiply, false)
                     .parse(self, left, token)
             }
             TokenKind::Slash => {
