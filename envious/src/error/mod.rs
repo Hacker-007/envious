@@ -62,6 +62,7 @@ pub enum Error {
         from_type: Type,
         to_type: Type,
     },
+    UndefinedVariable(Span),
 
     /// Occurs when a function was expected during the LLVM compilation.
     ExpectedFunction,

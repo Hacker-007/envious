@@ -71,7 +71,7 @@ fn compile_code(
     })?;
 
     time("semantic analysis", &error_reporter, || {
-        TypeChecker::analyze_program(interner, &mut ast)
+        TypeChecker::new().analyze_program(interner, &mut ast)
     })?;
 
     time("compilation", &error_reporter, || {

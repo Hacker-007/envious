@@ -125,13 +125,6 @@ impl Caster {
                     to_type: final_type,
                 })
             }
-            Type::Function { .. } => {
-                return Some(Error::IllegalCast {
-                    span: span.clone(),
-                    from_type: starting_type.clone(),
-                    to_type: final_type
-                })
-            }
         }
 
         None

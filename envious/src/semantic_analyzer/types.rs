@@ -11,10 +11,6 @@ pub enum Type {
     Float,
     Boolean,
     String,
-    Function {
-        arg_types: Vec<Type>,
-        return_type: Box<Type>,
-    }
 }
 
 impl Display for Type {
@@ -25,7 +21,6 @@ impl Display for Type {
             Type::Float => write!(f, "Float"),
             Type::Boolean => write!(f, "Boolean"),
             Type::String => write!(f, "String"),
-            Type::Function { .. } => write!(f, "Function"),
         }
     }
 }

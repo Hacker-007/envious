@@ -1,4 +1,4 @@
-use std::u64;
+use std::{collections::HashMap, u64};
 
 use inkwell::{
     builder::Builder,
@@ -24,6 +24,7 @@ pub struct CodeGenerator<'a, 'ctx> {
     module: &'a Module<'ctx>,
     builder: &'a Builder<'ctx>,
     current_function: &'a Option<FunctionValue<'ctx>>,
+    vars: HashMap<usize, BasicValueEnum<'ctx>>,
 }
 
 impl<'a, 'ctx> CodeGenerator<'a, 'ctx> {
@@ -38,6 +39,7 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> {
             module,
             builder,
             current_function,
+            vars: HashMap::new(),
         }
     }
 
@@ -112,6 +114,7 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> {
             ExpressionKind::String(id) => BasicValueEnum::VectorValue(
                 self.context.const_string(interner.get(id).as_bytes(), true),
             ),
+            ExpressionKind::Identifier(id) => *self.vars.get(&id).unwrap(),
             ExpressionKind::Unary {
                 ref operation,
                 ref expression,

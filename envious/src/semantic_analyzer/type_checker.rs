@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     error::{Error, Span},
     interner::Interner,
@@ -8,9 +10,17 @@ use super::{caster::Caster, types::Type};
 
 /// Struct that verifies the types of the expressions
 /// and ensures that the types of the program are sound.
-pub struct TypeChecker;
+pub struct TypeChecker {
+    vars: HashMap<usize, Type>,
+}
 
 impl TypeChecker {
+    pub fn new() -> Self {
+        Self {
+            vars: HashMap::new(),
+        }
+    }
+
     /// Analyzes the entire program given and ensures that
     /// each expression is valid.
     ///
@@ -18,12 +28,13 @@ impl TypeChecker {
     /// * `interner` - The `Interner` used to store all string literals.
     /// * `expressions` - The `Expression`'s that constitute the program.
     pub fn analyze_program(
+        &mut self,
         interner: &mut Interner<String>,
         program: &mut [Expression],
     ) -> Vec<Error> {
         let mut errors = vec![];
         for expression in program {
-            if let Err(error) = TypeChecker::analyze(interner, expression) {
+            if let Err(error) = self.analyze(interner, expression) {
                 errors.push(error);
             }
         }
@@ -38,6 +49,7 @@ impl TypeChecker {
     /// * `interner` - The `Interner` used to store all string literals.
     /// * `expression` - The `Expression` to type check.
     pub fn analyze(
+        &mut self,
         interner: &mut Interner<String>,
         expression: &mut Expression,
     ) -> Result<Type, Error> {
@@ -46,14 +58,17 @@ impl TypeChecker {
             ExpressionKind::Float(_) => Ok(Type::Float),
             ExpressionKind::Boolean(_) => Ok(Type::Boolean),
             ExpressionKind::String(_) => Ok(Type::String),
-            ExpressionKind::Identifier(_) => {
-                // This is temporary. This will be changed when I add variables.
-                Ok(Type::String)
+            ExpressionKind::Identifier(id) => {
+                if let Some(var_type) = self.vars.get(&id) {
+                    Ok(var_type.clone())
+                } else {
+                    Err(Error::UndefinedVariable(expression.0.clone()))
+                }
             }
             ExpressionKind::Unary {
                 ref operation,
                 expression: ref mut sub_expression,
-            } => TypeChecker::analyze_unary_expression(
+            } => self.analyze_unary_expression(
                 interner,
                 &expression.0,
                 operation,
@@ -63,7 +78,7 @@ impl TypeChecker {
                 ref operation,
                 ref mut left,
                 ref mut right,
-            } => TypeChecker::analyze_binary_expression(
+            } => self.analyze_binary_expression(
                 interner,
                 &expression.0,
                 operation,
@@ -74,7 +89,7 @@ impl TypeChecker {
                 ref mut condition,
                 ref mut then_branch,
                 ref mut else_branch,
-            } => TypeChecker::analyze_if_expression(
+            } => self.analyze_if_expression(
                 interner,
                 condition,
                 then_branch,
@@ -84,7 +99,7 @@ impl TypeChecker {
                 ref name,
                 ref given_type,
                 expression: ref mut sub_expression,
-            } => TypeChecker::analyze_let_expression(interner, name, given_type, sub_expression),
+            } => self.analyze_let_expression(interner, name, given_type, sub_expression),
         }
     }
 
@@ -99,12 +114,13 @@ impl TypeChecker {
     /// * `operation` - The unary operation used.
     /// * `expression` - The `Expression` that the unary operation was applied to.
     fn analyze_unary_expression(
+        &mut self,
         interner: &mut Interner<String>,
         operation_span: &Span,
         operation: &UnaryOperation,
         expression: &mut Expression,
     ) -> Result<Type, Error> {
-        let expression_type = TypeChecker::analyze(interner, expression)?;
+        let expression_type = self.analyze(interner, expression)?;
         match operation {
             UnaryOperation::Plus => {
                 if matches!(expression_type, Type::Int | Type::Float) {
@@ -157,14 +173,15 @@ impl TypeChecker {
     /// * `left` - The left `Expression` that the binary operation was applied to.
     /// * `right` - The right `Expression` that the binary operation was applied to.
     fn analyze_binary_expression(
+        &mut self,
         interner: &mut Interner<String>,
         operation_span: &Span,
         operation: &BinaryOperation,
         left: &mut Expression,
         right: &mut Expression,
     ) -> Result<Type, Error> {
-        let left_type = TypeChecker::analyze(interner, left)?;
-        let right_type = TypeChecker::analyze(interner, right)?;
+        let left_type = self.analyze(interner, left)?;
+        let right_type = self.analyze(interner, right)?;
         match operation {
             BinaryOperation::Plus => match (&left_type, &right_type) {
                 (Type::Int, Type::Int) => Ok(Type::Int),
@@ -314,12 +331,13 @@ impl TypeChecker {
     /// * `then_branch` - The `Expression` used for the then branch of the if.
     /// * `else_branch` - The optional `Expression` used for the else branch of the if.
     fn analyze_if_expression(
+        &mut self,
         interner: &mut Interner<String>,
         condition: &mut Expression,
         then_branch: &mut Expression,
         else_branch: Option<&mut Box<Expression>>,
     ) -> Result<Type, Error> {
-        let condition_type = TypeChecker::analyze(interner, condition)?;
+        let condition_type = self.analyze(interner, condition)?;
         if condition_type != Type::Boolean {
             let error = Error::TypeMismatch {
                 span: condition.0.clone(),
@@ -330,9 +348,9 @@ impl TypeChecker {
             return Err(error);
         }
 
-        let then_type = TypeChecker::analyze(interner, then_branch)?;
+        let then_type = self.analyze(interner, then_branch)?;
         if let Some(else_branch) = else_branch {
-            let else_type = TypeChecker::analyze(interner, else_branch)?;
+            let else_type = self.analyze(interner, else_branch)?;
             if then_type == else_type {
                 Ok(then_type)
             } else {
@@ -361,14 +379,16 @@ impl TypeChecker {
     /// * `given_type` - The `Type` assigned to the variable.
     /// * `expression` - The `Expression` or value of this variable.
     fn analyze_let_expression(
+        &mut self,
         interner: &mut Interner<String>,
         name: &(Span, usize),
         given_type: &Option<Type>,
         expression: &mut Expression,
     ) -> Result<Type, Error> {
-        let value_type = TypeChecker::analyze(interner, expression)?;
+        let value_type = self.analyze(interner, expression)?;
         if let Some(given_type) = given_type {
             if given_type == &value_type {
+                self.vars.insert(name.1, value_type.clone());
                 Ok(value_type)
             } else {
                 Err(Error::ConflictingType {
@@ -379,6 +399,7 @@ impl TypeChecker {
                 })
             }
         } else {
+            self.vars.insert(name.1, value_type.clone());
             Ok(value_type)
         }
     }

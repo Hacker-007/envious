@@ -86,6 +86,7 @@ impl<'a> ErrorReporter<'a> {
                 to_type,
                 from_type,
             } => self.handle_illegal_cast(span, to_type, from_type),
+            Error::UndefinedVariable(span) => self.handle_undefined_variable(span),
             Error::ExpectedFunction => {
                 println!("Expected a function to be selected when compiling to LLVM.");
                 return;
@@ -327,6 +328,19 @@ impl<'a> ErrorReporter<'a> {
             .with_labels(vec![
                 Label::primary(self.get_file_id(&span.file_name), start_column..end_column)
                     .with_message(format!("tried to convert from `{}` to `{}`", from_type, to_type))
+            ])
+    }
+
+    /// Handles an undefined variable error.
+    ///
+    /// # Arguments
+    /// `span` - The `Span` of this error.
+    fn handle_undefined_variable(&self, span: &Span) -> Diagnostic<usize> {
+        let (start_column, end_column) = self.construct_source(span);
+        Diagnostic::error()
+            .with_message("found undefined variable")
+            .with_labels(vec![
+                Label::primary(self.get_file_id(&span.file_name), start_column..end_column)
             ])
     }
 
