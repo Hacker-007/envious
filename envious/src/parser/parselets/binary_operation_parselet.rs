@@ -11,12 +11,16 @@ use super::infix_parselet::InfixParselet;
 
 pub struct BinaryOperationParselet {
     precedence: usize,
-    operation: BinaryOperation, 
+    operation: BinaryOperation,
     is_right_associative: bool,
 }
 
 impl BinaryOperationParselet {
-    pub fn new<T: Into<usize>>(precedence: T, operation: BinaryOperation, is_right_associative: bool) -> Self {
+    pub fn new<T: Into<usize>>(
+        precedence: T,
+        operation: BinaryOperation,
+        is_right_associative: bool,
+    ) -> Self {
         Self {
             precedence: precedence.into(),
             operation,
@@ -41,7 +45,7 @@ impl InfixParselet for BinaryOperationParselet {
             left: Box::new(left),
             right: Box::new(right),
         };
-        
+
         Ok((token.0, kind))
     }
 

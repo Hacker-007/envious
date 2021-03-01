@@ -6,10 +6,7 @@ use codespan_reporting::{
     term::termcolor::{ColorChoice, StandardStream},
 };
 
-use crate::{
-    lexer::token::TokenKind,
-    semantic_analyzer::types::Type
-};
+use crate::{lexer::token::TokenKind, semantic_analyzer::types::Type};
 
 use super::{Error, Span};
 
@@ -249,12 +246,18 @@ impl<'a> ErrorReporter<'a> {
         operands: &[(Span, Type)],
     ) -> Diagnostic<usize> {
         let (operation_start, operation_end) = self.construct_source(operation_span);
-        let mut labels = vec![Label::primary(self.get_file_id(&operation_span.file_name), operation_start..operation_end)];
+        let mut labels = vec![Label::primary(
+            self.get_file_id(&operation_span.file_name),
+            operation_start..operation_end,
+        )];
         for operand in operands {
             let (operand_start, operand_end) = self.construct_source(&operand.0);
             labels.push(
-                Label::secondary(self.get_file_id(&operand.0.file_name), operand_start..operand_end)
-                    .with_message(format!("has a type of {}", operand.1))
+                Label::secondary(
+                    self.get_file_id(&operand.0.file_name),
+                    operand_start..operand_end,
+                )
+                .with_message(format!("has a type of {}", operand.1)),
             )
         }
 
@@ -278,10 +281,14 @@ impl<'a> ErrorReporter<'a> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
             .with_message("type mismatch")
-            .with_labels(vec![
-                Label::primary(self.get_file_id(&span.file_name), start_column..end_column)
-                    .with_message(format!("expected `{}` but found `{}`", expected_type, actual_type))
-            ])
+            .with_labels(vec![Label::primary(
+                self.get_file_id(&span.file_name),
+                start_column..end_column,
+            )
+            .with_message(format!(
+                "expected `{}` but found `{}`",
+                expected_type, actual_type
+            ))])
     }
 
     /// Handles a conflicting type error.
@@ -303,10 +310,16 @@ impl<'a> ErrorReporter<'a> {
         Diagnostic::error()
             .with_message("type conflict occurred")
             .with_labels(vec![
-                Label::primary(self.get_file_id(&first_span.file_name), first_start_column..first_end_column)
-                    .with_message(format!("results in `{}`", first_type)),
-                Label::primary(self.get_file_id(&second_span.file_name), second_start_column..second_end_column)
-                    .with_message(format!("results in `{}`", second_type))
+                Label::primary(
+                    self.get_file_id(&first_span.file_name),
+                    first_start_column..first_end_column,
+                )
+                .with_message(format!("results in `{}`", first_type)),
+                Label::primary(
+                    self.get_file_id(&second_span.file_name),
+                    second_start_column..second_end_column,
+                )
+                .with_message(format!("results in `{}`", second_type)),
             ])
     }
 
@@ -325,10 +338,14 @@ impl<'a> ErrorReporter<'a> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
             .with_message("attempted to perform an illegal cast")
-            .with_labels(vec![
-                Label::primary(self.get_file_id(&span.file_name), start_column..end_column)
-                    .with_message(format!("tried to convert from `{}` to `{}`", from_type, to_type))
-            ])
+            .with_labels(vec![Label::primary(
+                self.get_file_id(&span.file_name),
+                start_column..end_column,
+            )
+            .with_message(format!(
+                "tried to convert from `{}` to `{}`",
+                from_type, to_type
+            ))])
     }
 
     /// Handles an undefined variable error.
@@ -339,9 +356,10 @@ impl<'a> ErrorReporter<'a> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
             .with_message("found undefined variable")
-            .with_labels(vec![
-                Label::primary(self.get_file_id(&span.file_name), start_column..end_column)
-            ])
+            .with_labels(vec![Label::primary(
+                self.get_file_id(&span.file_name),
+                start_column..end_column,
+            )])
     }
 
     /// Takes the span of the error and

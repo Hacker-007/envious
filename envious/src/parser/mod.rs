@@ -1,19 +1,24 @@
 use std::{iter::Peekable, mem};
 
-use expression::{Expression, UnaryOperation, BinaryOperation};
+use expression::{BinaryOperation, Expression, UnaryOperation};
 use parselets::LetParselet;
 
 use crate::{
     error::{Error, Span},
     lexer::token::{Token, TokenKind},
+    semantic_analyzer::types::Type,
 };
 
-use self::parselets::{
-    infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet,
-    BinaryOperationParselet, BooleanParselet, FloatParselet, IdentifierParselet, IfParselet,
-    IntParselet, PrefixOperationParselet, StringParselet,
+use self::{
+    ast::{Function, Parameter, Program},
+    parselets::{
+        infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet,
+        BinaryOperationParselet, BooleanParselet, FloatParselet, IdentifierParselet, IfParselet,
+        IntParselet, PrefixOperationParselet, StringParselet,
+    },
 };
 
+pub mod ast;
 pub mod expression;
 pub mod parselets;
 
@@ -32,14 +37,14 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     /// Walks through the tokens and constructs a program, or a vector
-    /// of expressions.
-    pub fn parse_program(&mut self) -> Result<Vec<Expression>, Vec<Error>> {
-        let mut expressions = vec![];
+    /// of functions.
+    pub fn parse(&mut self) -> Result<Program, Vec<Error>> {
+        let mut functions = vec![];
         let mut errors = vec![];
-        let dummy_span = Span::new(String::new(), 1, 1, 1, 1);
         while let Some((_, _)) = self.tokens.peek() {
-            match self.parse_expression(0, &dummy_span) {
-                Ok(expression) => expressions.push(expression),
+            let dummy_span = Span::new(String::new(), 1, 1, 1, 1);
+            match self.parse_function(&dummy_span) {
+                Ok(function) => functions.push(function),
                 Err(error) => errors.push(error),
             }
         }
@@ -47,8 +52,82 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         if !errors.is_empty() {
             Err(errors)
         } else {
-            Ok(expressions)
+            Ok(Program::new(functions))
         }
+    }
+
+    fn parse_function(&mut self, span: &Span) -> Result<Function, Error> {
+        let (define_span, _) = self.expect(TokenKind::Define, span)?;
+        if let (function_name_span, TokenKind::Identifier(id)) =
+            self.expect(TokenKind::Identifier(0), &define_span)?
+        {
+            let (left_paren_span, _) =
+                self.expect(TokenKind::LeftParenthesis, &function_name_span)?;
+            let parameters = self.parse_parameters()?;
+            let last_span = parameters
+                .iter()
+                .last()
+                .map_or(&left_paren_span, |param| &param.span);
+            let (right_paren_span, _) = self.expect(TokenKind::RightParenthesis, last_span)?;
+            let (eq_span, _) = self.expect(TokenKind::EqualSign, &right_paren_span)?;
+            let body = self.parse_expression(0, &eq_span)?;
+            Ok(Function::new(function_name_span, id, parameters, body))
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn parse_parameters(&mut self) -> Result<Vec<Parameter>, Error> {
+        let mut parameters = vec![];
+        while let Some((_, kind)) = self.tokens.peek() {
+            if kind == &TokenKind::RightParenthesis {
+                break;
+            }
+
+            let (param_span, kind) = self.tokens.next().unwrap();
+            let id = match kind {
+                TokenKind::Identifier(id) => id,
+                _ => {
+                    return Err(Error::ExpectedKind {
+                        span: param_span.clone(),
+                        expected_kinds: vec![TokenKind::Identifier(0)],
+                        actual_kind: kind,
+                    })
+                }
+            };
+
+            let (colon_span, _) = self.expect(TokenKind::Colon, &param_span)?;
+            let (type_span, kind) = self.consume(&colon_span)?;
+            let ty = match kind {
+                TokenKind::Void => Type::Void,
+                TokenKind::Int => Type::Int,
+                TokenKind::Float => Type::Float,
+                TokenKind::Boolean => Type::Boolean,
+                TokenKind::String => Type::String,
+                _ => {
+                    return Err(Error::ExpectedKind {
+                        span: type_span,
+                        expected_kinds: vec![
+                            TokenKind::Void,
+                            TokenKind::Int,
+                            TokenKind::Float,
+                            TokenKind::Boolean,
+                            TokenKind::String,
+                        ],
+                        actual_kind: kind,
+                    })
+                }
+            };
+
+            parameters.push(Parameter::new(param_span, ty, id));
+            if let Some((_, TokenKind::Comma)) = self.tokens.peek() {
+                self.tokens.next();
+            } else {
+                break;
+            }
+        }
+
+        Ok(parameters)
     }
 
     /// Parses a single expression. This function follows the Pratt parsing technique
@@ -82,14 +161,15 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             TokenKind::StringLiteral(_) => StringParselet.parse(self, token),
             TokenKind::Identifier(_) => IdentifierParselet.parse(self, token),
             TokenKind::Plus => {
-                PrefixOperationParselet::new(Precedence::Unary, UnaryOperation::Plus).parse(self, token)
+                PrefixOperationParselet::new(Precedence::Unary, UnaryOperation::Plus)
+                    .parse(self, token)
             }
-            TokenKind::Minus  => {
-                PrefixOperationParselet::new(Precedence::Unary, UnaryOperation::Minus).parse(self, token)
+            TokenKind::Minus => {
+                PrefixOperationParselet::new(Precedence::Unary, UnaryOperation::Minus)
+                    .parse(self, token)
             }
-            TokenKind::Not => {
-                PrefixOperationParselet::new(Precedence::Unary, UnaryOperation::Not).parse(self, token)
-            }
+            TokenKind::Not => PrefixOperationParselet::new(Precedence::Unary, UnaryOperation::Not)
+                .parse(self, token),
             TokenKind::If => IfParselet.parse(self, token),
             TokenKind::Let => LetParselet.parse(self, token),
             _ => Err(Error::ExpectedPrefixExpression {
@@ -109,19 +189,25 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn parse_infix(&mut self, left: Expression, token: Token) -> Result<Expression, Error> {
         match token.1 {
             TokenKind::Plus => {
-                BinaryOperationParselet::new(Precedence::Addition, BinaryOperation::Plus, false).parse(self, left, token)
+                BinaryOperationParselet::new(Precedence::Addition, BinaryOperation::Plus, false)
+                    .parse(self, left, token)
             }
             TokenKind::Minus => {
-                BinaryOperationParselet::new(Precedence::Addition, BinaryOperation::Minus, false).parse(self, left, token)
-            }
-            TokenKind::Star => {
-                BinaryOperationParselet::new(Precedence::Multiplication, BinaryOperation::Multiply, false)
+                BinaryOperationParselet::new(Precedence::Addition, BinaryOperation::Minus, false)
                     .parse(self, left, token)
             }
-            TokenKind::Slash => {
-                BinaryOperationParselet::new(Precedence::Multiplication, BinaryOperation::Divide,  false)
-                    .parse(self, left, token)
-            }
+            TokenKind::Star => BinaryOperationParselet::new(
+                Precedence::Multiplication,
+                BinaryOperation::Multiply,
+                false,
+            )
+            .parse(self, left, token),
+            TokenKind::Slash => BinaryOperationParselet::new(
+                Precedence::Multiplication,
+                BinaryOperation::Divide,
+                false,
+            )
+            .parse(self, left, token),
             _ => unreachable!(),
         }
     }

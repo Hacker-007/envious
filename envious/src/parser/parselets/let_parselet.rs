@@ -33,7 +33,6 @@ impl PrefixParselet for LetParselet {
             if let Some((_, TokenKind::Colon)) = parser.peek() {
                 let (colon_span, _) = parser.consume(&identifier.0)?;
                 match parser.consume(&colon_span)? {
-                    (span, TokenKind::Any) => (None, Some(span)),
                     (span, TokenKind::Void) => (Some(Type::Void), Some(span)),
                     (span, TokenKind::Int) => (Some(Type::Int), Some(span)),
                     (span, TokenKind::Float) => (Some(Type::Float), Some(span)),
@@ -43,7 +42,6 @@ impl PrefixParselet for LetParselet {
                         return Err(Error::ExpectedKind {
                             span,
                             expected_kinds: vec![
-                                TokenKind::Any,
                                 TokenKind::Void,
                                 TokenKind::Int,
                                 TokenKind::Float,

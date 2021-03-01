@@ -1,12 +1,13 @@
 use std::{error::Error, fs, time::Instant};
 
-use envious::{codegen::Runner, error::reporter::{
-        ErrorReporter, 
-        Reporter
-    }, interner::Interner, lexer::{
-        token::TokenKind, 
-        Lexer
-    }, parser::Parser, semantic_analyzer::type_checker::TypeChecker};
+use envious::{
+    codegen::Runner,
+    error::reporter::{ErrorReporter, Reporter},
+    interner::Interner,
+    lexer::{token::TokenKind, Lexer},
+    parser::Parser,
+    semantic_analyzer::type_checker::TypeChecker,
+};
 use options::Options;
 
 mod options;
@@ -66,17 +67,18 @@ fn compile_code(
         .filter(|token| !matches!(token.1, TokenKind::Whitespace(_)))
         .peekable();
 
-    let mut ast = time("syntactic analysis", &error_reporter, || {
-        Parser::new(filtered_tokens).parse_program()
+    let ast = time("syntactic analysis", &error_reporter, || {
+        Parser::new(filtered_tokens).parse()
     })?;
 
-    time("semantic analysis", &error_reporter, || {
-        TypeChecker::new().analyze_program(interner, &mut ast)
-    })?;
+    println!("{:#?}", ast);
+    // time("semantic analysis", &error_reporter, || {
+    //     TypeChecker::new().analyze_program(interner, &mut ast)
+    // })?;
 
-    time("compilation", &error_reporter, || {
-        Runner::new(ast).run("envious", interner)
-    })?;
+    // time("compilation", &error_reporter, || {
+    //     Runner::new(ast).run("envious", interner)
+    // })?;
 
     Some(())
 }

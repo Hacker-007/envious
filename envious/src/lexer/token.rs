@@ -16,7 +16,6 @@ pub enum TokenKind {
     Whitespace(char),
 
     Void,
-    Any,
     Int,
     Float,
     Boolean,
@@ -66,7 +65,6 @@ impl Display for TokenKind {
         match *self {
             TokenKind::Whitespace(ch) => write!(f, "{}", ch),
             TokenKind::Void => write!(f, "Void"),
-            TokenKind::Any => write!(f, "Any"),
             TokenKind::Int => write!(f, "Int"),
             TokenKind::Float => write!(f, "Float"),
             TokenKind::Boolean => write!(f, "Boolean"),

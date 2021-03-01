@@ -8,14 +8,12 @@ use super::CodeGenerator;
 /// This ensures that other packages that handles maintaining either
 /// the CLI or the REPL do not have to import the LLVM library.
 pub struct Runner {
-    ast: Vec<Expression>
+    ast: Vec<Expression>,
 }
 
 impl Runner {
     pub fn new(ast: Vec<Expression>) -> Self {
-        Self {
-            ast,
-        }
+        Self { ast }
     }
 
     /// Generates the code for the given ast and provides a result.

@@ -47,7 +47,10 @@ impl<'a> Lexer<'a> {
     ///
     /// # Arguments
     /// * `interner` - The `Interner` used to store different `String` literals.
-    pub fn get_tokens(&mut self, interner: &mut Interner<String>) -> Result<Vec<Token>, Vec<Error>> {
+    pub fn get_tokens(
+        &mut self,
+        interner: &mut Interner<String>,
+    ) -> Result<Vec<Token>, Vec<Error>> {
         let mut tokens = vec![];
         let mut errors = vec![];
         while let Some(byte) = self.next() {
@@ -268,7 +271,6 @@ impl<'a> Lexer<'a> {
 
         match word.as_str() {
             "Void" => Ok((self.make_span(start_column), TokenKind::Void)),
-            "Any" => Ok((self.make_span(start_column), TokenKind::Any)),
             "Int" => Ok((self.make_span(start_column), TokenKind::Int)),
             "Float" => Ok((self.make_span(start_column), TokenKind::Float)),
             "Boolean" => Ok((self.make_span(start_column), TokenKind::Boolean)),

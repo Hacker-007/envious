@@ -1,7 +1,4 @@
-use crate::{
-    lexer::token::TokenKind,
-    semantic_analyzer::types::Type
-};
+use crate::{lexer::token::TokenKind, semantic_analyzer::types::Type};
 
 /// Enum used by compiler to construct the various errors.
 /// Every error needs to keep a track of the span of the error

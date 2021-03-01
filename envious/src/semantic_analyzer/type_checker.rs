@@ -68,33 +68,17 @@ impl TypeChecker {
             ExpressionKind::Unary {
                 ref operation,
                 expression: ref mut sub_expression,
-            } => self.analyze_unary_expression(
-                interner,
-                &expression.0,
-                operation,
-                sub_expression,
-            ),
+            } => self.analyze_unary_expression(interner, &expression.0, operation, sub_expression),
             ExpressionKind::Binary {
                 ref operation,
                 ref mut left,
                 ref mut right,
-            } => self.analyze_binary_expression(
-                interner,
-                &expression.0,
-                operation,
-                left,
-                right,
-            ),
+            } => self.analyze_binary_expression(interner, &expression.0, operation, left, right),
             ExpressionKind::If {
                 ref mut condition,
                 ref mut then_branch,
                 ref mut else_branch,
-            } => self.analyze_if_expression(
-                interner,
-                condition,
-                then_branch,
-                else_branch.as_mut(),
-            ),
+            } => self.analyze_if_expression(interner, condition, then_branch, else_branch.as_mut()),
             ExpressionKind::Let {
                 ref name,
                 ref given_type,
