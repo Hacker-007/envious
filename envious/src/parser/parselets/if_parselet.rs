@@ -2,7 +2,7 @@ use crate::{
     error::Error,
     lexer::token::{Token, TokenKind},
     parser::{
-        expression::{Expression, ExpressionKind},
+        expression::{Expression, ExpressionKind, If},
         Parser,
     },
 };
@@ -27,11 +27,11 @@ impl PrefixParselet for IfParselet {
 
         Ok((
             token.0,
-            ExpressionKind::If {
+            ExpressionKind::If(If {
                 condition: Box::new(condition),
                 then_branch: Box::new(then_branch),
                 else_branch,
-            },
+            }),
         ))
     }
 }

@@ -4,7 +4,7 @@ use super::expression::Expression;
 
 #[derive(Debug)]
 pub struct Program {
-    functions: Vec<Function>,
+    pub functions: Vec<Function>,
 }
 
 impl Program {
@@ -15,10 +15,10 @@ impl Program {
 
 #[derive(Debug)]
 pub struct Function {
-    span: Span,
-    name: usize,
-    parameters: Vec<Parameter>,
-    body: Expression,
+    pub span: Span,
+    pub name: usize,
+    pub parameters: Vec<Parameter>,
+    pub body: Expression,
 }
 
 impl Function {
@@ -35,8 +35,8 @@ impl Function {
 #[derive(Debug)]
 pub struct Parameter {
     pub span: Span,
-    ty: Type,
-    name: usize,
+    pub ty: Type,
+    pub name: usize,
 }
 
 impl Parameter {

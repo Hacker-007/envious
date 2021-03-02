@@ -2,7 +2,7 @@ use crate::{
     error::Error,
     lexer::token::Token,
     parser::{
-        expression::{Expression, ExpressionKind, UnaryOperation},
+        expression::{Expression, ExpressionKind, Unary, UnaryOperation},
         Parser,
     },
 };
@@ -30,10 +30,10 @@ impl PrefixParselet for PrefixOperationParselet {
         token: Token,
     ) -> Result<Expression, Error> {
         let operand = parser.parse_expression(self.precedence, &token.0)?;
-        let kind = ExpressionKind::Unary {
+        let kind = ExpressionKind::Unary(Unary {
             operation: self.operation,
             expression: Box::new(operand),
-        };
+        });
 
         Ok((token.0, kind))
     }

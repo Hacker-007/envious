@@ -18,26 +18,41 @@ pub enum ExpressionKind {
     // stored in the `Interner` to reduce redundency in values. Instead,
     // the id's are stored in the variant.
     String(usize),
-    Identifier(usize),
-    Unary {
-        operation: UnaryOperation,
-        expression: Box<Expression>,
-    },
-    Binary {
-        operation: BinaryOperation,
-        left: Box<Expression>,
-        right: Box<Expression>,
-    },
-    If {
-        condition: Box<Expression>,
-        then_branch: Box<Expression>,
-        else_branch: Option<Box<Expression>>,
-    },
-    Let {
-        name: (Span, usize),
-        given_type: Option<Type>,
-        expression: Box<Expression>,
-    },
+    Identifier(Identifier),
+    Unary(Unary),
+    Binary(Binary),
+    If(If),
+    Let(Let),
+}
+
+#[derive(Debug)]
+pub struct Identifier(pub usize);
+
+#[derive(Debug)]
+pub struct Unary {
+    pub operation: UnaryOperation,
+    pub expression: Box<Expression>,
+}
+
+#[derive(Debug)]
+pub struct Binary {
+    pub operation: BinaryOperation,
+    pub left: Box<Expression>,
+    pub right: Box<Expression>,
+}
+
+#[derive(Debug)]
+pub struct If {
+    pub condition: Box<Expression>,
+    pub then_branch: Box<Expression>,
+    pub else_branch: Option<Box<Expression>>,
+}
+
+#[derive(Debug)]
+pub struct Let {
+    pub name: (Span, Identifier),
+    pub given_type: Option<Type>,
+    pub expression: Box<Expression>,
 }
 
 /// Enum that details the different unary operations
@@ -51,17 +66,6 @@ pub enum UnaryOperation {
     Not,
 }
 
-impl UnaryOperation {
-    pub fn get_name(&self) -> String {
-        match self {
-            UnaryOperation::Plus => "u+",
-            UnaryOperation::Minus => "u-",
-            UnaryOperation::Not => "unot",
-        }
-        .to_string()
-    }
-}
-
 /// Enum that details the different binary operations
 /// that can be applied to any expression.
 /// Note that this enum should not contain any subexpressions.
@@ -72,16 +76,4 @@ pub enum BinaryOperation {
     Minus,
     Multiply,
     Divide,
-}
-
-impl BinaryOperation {
-    pub fn get_name(&self) -> String {
-        match self {
-            BinaryOperation::Plus => "b+",
-            BinaryOperation::Minus => "b-",
-            BinaryOperation::Multiply => "b*",
-            BinaryOperation::Divide => "b/",
-        }
-        .to_string()
-    }
 }

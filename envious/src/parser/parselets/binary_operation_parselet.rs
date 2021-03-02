@@ -2,7 +2,7 @@ use crate::{
     error::Error,
     lexer::token::Token,
     parser::{
-        expression::{BinaryOperation, Expression, ExpressionKind},
+        expression::{Binary, BinaryOperation, Expression, ExpressionKind},
         Parser,
     },
 };
@@ -40,11 +40,11 @@ impl InfixParselet for BinaryOperationParselet {
             self.precedence - if self.is_right_associative { 1 } else { 0 },
             &token.0,
         )?;
-        let kind = ExpressionKind::Binary {
+        let kind = ExpressionKind::Binary(Binary {
             operation: self.operation,
             left: Box::new(left),
             right: Box::new(right),
-        };
+        });
 
         Ok((token.0, kind))
     }

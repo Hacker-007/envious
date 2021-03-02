@@ -2,7 +2,7 @@ use crate::{
     error::Error,
     lexer::token::{Token, TokenKind},
     parser::{
-        expression::{Expression, ExpressionKind},
+        expression::{Expression, ExpressionKind, Identifier, Let},
         Parser,
     },
     semantic_analyzer::types::Type,
@@ -68,11 +68,11 @@ impl PrefixParselet for LetParselet {
 
         Ok((
             token.0,
-            ExpressionKind::Let {
-                name: (identifier.0, id),
+            ExpressionKind::Let(Let {
+                name: (identifier.0, Identifier(id)),
                 given_type,
                 expression: Box::new(expression),
-            },
+            }),
         ))
     }
 }

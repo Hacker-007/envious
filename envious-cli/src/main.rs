@@ -1,12 +1,14 @@
 use std::{error::Error, fs, time::Instant};
 
 use envious::{
-    codegen::Runner,
-    error::reporter::{ErrorReporter, Reporter},
+    error::{
+        reporter::{ErrorReporter, Reporter},
+        Span,
+    },
     interner::Interner,
     lexer::{token::TokenKind, Lexer},
     parser::Parser,
-    semantic_analyzer::type_checker::TypeChecker,
+    semantic_analyzer::type_check::TypeCheck,
 };
 use options::Options;
 
@@ -59,7 +61,7 @@ fn compile_code(
     bytes: &[u8],
 ) -> Option<()> {
     let tokens = time("lexical analysis", &error_reporter, || {
-        Lexer::new(file_name, bytes).get_tokens(interner)
+        Lexer::new(file_name.clone(), bytes).get_tokens(interner)
     })?;
 
     let filtered_tokens = tokens
@@ -71,10 +73,7 @@ fn compile_code(
         Parser::new(filtered_tokens).parse()
     })?;
 
-    println!("{:#?}", ast);
-    // time("semantic analysis", &error_reporter, || {
-    //     TypeChecker::new().analyze_program(interner, &mut ast)
-    // })?;
+    time("semantic analysis", &error_reporter, || ast.check())?;
 
     // time("compilation", &error_reporter, || {
     //     Runner::new(ast).run("envious", interner)

@@ -450,7 +450,7 @@ impl Reporter for Vec<Error> {
             error_reporter.report(error);
         }
 
-        if self.len() != 0 {
+        if !self.is_empty() {
             None
         } else {
             Some(())

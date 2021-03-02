@@ -89,7 +89,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 TokenKind::Identifier(id) => id,
                 _ => {
                     return Err(Error::ExpectedKind {
-                        span: param_span.clone(),
+                        span: param_span,
                         expected_kinds: vec![TokenKind::Identifier(0)],
                         actual_kind: kind,
                     })

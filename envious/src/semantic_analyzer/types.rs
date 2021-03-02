@@ -4,7 +4,7 @@ use std::fmt::Display;
 /// expressions. There is no current support for
 /// generics. However, there is a plan to implement
 /// this in the future.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Type {
     Void,
     Int,

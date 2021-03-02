@@ -2,7 +2,7 @@ use crate::{
     error::Error,
     lexer::token::{Token, TokenKind},
     parser::{
-        expression::{Expression, ExpressionKind},
+        expression::{Expression, ExpressionKind, Identifier},
         Parser,
     },
 };
@@ -27,6 +27,6 @@ impl PrefixParselet for IdentifierParselet {
         token: Token,
     ) -> Result<Expression, Error> {
         let id = get!(token, TokenKind::Identifier(id), id);
-        Ok((token.0, ExpressionKind::Identifier(id)))
+        Ok((token.0, ExpressionKind::Identifier(Identifier(id))))
     }
 }
