@@ -19,6 +19,7 @@ pub struct Function {
     pub name: usize,
     pub parameters: Vec<Parameter>,
     pub body: Expression,
+    pub return_type: Option<Type>,
 }
 
 impl Function {
@@ -28,6 +29,7 @@ impl Function {
             name,
             parameters,
             body,
+            return_type: None,
         }
     }
 }

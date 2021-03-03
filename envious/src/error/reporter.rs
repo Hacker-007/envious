@@ -78,11 +78,7 @@ impl<'a> ErrorReporter<'a> {
                 second_span,
                 second_type,
             } => self.handle_conflicting_type(first_span, first_type, second_span, second_type),
-            Error::IllegalCast {
-                span,
-                to_type,
-                from_type,
-            } => self.handle_illegal_cast(span, to_type, from_type),
+            Error::IllegalType(span) => self.handle_illegal_type(span),
             Error::UndefinedVariable(span) => self.handle_undefined_variable(span),
             Error::ExpectedFunction => {
                 println!("Expected a function to be selected when compiling to LLVM.");
@@ -323,29 +319,18 @@ impl<'a> ErrorReporter<'a> {
             ])
     }
 
-    /// Handles an illegal cast error.
+    /// Handles an illegal type error.
     ///
     /// # Arguments
     /// `span` - The `Span` of this error.
-    /// `from_type` - The from `Type` of the cast.
-    /// `to_type` - The to `Type` of the cast.
-    fn handle_illegal_cast(
-        &self,
-        span: &Span,
-        from_type: &Type,
-        to_type: &Type,
-    ) -> Diagnostic<usize> {
+    fn handle_illegal_type(&self, span: &Span) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
-            .with_message("attempted to perform an illegal cast")
+            .with_message("placed a type where it was not allowed")
             .with_labels(vec![Label::primary(
                 self.get_file_id(&span.file_name),
                 start_column..end_column,
-            )
-            .with_message(format!(
-                "tried to convert from `{}` to `{}`",
-                from_type, to_type
-            ))])
+            )])
     }
 
     /// Handles an undefined variable error.

@@ -1,4 +1,4 @@
-// pub mod codegen;
+pub mod codegen;
 pub mod error;
 pub mod interner;
 pub mod lexer;

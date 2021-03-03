@@ -1,1 +1,5 @@
-define f() = 1 + true
+define main() =
+    if true then
+        4
+    else
+        21

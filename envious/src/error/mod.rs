@@ -52,13 +52,8 @@ pub enum Error {
         second_span: Span,
         second_type: Type,
     },
-    // // Occurs when a cast could not be performed between the original type and the new
-    // // type.
-    IllegalCast {
-        span: Span,
-        from_type: Type,
-        to_type: Type,
-    },
+    // Occurs when a type was found that could not be used.
+    IllegalType(Span),
     UndefinedVariable(Span),
 
     /// Occurs when a function was expected during the LLVM compilation.

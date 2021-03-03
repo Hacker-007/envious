@@ -1,19 +1,19 @@
 use inkwell::context::Context;
 
-use crate::{error::Error, interner::Interner, parser::expression::Expression};
+use crate::{error::Error, interner::Interner, parser::ast::Program};
 
-use super::CodeGenerator;
+use super::code_generator::CodeGenerator;
 
 /// A struct that handles running the final stage of the compiler.
 /// This ensures that other packages that handles maintaining either
 /// the CLI or the REPL do not have to import the LLVM library.
 pub struct Runner {
-    ast: Vec<Expression>,
+    program: Program,
 }
 
 impl Runner {
-    pub fn new(ast: Vec<Expression>) -> Self {
-        Self { ast }
+    pub fn new(program: Program) -> Self {
+        Self { program }
     }
 
     /// Generates the code for the given ast and provides a result.
@@ -24,14 +24,22 @@ impl Runner {
     /// # Arguments
     /// `module_name` - The name of the module to use.
     /// `interner` - The `Interner` used to store all string literals.
-    pub fn run(&mut self, module_name: &str, interner: &mut Interner<String>) -> Result<(), Error> {
+    pub fn run(
+        &mut self,
+        module_name: &str,
+        interner: &mut Interner<String>,
+    ) -> Result<(), Vec<Error>> {
         let context = Context::create();
         let module = context.create_module(module_name);
         let builder = context.create_builder();
 
-        let return_type = context.i64_type();
-        let main_function_type = return_type.fn_type(&[], false);
-        let main_function = Some(module.add_function("main", main_function_type, None));
-        CodeGenerator::new(&context, &module, &builder, &main_function).compile(interner, &self.ast)
+        // let return_type = context.i64_type();
+        // let main_function_type = return_type.fn_type(&[], false);
+        // let main_function = Some(module.add_function("main", main_function_type, None));
+        self.program
+            .code_gen(&context, &module, &builder, interner)?;
+        module.print_to_stderr();
+        Ok(())
+        // CodeGenerator::new(&context, &module, &builder, &main_function).compile(interner, &self.ast)
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     error::{Error, Span},
     parser::{
-        ast::{Function, Program},
+        ast::{Function, Parameter, Program},
         expression::{
             Binary, BinaryOperation, Expression, ExpressionKind, Identifier, If, Let, Unary,
             UnaryOperation,
@@ -16,7 +16,7 @@ pub trait TypeCheck {
     type Error;
 
     // TODO: Implement environment.
-    fn check(&self) -> Result<Self::Output, Self::Error>;
+    fn check(&mut self) -> Result<Self::Output, Self::Error>;
 }
 
 pub trait TypeCheckSpan {
@@ -24,26 +24,37 @@ pub trait TypeCheckSpan {
     type Error;
 
     // TODO: Implement environment.
-    fn check_span(&self, span: &Span) -> Result<Self::Output, Self::Error>;
+    fn check_span(&mut self, span: &Span) -> Result<Self::Output, Self::Error>;
 }
 
-impl TypeCheck for Program {
-    type Output = ();
-    type Error = Vec<Error>;
+impl<T: TypeCheck> TypeCheck for Vec<T> {
+    type Output = Vec<T::Output>;
+    type Error = Vec<T::Error>;
 
-    fn check(&self) -> Result<Self::Output, Self::Error> {
+    fn check(&mut self) -> Result<Self::Output, Self::Error> {
+        let mut results = vec![];
         let mut errors = vec![];
-        for function in &self.functions {
-            if let Err(error) = function.check() {
-                errors.push(error);
+        for value in self {
+            match value.check() {
+                Ok(result) => results.push(result),
+                Err(error) => errors.push(error),
             }
         }
 
         if !errors.is_empty() {
             Err(errors)
         } else {
-            Ok(())
+            Ok(results)
         }
+    }
+}
+
+impl TypeCheck for Program {
+    type Output = ();
+    type Error = Vec<Error>;
+
+    fn check(&mut self) -> Result<Self::Output, Self::Error> {
+        self.functions.check().map(|_| ())
     }
 }
 
@@ -51,9 +62,26 @@ impl TypeCheck for Function {
     type Output = Type;
     type Error = Error;
 
-    fn check(&self) -> Result<Self::Output, Self::Error> {
+    fn check(&mut self) -> Result<Self::Output, Self::Error> {
+        for parameter in &self.parameters {
+            if parameter.ty == Type::Void {
+                return Err(Error::IllegalType(parameter.span.clone()));
+            }
+        }
+
         // TODO: Add parameters to environment.
-        self.body.check()
+        let return_type = self.body.check()?;
+        self.return_type = Some(return_type);
+        Ok(return_type)
+    }
+}
+
+impl TypeCheck for Parameter {
+    type Output = Type;
+    type Error = Error;
+
+    fn check(&mut self) -> Result<Self::Output, Self::Error> {
+        Ok(self.ty)
     }
 }
 
@@ -61,17 +89,17 @@ impl TypeCheck for Expression {
     type Output = Type;
     type Error = Error;
 
-    fn check(&self) -> Result<Self::Output, Self::Error> {
+    fn check(&mut self) -> Result<Self::Output, Self::Error> {
         match self.1 {
             ExpressionKind::Int(_) => Ok(Type::Int),
             ExpressionKind::Float(_) => Ok(Type::Float),
             ExpressionKind::Boolean(_) => Ok(Type::Boolean),
             ExpressionKind::String(_) => Ok(Type::String),
-            ExpressionKind::Identifier(ref inner) => inner.check(),
-            ExpressionKind::Unary(ref inner) => inner.check_span(&self.0),
-            ExpressionKind::Binary(ref inner) => inner.check_span(&self.0),
-            ExpressionKind::If(ref inner) => inner.check(),
-            ExpressionKind::Let(ref inner) => inner.check(),
+            ExpressionKind::Identifier(ref mut inner) => inner.check(),
+            ExpressionKind::Unary(ref mut inner) => inner.check_span(&self.0),
+            ExpressionKind::Binary(ref mut inner) => inner.check_span(&self.0),
+            ExpressionKind::If(ref mut inner) => inner.check(),
+            ExpressionKind::Let(ref mut inner) => inner.check(),
         }
     }
 }
@@ -80,7 +108,7 @@ impl TypeCheck for Identifier {
     type Output = Type;
     type Error = Error;
 
-    fn check(&self) -> Result<Self::Output, Self::Error> {
+    fn check(&mut self) -> Result<Self::Output, Self::Error> {
         // TODO: Check id of identifier from environment.
         todo!()
     }
@@ -90,7 +118,7 @@ impl TypeCheckSpan for Unary {
     type Output = Type;
     type Error = Error;
 
-    fn check_span(&self, span: &Span) -> Result<Self::Output, Self::Error> {
+    fn check_span(&mut self, span: &Span) -> Result<Self::Output, Self::Error> {
         let expression_type = self.expression.check()?;
         let valid_op = match self.operation {
             UnaryOperation::Plus => matches!(expression_type, Type::Int | Type::Float),
@@ -115,7 +143,7 @@ impl TypeCheckSpan for Binary {
     type Output = Type;
     type Error = Error;
 
-    fn check_span(&self, span: &Span) -> Result<Self::Output, Self::Error> {
+    fn check_span(&mut self, span: &Span) -> Result<Self::Output, Self::Error> {
         let left_type = self.left.check()?;
         let right_type = self.right.check()?;
         let result_type = match (self.operation, left_type, right_type) {
@@ -155,7 +183,7 @@ impl TypeCheck for If {
     type Output = Type;
     type Error = Error;
 
-    fn check(&self) -> Result<Self::Output, Self::Error> {
+    fn check(&mut self) -> Result<Self::Output, Self::Error> {
         let condition_type = self.condition.check()?;
         if condition_type != Type::Boolean {
             return Err(Error::TypeMismatch {
@@ -165,7 +193,7 @@ impl TypeCheck for If {
             });
         }
 
-        if let Some(ref else_branch) = self.else_branch {
+        if let Some(ref mut else_branch) = self.else_branch {
             let then_branch_type = self.then_branch.check()?;
             let else_branch_type = else_branch.check()?;
 
@@ -189,7 +217,7 @@ impl TypeCheck for Let {
     type Output = Type;
     type Error = Error;
 
-    fn check(&self) -> Result<Self::Output, Self::Error> {
+    fn check(&mut self) -> Result<Self::Output, Self::Error> {
         if let Some(given_type) = self.given_type {
             let actual_type = self.expression.check()?;
             if actual_type != given_type {

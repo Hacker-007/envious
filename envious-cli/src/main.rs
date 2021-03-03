@@ -1,10 +1,8 @@
 use std::{error::Error, fs, time::Instant};
 
 use envious::{
-    error::{
-        reporter::{ErrorReporter, Reporter},
-        Span,
-    },
+    codegen::Runner,
+    error::reporter::{ErrorReporter, Reporter},
     interner::Interner,
     lexer::{token::TokenKind, Lexer},
     parser::Parser,
@@ -69,15 +67,15 @@ fn compile_code(
         .filter(|token| !matches!(token.1, TokenKind::Whitespace(_)))
         .peekable();
 
-    let ast = time("syntactic analysis", &error_reporter, || {
+    let mut program = time("syntactic analysis", &error_reporter, || {
         Parser::new(filtered_tokens).parse()
     })?;
 
-    time("semantic analysis", &error_reporter, || ast.check())?;
+    time("semantic analysis", &error_reporter, || program.check())?;
 
-    // time("compilation", &error_reporter, || {
-    //     Runner::new(ast).run("envious", interner)
-    // })?;
+    time("compilation", &error_reporter, || {
+        Runner::new(program).run(&file_name, interner)
+    })?;
 
     Some(())
 }
