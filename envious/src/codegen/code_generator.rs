@@ -8,7 +8,18 @@ use inkwell::{
     values::{BasicValueEnum, FunctionValue, VectorValue},
 };
 
-use crate::{error::Error, interner::Interner, parser::{ast::{Function, Program}, expression::{Binary, BinaryOperation, Expression, ExpressionKind, Identifier, If, Unary, UnaryOperation}}, semantic_analyzer::types::Type};
+use crate::{
+    error::Error,
+    interner::Interner,
+    parser::{
+        ast::{Function, Program},
+        expression::{
+            Binary, BinaryOperation, Expression, ExpressionKind, Identifier, If, Unary,
+            UnaryOperation,
+        },
+    },
+    semantic_analyzer::types::Type,
+};
 
 pub trait CodeGenerator<'ctx> {
     type Output;
@@ -292,20 +303,38 @@ impl<'ctx> CodeGeneratorFunction<'ctx> for If {
         current_function: &FunctionValue<'ctx>,
         interner: &mut Interner<String>,
     ) -> Result<Self::Output, Self::Error> {
-        let then_block = context.append_basic_block(*current_function, "ifthen"); 
+        let then_block = context.append_basic_block(*current_function, "ifthen");
         let else_block = context.append_basic_block(*current_function, "ifelse");
         let end_block = context.append_basic_block(*current_function, "ifend");
-        
-        let condition = self.condition.code_gen_function(context, module, builder, current_function, interner)?;
+
+        let condition = self.condition.code_gen_function(
+            context,
+            module,
+            builder,
+            current_function,
+            interner,
+        )?;
         builder.build_conditional_branch(condition.into_int_value(), then_block, else_block);
 
         builder.position_at_end(then_block);
-        let then_branch = self.then_branch.code_gen_function(context, module, builder, current_function, interner)?;
+        let then_branch = self.then_branch.code_gen_function(
+            context,
+            module,
+            builder,
+            current_function,
+            interner,
+        )?;
         builder.build_unconditional_branch(end_block);
 
         if let Some(ref else_branch) = self.else_branch {
             builder.position_at_end(else_block);
-            let else_branch = else_branch.code_gen_function(context, module, builder, current_function, interner)?;
+            let else_branch = else_branch.code_gen_function(
+                context,
+                module,
+                builder,
+                current_function,
+                interner,
+            )?;
             builder.build_unconditional_branch(end_block);
             builder.position_at_end(end_block);
             let phi = builder.build_phi(then_branch.get_type(), "ifphi");
