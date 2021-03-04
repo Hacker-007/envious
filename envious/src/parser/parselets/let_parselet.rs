@@ -57,8 +57,8 @@ impl<'a> PrefixParselet<'a> for LetParselet {
             }
         };
 
-        let last_span = if type_span.is_some() {
-            type_span.unwrap()
+        let last_span = if let Some(span) = type_span {
+            span
         } else {
             identifier.0
         };

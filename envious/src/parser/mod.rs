@@ -136,7 +136,11 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
     /// # Arguments
     /// * `precendence` - The current precedence to use when evaluating expressions.
     /// * `span` - The `Span` of the current token.
-    fn parse_expression(&mut self, precedence: usize, span: Span<'a>) -> Result<Expression<'a>, Error<'a>> {
+    fn parse_expression(
+        &mut self,
+        precedence: usize,
+        span: Span<'a>,
+    ) -> Result<Expression<'a>, Error<'a>> {
         let token = self.consume(span)?;
         let mut left = self.parse_prefix(token)?;
         while precedence < self.get_precedence() {
@@ -186,7 +190,11 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
     /// # Arguments
     /// * `left` - The first part of the infix expression that was already parsed.
     /// * `token` - The token to parse into a prefix expression.
-    fn parse_infix(&mut self, left: Expression<'a>, token: Token<'a>) -> Result<Expression<'a>, Error<'a>> {
+    fn parse_infix(
+        &mut self,
+        left: Expression<'a>,
+        token: Token<'a>,
+    ) -> Result<Expression<'a>, Error<'a>> {
         match token.1 {
             TokenKind::Plus => {
                 BinaryOperationParselet::new(Precedence::Addition, BinaryOperation::Plus, false)

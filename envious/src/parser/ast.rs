@@ -23,7 +23,12 @@ pub struct Function<'a> {
 }
 
 impl<'a> Function<'a> {
-    pub fn new(span: Span<'a>, name: usize, parameters: Vec<Parameter<'a>>, body: Expression<'a>) -> Self {
+    pub fn new(
+        span: Span<'a>,
+        name: usize,
+        parameters: Vec<Parameter<'a>>,
+        body: Expression<'a>,
+    ) -> Self {
         Self {
             span,
             name,

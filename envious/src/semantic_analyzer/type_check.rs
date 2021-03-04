@@ -168,10 +168,7 @@ impl<'a> TypeCheckSpan<'a> for Binary<'a> {
         } else {
             let error = Error::UnsupportedOperation {
                 operation_span: span,
-                operands: vec![
-                    (self.left.0, left_type),
-                    (self.right.0, right_type),
-                ],
+                operands: vec![(self.left.0, left_type), (self.right.0, right_type)],
             };
 
             Err(error)
