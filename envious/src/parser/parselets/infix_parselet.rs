@@ -4,7 +4,7 @@ use crate::{
     parser::{expression::Expression, Parser},
 };
 
-pub trait InfixParselet {
+pub trait InfixParselet<'a> {
     /// This method parses the given token and the expression into an
     /// infix expression.
     ///
@@ -20,10 +20,10 @@ pub trait InfixParselet {
     /// * `token` - The token associated with the given infix parselet.
     fn parse(
         &self,
-        parser: &mut Parser<impl Iterator<Item = Token>>,
-        left: Expression,
-        token: Token,
-    ) -> Result<Expression, Error>;
+        parser: &mut Parser<'a, impl Iterator<Item = Token<'a>>>,
+        left: Expression<'a>,
+        token: Token<'a>,
+    ) -> Result<Expression<'a>, Error<'a>>;
 
     /// This method gets the precedence of the infix parselet.
     /// This is used to determine whether to continue parsing the

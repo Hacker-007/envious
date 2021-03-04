@@ -27,23 +27,23 @@ pub mod parselets;
 /// The `Parser` uses a mixture of the Pratt parsing technique and the
 /// recursive descent algorithm. It achieves this through the mini parsers
 /// called parselets.
-pub struct Parser<T: Iterator<Item = Token>> {
+pub struct Parser<'a, T: Iterator<Item = Token<'a>>> {
     tokens: Peekable<T>,
 }
 
-impl<T: Iterator<Item = Token>> Parser<T> {
+impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
     pub fn new(tokens: Peekable<T>) -> Self {
         Self { tokens }
     }
 
     /// Walks through the tokens and constructs a program, or a vector
     /// of functions.
-    pub fn parse(&mut self) -> Result<Program, Vec<Error>> {
+    pub fn parse(&mut self) -> Result<Program<'a>, Vec<Error<'a>>> {
         let mut functions = vec![];
         let mut errors = vec![];
         while let Some((_, _)) = self.tokens.peek() {
-            let dummy_span = Span::new(String::new(), 1, 1, 1, 1);
-            match self.parse_function(&dummy_span) {
+            let dummy_span = Span::new("", 1, 1, 1, 1);
+            match self.parse_function(dummy_span) {
                 Ok(function) => functions.push(function),
                 Err(error) => errors.push(error),
             }
@@ -56,28 +56,28 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
     }
 
-    fn parse_function(&mut self, span: &Span) -> Result<Function, Error> {
+    fn parse_function(&mut self, span: Span<'a>) -> Result<Function<'a>, Error<'a>> {
         let (define_span, _) = self.expect(TokenKind::Define, span)?;
         if let (function_name_span, TokenKind::Identifier(id)) =
-            self.expect(TokenKind::Identifier(0), &define_span)?
+            self.expect(TokenKind::Identifier(0), define_span)?
         {
             let (left_paren_span, _) =
-                self.expect(TokenKind::LeftParenthesis, &function_name_span)?;
+                self.expect(TokenKind::LeftParenthesis, function_name_span)?;
             let parameters = self.parse_parameters()?;
             let last_span = parameters
                 .iter()
                 .last()
-                .map_or(&left_paren_span, |param| &param.span);
+                .map_or(left_paren_span, |param| param.span);
             let (right_paren_span, _) = self.expect(TokenKind::RightParenthesis, last_span)?;
-            let (eq_span, _) = self.expect(TokenKind::EqualSign, &right_paren_span)?;
-            let body = self.parse_expression(0, &eq_span)?;
+            let (eq_span, _) = self.expect(TokenKind::EqualSign, right_paren_span)?;
+            let body = self.parse_expression(0, eq_span)?;
             Ok(Function::new(function_name_span, id, parameters, body))
         } else {
             unreachable!()
         }
     }
 
-    fn parse_parameters(&mut self) -> Result<Vec<Parameter>, Error> {
+    fn parse_parameters(&mut self) -> Result<Vec<Parameter<'a>>, Error<'a>> {
         let mut parameters = vec![];
         while let Some((_, kind)) = self.tokens.peek() {
             if kind == &TokenKind::RightParenthesis {
@@ -96,8 +96,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 }
             };
 
-            let (colon_span, _) = self.expect(TokenKind::Colon, &param_span)?;
-            let (type_span, kind) = self.consume(&colon_span)?;
+            let (colon_span, _) = self.expect(TokenKind::Colon, param_span)?;
+            let (type_span, kind) = self.consume(colon_span)?;
             let ty = match kind {
                 TokenKind::Void => Type::Void,
                 TokenKind::Int => Type::Int,
@@ -136,11 +136,11 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     /// # Arguments
     /// * `precendence` - The current precedence to use when evaluating expressions.
     /// * `span` - The `Span` of the current token.
-    fn parse_expression(&mut self, precedence: usize, span: &Span) -> Result<Expression, Error> {
+    fn parse_expression(&mut self, precedence: usize, span: Span<'a>) -> Result<Expression<'a>, Error<'a>> {
         let token = self.consume(span)?;
         let mut left = self.parse_prefix(token)?;
         while precedence < self.get_precedence() {
-            let token = self.consume(&left.0)?;
+            let token = self.consume(left.0)?;
             left = self.parse_infix(left, token)?;
         }
 
@@ -153,7 +153,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     ///
     /// # Arguments
     /// * `token` - The token to parse into a prefix expression.
-    fn parse_prefix(&mut self, token: Token) -> Result<Expression, Error> {
+    fn parse_prefix(&mut self, token: Token<'a>) -> Result<Expression<'a>, Error<'a>> {
         match token.1 {
             TokenKind::IntegerLiteral(_) => IntParselet.parse(self, token),
             TokenKind::FloatLiteral(_) => FloatParselet.parse(self, token),
@@ -186,7 +186,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     /// # Arguments
     /// * `left` - The first part of the infix expression that was already parsed.
     /// * `token` - The token to parse into a prefix expression.
-    fn parse_infix(&mut self, left: Expression, token: Token) -> Result<Expression, Error> {
+    fn parse_infix(&mut self, left: Expression<'a>, token: Token<'a>) -> Result<Expression<'a>, Error<'a>> {
         match token.1 {
             TokenKind::Plus => {
                 BinaryOperationParselet::new(Precedence::Addition, BinaryOperation::Plus, false)
@@ -228,7 +228,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     /// Returns an immutable reference to the next token
     /// without consuming it.
-    fn peek(&mut self) -> Option<&Token> {
+    fn peek(&mut self) -> Option<&Token<'a>> {
         self.tokens.peek()
     }
 
@@ -238,10 +238,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     ///
     /// # Arguments
     /// `span` - The `Span` of the previous token.
-    fn consume(&mut self, span: &Span) -> Result<Token, Error> {
+    fn consume(&mut self, span: Span<'a>) -> Result<Token<'a>, Error<'a>> {
         match self.tokens.next() {
             Some(token) => Ok(token),
-            None => Err(Error::UnexpectedEndOfInput(span.clone())),
+            None => Err(Error::UnexpectedEndOfInput(span)),
         }
     }
 
@@ -253,7 +253,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     /// # Arguments
     /// * `expected_kind` - The kind expected of the next token.
     /// `span` - The `Span` of the previous token.
-    fn expect(&mut self, expected_kind: TokenKind, span: &Span) -> Result<Token, Error> {
+    fn expect(&mut self, expected_kind: TokenKind, span: Span<'a>) -> Result<Token<'a>, Error<'a>> {
         let token = self.consume(span)?;
 
         if mem::discriminant(&token.1) == mem::discriminant(&expected_kind) {

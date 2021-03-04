@@ -20,12 +20,12 @@ macro_rules! get {
 }
 
 pub struct IdentifierParselet;
-impl PrefixParselet for IdentifierParselet {
+impl<'a> PrefixParselet<'a> for IdentifierParselet {
     fn parse(
         &self,
-        _: &mut Parser<impl Iterator<Item = Token>>,
-        token: Token,
-    ) -> Result<Expression, Error> {
+        _: &mut Parser<'a, impl Iterator<Item = Token<'a>>>,
+        token: Token<'a>,
+    ) -> Result<Expression<'a>, Error<'a>> {
         let id = get!(token, TokenKind::Identifier(id), id);
         Ok((token.0, ExpressionKind::Identifier(Identifier(id))))
     }

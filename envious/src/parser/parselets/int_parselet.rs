@@ -20,12 +20,12 @@ macro_rules! get {
 }
 
 pub struct IntParselet;
-impl PrefixParselet for IntParselet {
+impl<'a> PrefixParselet<'a> for IntParselet {
     fn parse(
         &self,
-        _: &mut Parser<impl Iterator<Item = Token>>,
-        token: Token,
-    ) -> Result<Expression, Error> {
+        _: &mut Parser<'a, impl Iterator<Item = Token<'a>>>,
+        token: Token<'a>,
+    ) -> Result<Expression<'a>, Error<'a>> {
         let value = get!(token, TokenKind::IntegerLiteral(value), value);
         Ok((token.0, ExpressionKind::Int(value)))
     }

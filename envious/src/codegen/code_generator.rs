@@ -21,7 +21,7 @@ use crate::{
     semantic_analyzer::types::Type,
 };
 
-pub trait CodeGenerator<'ctx> {
+pub trait CodeGenerator<'a, 'ctx> {
     type Output;
     type Error;
 
@@ -34,7 +34,7 @@ pub trait CodeGenerator<'ctx> {
     ) -> Result<Self::Output, Self::Error>;
 }
 
-pub trait CodeGeneratorFunction<'ctx> {
+pub trait CodeGeneratorFunction<'a, 'ctx> {
     type Output;
     type Error;
 
@@ -48,9 +48,9 @@ pub trait CodeGeneratorFunction<'ctx> {
     ) -> Result<Self::Output, Self::Error>;
 }
 
-impl<'ctx> CodeGenerator<'ctx> for Program {
+impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for Program<'a> {
     type Output = ();
-    type Error = Vec<Error>;
+    type Error = Vec<Error<'a>>;
 
     fn code_gen(
         &self,
@@ -74,9 +74,9 @@ impl<'ctx> CodeGenerator<'ctx> for Program {
     }
 }
 
-impl<'ctx> CodeGenerator<'ctx> for Function {
+impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for Function<'a> {
     type Output = ();
-    type Error = Error;
+    type Error = Error<'a>;
 
     fn code_gen(
         &self,
@@ -117,9 +117,9 @@ impl<'ctx> CodeGenerator<'ctx> for Function {
     }
 }
 
-impl<'ctx> CodeGeneratorFunction<'ctx> for Expression {
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Expression<'a> {
     type Output = BasicValueEnum<'ctx>;
-    type Error = Error;
+    type Error = Error<'a>;
 
     fn code_gen_function(
         &self,
@@ -164,9 +164,9 @@ impl<'ctx> CodeGeneratorFunction<'ctx> for Expression {
     }
 }
 
-impl<'ctx> CodeGeneratorFunction<'ctx> for Identifier {
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Identifier {
     type Output = BasicValueEnum<'ctx>;
-    type Error = Error;
+    type Error = Error<'a>;
 
     fn code_gen_function(
         &self,
@@ -180,9 +180,9 @@ impl<'ctx> CodeGeneratorFunction<'ctx> for Identifier {
     }
 }
 
-impl<'ctx> CodeGeneratorFunction<'ctx> for Unary {
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Unary<'a> {
     type Output = BasicValueEnum<'ctx>;
-    type Error = Error;
+    type Error = Error<'a>;
 
     fn code_gen_function(
         &self,
@@ -217,9 +217,9 @@ impl<'ctx> CodeGeneratorFunction<'ctx> for Unary {
     }
 }
 
-impl<'ctx> CodeGeneratorFunction<'ctx> for Binary {
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Binary<'a> {
     type Output = BasicValueEnum<'ctx>;
-    type Error = Error;
+    type Error = Error<'a>;
 
     fn code_gen_function(
         &self,
@@ -291,9 +291,9 @@ impl<'ctx> CodeGeneratorFunction<'ctx> for Binary {
     }
 }
 
-impl<'ctx> CodeGeneratorFunction<'ctx> for If {
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for If<'a> {
     type Output = BasicValueEnum<'ctx>;
-    type Error = Error;
+    type Error = Error<'a>;
 
     fn code_gen_function(
         &self,

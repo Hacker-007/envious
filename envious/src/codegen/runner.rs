@@ -7,12 +7,12 @@ use super::code_generator::CodeGenerator;
 /// A struct that handles running the final stage of the compiler.
 /// This ensures that other packages that handles maintaining either
 /// the CLI or the REPL do not have to import the LLVM library.
-pub struct Runner {
-    program: Program,
+pub struct Runner<'a> {
+    program: Program<'a>,
 }
 
-impl Runner {
-    pub fn new(program: Program) -> Self {
+impl<'a> Runner<'a> {
+    pub fn new(program: Program<'a>) -> Self {
         Self { program }
     }
 
@@ -28,7 +28,7 @@ impl Runner {
         &mut self,
         module_name: &str,
         interner: &mut Interner<String>,
-    ) -> Result<(), Vec<Error>> {
+    ) -> Result<(), Vec<Error<'a>>> {
         let context = Context::create();
         let module = context.create_module(module_name);
         let builder = context.create_builder();

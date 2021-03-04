@@ -20,12 +20,12 @@ macro_rules! get {
 }
 
 pub struct FloatParselet;
-impl PrefixParselet for FloatParselet {
+impl<'a> PrefixParselet<'a> for FloatParselet {
     fn parse(
         &self,
-        _: &mut Parser<impl Iterator<Item = Token>>,
-        token: Token,
-    ) -> Result<Expression, Error> {
+        _: &mut Parser<'a, impl Iterator<Item = Token<'a>>>,
+        token: Token<'a>,
+    ) -> Result<Expression<'a>, Error<'a>> {
         let value = get!(token, TokenKind::FloatLiteral(value), value);
         Ok((token.0, ExpressionKind::Float(value)))
     }

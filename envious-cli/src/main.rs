@@ -59,7 +59,7 @@ fn compile_code(
     bytes: &[u8],
 ) -> Option<()> {
     let tokens = time("lexical analysis", &error_reporter, || {
-        Lexer::new(file_name.clone(), bytes).get_tokens(interner)
+        Lexer::new(&file_name, bytes).get_tokens(interner)
     })?;
 
     let filtered_tokens = tokens

@@ -5,7 +5,7 @@ use crate::{
 };
 
 /// Trait used by prefix parselets to parse different expressions.
-pub trait PrefixParselet {
+pub trait PrefixParselet<'a> {
     /// This method parses the given token into a prefix expression.
     ///
     /// This method assumes that the token provided is the correct token for
@@ -17,7 +17,7 @@ pub trait PrefixParselet {
     /// * `token` - The token associated with the given prefix parselet.
     fn parse(
         &self,
-        parser: &mut Parser<impl Iterator<Item = Token>>,
-        token: Token,
-    ) -> Result<Expression, Error>;
+        parser: &mut Parser<'a, impl Iterator<Item = Token<'a>>>,
+        token: Token<'a>,
+    ) -> Result<Expression<'a>, Error<'a>>;
 }

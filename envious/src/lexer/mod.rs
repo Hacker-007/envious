@@ -5,7 +5,7 @@ use crate::{error::Error, error::Span, interner::Interner};
 use self::token::{Token, TokenKind};
 
 /// Represents an internal type to simplify the code.
-type LexResult = Result<Token, Error>;
+type LexResult<'a> = Result<Token<'a>, Error<'a>>;
 
 /// Struct that transforms the input into a vector of tokens.
 /// The `Lexer` operates on the slice of bytes to
@@ -17,7 +17,7 @@ type LexResult = Result<Token, Error>;
 /// `Token` is constructed.
 pub struct Lexer<'a> {
     // The name of the file currently being analyzed.
-    file_name: String,
+    file_name: &'a str,
     // The bytes of the file being analyzed.
     bytes: &'a [u8],
     // The current index in the bytes slice.
@@ -31,7 +31,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(file_name: String, bytes: &'a [u8]) -> Self {
+    pub fn new(file_name: &'a str, bytes: &'a [u8]) -> Self {
         Self {
             file_name,
             bytes,
@@ -50,7 +50,7 @@ impl<'a> Lexer<'a> {
     pub fn get_tokens(
         &mut self,
         interner: &mut Interner<String>,
-    ) -> Result<Vec<Token>, Vec<Error>> {
+    ) -> Result<Vec<Token<'a>>, Vec<Error<'a>>> {
         let mut tokens = vec![];
         let mut errors = vec![];
         while let Some(byte) = self.next() {
@@ -175,7 +175,7 @@ impl<'a> Lexer<'a> {
     /// # Arguments
     /// * `digit` - The first digit of the number.
     /// * `start_column` - The starting column of the number. This changes when dealing with negative numbers.
-    fn form_number(&mut self, digit: i64, start_column: usize) -> LexResult {
+    fn form_number(&mut self, digit: i64, start_column: usize) -> LexResult<'a> {
         let mut number = digit.to_string();
         let mut seen_decimal_point = false;
         while let Some(next) = self.peek() {
@@ -214,7 +214,7 @@ impl<'a> Lexer<'a> {
     /// # Arguments
     /// * `string_start` - The character with which the string started with.
     /// * `interner` - The `Interner` which stores the different string literals.
-    fn form_string(&mut self, string_start: u8, interner: &mut Interner<String>) -> LexResult {
+    fn form_string(&mut self, string_start: u8, interner: &mut Interner<String>) -> LexResult<'a> {
         let (start_line, start_column) = (self.current_line, self.current_column);
         let mut string = String::new();
         let mut is_terminated = false;
@@ -235,7 +235,7 @@ impl<'a> Lexer<'a> {
         }
 
         let span = Span::new(
-            self.file_name.clone(),
+            self.file_name,
             start_line,
             start_column,
             self.current_line,
@@ -256,7 +256,7 @@ impl<'a> Lexer<'a> {
     /// # Arguments
     /// * `leter` - The character with which the word started with.
     /// * `interner` - The `Interner` which stores the different string literals.
-    fn form_word(&mut self, letter: char, interner: &mut Interner<String>) -> LexResult {
+    fn form_word(&mut self, letter: char, interner: &mut Interner<String>) -> LexResult<'a> {
         let start_column = self.current_column;
         let mut word = letter.to_string();
         while let Some(next) = self.peek() {
@@ -317,9 +317,9 @@ impl<'a> Lexer<'a> {
     ///
     /// # Arguments
     /// `start_column` - The starting column of the `Token`.
-    fn make_span(&self, start_column: usize) -> Span {
+    fn make_span(&self, start_column: usize) -> Span<'a> {
         Span::new(
-            self.file_name.clone(),
+            self.file_name,
             self.current_line,
             start_column,
             self.current_line,

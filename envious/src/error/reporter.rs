@@ -427,7 +427,7 @@ pub trait Reporter {
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output>;
 }
 
-impl Reporter for Vec<Error> {
+impl<'a> Reporter for Vec<Error<'a>> {
     type Output = ();
 
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
@@ -443,7 +443,7 @@ impl Reporter for Vec<Error> {
     }
 }
 
-impl Reporter for Option<Error> {
+impl<'a> Reporter for Option<Error<'a>> {
     type Output = ();
 
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
@@ -459,7 +459,7 @@ impl Reporter for Option<Error> {
     }
 }
 
-impl<T> Reporter for Result<T, Error> {
+impl<'a, T> Reporter for Result<T, Error<'a>> {
     type Output = T;
 
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
@@ -473,7 +473,7 @@ impl<T> Reporter for Result<T, Error> {
     }
 }
 
-impl<T> Reporter for Result<T, Vec<Error>> {
+impl<'a, T> Reporter for Result<T, Vec<Error<'a>>> {
     type Output = T;
 
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {

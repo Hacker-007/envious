@@ -20,12 +20,12 @@ macro_rules! get {
 }
 
 pub struct BooleanParselet;
-impl PrefixParselet for BooleanParselet {
+impl<'a> PrefixParselet<'a> for BooleanParselet {
     fn parse(
         &self,
-        _: &mut Parser<impl Iterator<Item = Token>>,
-        token: Token,
-    ) -> Result<Expression, Error> {
+        _: &mut Parser<'a, impl Iterator<Item = Token<'a>>>,
+        token: Token<'a>,
+    ) -> Result<Expression<'a>, Error<'a>> {
         let value = get!(token, TokenKind::BooleanLiteral(value), value);
         Ok((token.0, ExpressionKind::Boolean(value)))
     }

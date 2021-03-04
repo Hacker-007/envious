@@ -23,13 +23,13 @@ impl PrefixOperationParselet {
     }
 }
 
-impl PrefixParselet for PrefixOperationParselet {
+impl<'a> PrefixParselet<'a> for PrefixOperationParselet {
     fn parse(
         &self,
-        parser: &mut Parser<impl Iterator<Item = Token>>,
-        token: Token,
-    ) -> Result<Expression, Error> {
-        let operand = parser.parse_expression(self.precedence, &token.0)?;
+        parser: &mut Parser<'a, impl Iterator<Item = Token<'a>>>,
+        token: Token<'a>,
+    ) -> Result<Expression<'a>, Error<'a>> {
+        let operand = parser.parse_expression(self.precedence, token.0)?;
         let kind = ExpressionKind::Unary(Unary {
             operation: self.operation,
             expression: Box::new(operand),

@@ -29,16 +29,16 @@ impl BinaryOperationParselet {
     }
 }
 
-impl InfixParselet for BinaryOperationParselet {
+impl<'a> InfixParselet<'a> for BinaryOperationParselet {
     fn parse(
         &self,
-        parser: &mut Parser<impl Iterator<Item = Token>>,
-        left: Expression,
-        token: Token,
-    ) -> Result<Expression, Error> {
+        parser: &mut Parser<'a, impl Iterator<Item = Token<'a>>>,
+        left: Expression<'a>,
+        token: Token<'a>,
+    ) -> Result<Expression<'a>, Error<'a>> {
         let right = parser.parse_expression(
             self.precedence - if self.is_right_associative { 1 } else { 0 },
-            &token.0,
+            token.0,
         )?;
         let kind = ExpressionKind::Binary(Binary {
             operation: self.operation,

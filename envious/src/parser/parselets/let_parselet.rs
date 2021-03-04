@@ -21,18 +21,18 @@ macro_rules! get {
 }
 
 pub struct LetParselet;
-impl PrefixParselet for LetParselet {
+impl<'a> PrefixParselet<'a> for LetParselet {
     fn parse(
         &self,
-        parser: &mut Parser<impl Iterator<Item = Token>>,
-        token: Token,
-    ) -> Result<Expression, Error> {
-        let identifier = parser.expect(TokenKind::Identifier(0), &token.0)?;
+        parser: &mut Parser<'a, impl Iterator<Item = Token<'a>>>,
+        token: Token<'a>,
+    ) -> Result<Expression<'a>, Error<'a>> {
+        let identifier = parser.expect(TokenKind::Identifier(0), token.0)?;
         let id = get!(identifier, TokenKind::Identifier(id), id);
         let (given_type, type_span) = {
             if let Some((_, TokenKind::Colon)) = parser.peek() {
-                let (colon_span, _) = parser.consume(&identifier.0)?;
-                match parser.consume(&colon_span)? {
+                let (colon_span, _) = parser.consume(identifier.0)?;
+                match parser.consume(colon_span)? {
                     (span, TokenKind::Void) => (Some(Type::Void), Some(span)),
                     (span, TokenKind::Int) => (Some(Type::Int), Some(span)),
                     (span, TokenKind::Float) => (Some(Type::Float), Some(span)),
@@ -58,13 +58,13 @@ impl PrefixParselet for LetParselet {
         };
 
         let last_span = if type_span.is_some() {
-            type_span.as_ref().unwrap()
+            type_span.unwrap()
         } else {
-            &identifier.0
+            identifier.0
         };
 
         let (equal_span, _) = parser.expect(TokenKind::EqualSign, last_span)?;
-        let expression = parser.parse_expression(0, &equal_span)?;
+        let expression = parser.parse_expression(0, equal_span)?;
 
         Ok((
             token.0,
