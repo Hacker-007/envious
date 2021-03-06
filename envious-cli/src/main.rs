@@ -67,14 +67,14 @@ fn compile_code(
         .filter(|token| !matches!(token.1, TokenKind::Whitespace(_)))
         .peekable();
 
-    let mut program = time("syntactic analysis", &error_reporter, || {
+    let program = time("syntactic analysis", &error_reporter, || {
         Parser::new(filtered_tokens).parse()
     })?;
 
-    time("semantic analysis", &error_reporter, || program.check())?;
+    let typed_program = time("semantic analysis", &error_reporter, || program.check())?;
 
     time("compilation", &error_reporter, || {
-        Runner::new(program).run(&file_name, interner)
+        Runner::new(typed_program).run(&file_name, interner)
     })?;
 
     Some(())

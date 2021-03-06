@@ -1,6 +1,6 @@
 use inkwell::context::Context;
 
-use crate::{error::Error, interner::Interner, parser::ast::Program};
+use crate::{error::Error, interner::Interner, parser::typed_ast::TypedProgram};
 
 use super::code_generator::CodeGenerator;
 
@@ -8,11 +8,11 @@ use super::code_generator::CodeGenerator;
 /// This ensures that other packages that handles maintaining either
 /// the CLI or the REPL do not have to import the LLVM library.
 pub struct Runner<'a> {
-    program: Program<'a>,
+    program: TypedProgram<'a>,
 }
 
 impl<'a> Runner<'a> {
-    pub fn new(program: Program<'a>) -> Self {
+    pub fn new(program: TypedProgram<'a>) -> Self {
         Self { program }
     }
 

@@ -8,7 +8,7 @@ use inkwell::{
     values::{BasicValueEnum, FunctionValue, VectorValue},
 };
 
-use crate::{error::Error, interner::Interner, parser::{ast::{Function, Program}, expression::{Binary, BinaryOperation, Expression, ExpressionKind, Identifier, If, Let, Unary, UnaryOperation}}, semantic_analyzer::types::Type};
+use crate::{error::Error, interner::Interner, parser::{expression::{UnaryOperation, BinaryOperation}, typed_ast::{TypedFunction, TypedProgram}, typed_expression::{TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier, TypedIf, TypedLet, TypedUnary}}, semantic_analyzer::types::Type};
 
 pub trait CodeGenerator<'a, 'ctx> {
     type Output;
@@ -37,7 +37,7 @@ pub trait CodeGeneratorFunction<'a, 'ctx> {
     ) -> Result<Self::Output, Self::Error>;
 }
 
-impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for Program<'a> {
+impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedProgram<'a> {
     type Output = ();
     type Error = Vec<Error<'a>>;
 
@@ -63,7 +63,7 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for Program<'a> {
     }
 }
 
-impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for Function<'a> {
+impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
     type Output = ();
     type Error = Error<'a>;
 
@@ -74,7 +74,6 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for Function<'a> {
         builder: &Builder<'ctx>,
         interner: &mut Interner<String>,
     ) -> Result<Self::Output, Self::Error> {
-        let return_type = self.return_type.unwrap();
         let parameter_types = self
             .parameters
             .iter()
@@ -82,10 +81,10 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for Function<'a> {
             .map(|ty| convert_basic_type(ty, context))
             .collect::<Vec<_>>();
 
-        let function_type = if let Type::Void = return_type {
+        let function_type = if let Type::Void = self.return_type {
             context.void_type().fn_type(&parameter_types, false)
         } else {
-            convert_type(return_type, context).fn_type(&parameter_types, false)
+            convert_type(self.return_type, context).fn_type(&parameter_types, false)
         };
 
         let function = module.add_function(&interner.get(self.name), function_type, None);
@@ -95,7 +94,7 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for Function<'a> {
         let expression = self
             .body
             .code_gen_function(context, module, builder, &function, interner)?;
-        if return_type == Type::Void {
+        if self.return_type == Type::Void {
             builder.build_return(None);
         } else {
             builder.build_return(Some(&expression));
@@ -106,7 +105,7 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for Function<'a> {
     }
 }
 
-impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Expression<'a> {
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
     type Output = BasicValueEnum<'ctx>;
     type Error = Error<'a>;
 
@@ -119,7 +118,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Expression<'a> {
         interner: &mut Interner<String>,
     ) -> Result<Self::Output, Self::Error> {
         match self.1 {
-            ExpressionKind::Int(value) => {
+            TypedExpressionKind::Int(value) => {
                 let int = context.i64_type().const_int(value.abs() as u64, false);
                 if value < 0 {
                     Ok(BasicValueEnum::IntValue(int.const_neg()))
@@ -127,36 +126,35 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Expression<'a> {
                     Ok(BasicValueEnum::IntValue(int))
                 }
             }
-            ExpressionKind::Float(value) => Ok(BasicValueEnum::FloatValue(
+            TypedExpressionKind::Float(value) => Ok(BasicValueEnum::FloatValue(
                 context.f64_type().const_float(value),
             )),
-            ExpressionKind::Boolean(value) => Ok(BasicValueEnum::IntValue(
+            TypedExpressionKind::Boolean(value) => Ok(BasicValueEnum::IntValue(
                 context.bool_type().const_int(value as u64, false),
             )),
-            ExpressionKind::String(id) => Ok(BasicValueEnum::VectorValue(
+            TypedExpressionKind::String(id) => Ok(BasicValueEnum::VectorValue(
                 context.const_string(interner.get(id).as_bytes(), true),
             )),
-            ExpressionKind::Identifier(ref inner) => {
+            TypedExpressionKind::Identifier(ref inner) => {
                 inner.code_gen_function(context, module, builder, current_function, interner)
             }
-            ExpressionKind::Unary(ref inner) => {
+            TypedExpressionKind::Unary(ref inner) => {
                 inner.code_gen_function(context, module, builder, current_function, interner)
             }
-            ExpressionKind::Binary(ref inner) => {
+            TypedExpressionKind::Binary(ref inner) => {
                 inner.code_gen_function(context, module, builder, current_function, interner)
             }
-            ExpressionKind::If(ref inner) => {
+            TypedExpressionKind::If(ref inner) => {
                 inner.code_gen_function(context, module, builder, current_function, interner)
             }
-            ExpressionKind::Let(ref inner) => {
+            TypedExpressionKind::Let(ref inner) => {
                 inner.code_gen_function(context, module, builder, current_function, interner)
             }
-            _ => todo!(),
         }
     }
 }
 
-impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Identifier {
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIdentifier {
     type Output = BasicValueEnum<'ctx>;
     type Error = Error<'a>;
 
@@ -172,7 +170,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Identifier {
     }
 }
 
-impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Unary<'a> {
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedUnary<'a> {
     type Output = BasicValueEnum<'ctx>;
     type Error = Error<'a>;
 
@@ -209,7 +207,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Unary<'a> {
     }
 }
 
-impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Binary<'a> {
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedBinary<'a> {
     type Output = BasicValueEnum<'ctx>;
     type Error = Error<'a>;
 
@@ -283,7 +281,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Binary<'a> {
     }
 }
 
-impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for If<'a> {
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
     type Output = BasicValueEnum<'ctx>;
     type Error = Error<'a>;
 
@@ -341,7 +339,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for If<'a> {
     }
 }
 
-impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Let<'a> {
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedLet<'a> {
     type Output = BasicValueEnum<'ctx>;
     type Error = Error<'a>;
 
