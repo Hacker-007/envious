@@ -18,7 +18,9 @@ use self::{
     },
 };
 
+pub mod typed_ast;
 pub mod ast;
+pub mod typed_expression;
 pub mod expression;
 pub mod parselets;
 

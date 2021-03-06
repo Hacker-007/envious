@@ -8,18 +8,7 @@ use inkwell::{
     values::{BasicValueEnum, FunctionValue, VectorValue},
 };
 
-use crate::{
-    error::Error,
-    interner::Interner,
-    parser::{
-        ast::{Function, Program},
-        expression::{
-            Binary, BinaryOperation, Expression, ExpressionKind, Identifier, If, Unary,
-            UnaryOperation,
-        },
-    },
-    semantic_analyzer::types::Type,
-};
+use crate::{error::Error, interner::Interner, parser::{ast::{Function, Program}, expression::{Binary, BinaryOperation, Expression, ExpressionKind, Identifier, If, Let, Unary, UnaryOperation}}, semantic_analyzer::types::Type};
 
 pub trait CodeGenerator<'a, 'ctx> {
     type Output;
@@ -157,6 +146,9 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Expression<'a> {
                 inner.code_gen_function(context, module, builder, current_function, interner)
             }
             ExpressionKind::If(ref inner) => {
+                inner.code_gen_function(context, module, builder, current_function, interner)
+            }
+            ExpressionKind::Let(ref inner) => {
                 inner.code_gen_function(context, module, builder, current_function, interner)
             }
             _ => todo!(),
@@ -346,6 +338,22 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for If<'a> {
             builder.position_at_end(end_block);
             Ok(BasicValueEnum::IntValue(context.i64_type().const_zero()))
         }
+    }
+}
+
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for Let<'a> {
+    type Output = BasicValueEnum<'ctx>;
+    type Error = Error<'a>;
+
+    fn code_gen_function(
+        &self,
+        context: &'ctx Context,
+        module: &Module<'ctx>,
+        builder: &Builder<'ctx>,
+        current_function: &FunctionValue<'ctx>,
+        interner: &mut Interner<String>,
+    ) -> Result<Self::Output, Self::Error> {
+        todo!()
     }
 }
 
