@@ -423,6 +423,9 @@ pub trait Reporter {
     /// The value returned by the reporter once used.
     type Output;
 
+    /// Determines whether this container is in an error state.
+    fn is_err(&self) -> bool;
+
     /// Reports errors using a reference to the error reporter.
     /// Return the output if there were no errors.
     ///
@@ -433,6 +436,10 @@ pub trait Reporter {
 
 impl<'a> Reporter for Vec<Error<'a>> {
     type Output = ();
+
+    fn is_err(&self) -> bool {
+        !self.is_empty()
+    }
 
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
         for error in &self {
@@ -450,6 +457,10 @@ impl<'a> Reporter for Vec<Error<'a>> {
 impl<'a> Reporter for Option<Error<'a>> {
     type Output = ();
 
+    fn is_err(&self) -> bool {
+        self.is_some()
+    }
+
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
         if let Some(ref error) = self {
             error_reporter.report(error);
@@ -466,6 +477,10 @@ impl<'a> Reporter for Option<Error<'a>> {
 impl<'a, T> Reporter for Result<T, Error<'a>> {
     type Output = T;
 
+    fn is_err(&self) -> bool {
+        self.is_err()
+    }
+
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
         match self {
             Ok(val) => Some(val),
@@ -480,11 +495,18 @@ impl<'a, T> Reporter for Result<T, Error<'a>> {
 impl<'a, T> Reporter for Result<T, Vec<Error<'a>>> {
     type Output = T;
 
+    fn is_err(&self) -> bool {
+        match self {
+            Err(errors) if !errors.is_empty() => true,
+            _ => false,
+        }
+    }
+
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
         match self {
             Ok(val) => Some(val),
             Err(errors) => {
-                errors.iter().for_each(|error| error_reporter.report(error));
+                errors.report(error_reporter)?;
                 None
             }
         }

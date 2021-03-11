@@ -6,4 +6,5 @@ edition = "2018"
 
 [dependencies]
 structopt = "0.3.21"
+progress_bar = "0.1.3"
 envyc = { path = "../envyc" }
