@@ -1,5 +1,5 @@
-define main() =
-    if true then
-        4
-    else
-        21
+define test(x: Int) = {
+    let y = x + 1
+    let y = y + 1
+    y
+}

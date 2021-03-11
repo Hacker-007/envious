@@ -1,11 +1,12 @@
 use std::{error::Error, fs, time::Instant};
 
-use envious::{
-    codegen::Runner,
+use envyc::{
+    environment::Environment,
     error::reporter::{ErrorReporter, Reporter},
     interner::Interner,
     lexer::{token::TokenKind, Lexer},
     parser::Parser,
+    run,
     semantic_analyzer::type_check::TypeCheck,
 };
 use options::Options;
@@ -71,10 +72,13 @@ fn compile_code(
         Parser::new(filtered_tokens).parse()
     })?;
 
-    let typed_program = time("semantic analysis", &error_reporter, || program.check())?;
+    let mut type_env = Environment::default();
+    let typed_program = time("semantic analysis", &error_reporter, || {
+        program.check(&mut type_env)
+    })?;
 
     time("compilation", &error_reporter, || {
-        Runner::new(typed_program).run(&file_name, interner)
+        run(&typed_program, &file_name, interner)
     })?;
 
     Some(())

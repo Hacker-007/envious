@@ -58,6 +58,7 @@ pub enum Error<'a> {
 
     /// Occurs when a function was expected during the LLVM compilation.
     ExpectedFunction,
+    LLVMFunctionFailure,
 }
 
 pub mod reporter;

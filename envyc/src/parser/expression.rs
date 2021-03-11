@@ -23,6 +23,7 @@ pub enum ExpressionKind<'a> {
     Binary(Binary<'a>),
     If(If<'a>),
     Let(Let<'a>),
+    Block(Vec<Expression<'a>>),
 }
 
 #[derive(Debug)]

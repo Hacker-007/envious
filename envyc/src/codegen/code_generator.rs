@@ -1,14 +1,21 @@
 use std::u64;
 
-use inkwell::{
-    builder::Builder,
-    context::Context,
-    module::Module,
-    types::{BasicType, BasicTypeEnum},
-    values::{BasicValueEnum, FunctionValue, VectorValue},
-};
+use inkwell::{AddressSpace, builder::Builder, context::Context, module::Module, types::{BasicType, BasicTypeEnum}, values::{BasicValue, BasicValueEnum, FunctionValue, PointerValue}};
 
-use crate::{error::Error, interner::Interner, parser::{expression::{UnaryOperation, BinaryOperation}, typed_ast::{TypedFunction, TypedProgram}, typed_expression::{TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier, TypedIf, TypedLet, TypedUnary}}, semantic_analyzer::types::Type};
+use crate::{
+    environment::Environment,
+    error::Error,
+    interner::Interner,
+    parser::{
+        expression::{BinaryOperation, UnaryOperation},
+        typed_ast::{TypedFunction, TypedProgram},
+        typed_expression::{
+            TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier, TypedIf, TypedLet,
+            TypedUnary,
+        },
+    },
+    semantic_analyzer::types::Type,
+};
 
 pub trait CodeGenerator<'a, 'ctx> {
     type Output;
@@ -20,6 +27,7 @@ pub trait CodeGenerator<'a, 'ctx> {
         module: &Module<'ctx>,
         builder: &Builder<'ctx>,
         interner: &mut Interner<String>,
+        env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error>;
 }
 
@@ -34,6 +42,7 @@ pub trait CodeGeneratorFunction<'a, 'ctx> {
         builder: &Builder<'ctx>,
         current_function: &FunctionValue<'ctx>,
         interner: &mut Interner<String>,
+        env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error>;
 }
 
@@ -47,10 +56,11 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedProgram<'a> {
         module: &Module<'ctx>,
         builder: &Builder<'ctx>,
         interner: &mut Interner<String>,
+        env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
         let mut errors = vec![];
         for function in &self.functions {
-            if let Err(error) = function.code_gen(context, module, builder, interner) {
+            if let Err(error) = function.code_gen(context, module, builder, interner, env) {
                 errors.push(error);
             }
         }
@@ -73,6 +83,7 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
         module: &Module<'ctx>,
         builder: &Builder<'ctx>,
         interner: &mut Interner<String>,
+        env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
         let parameter_types = self
             .parameters
@@ -91,17 +102,39 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
         let entry = context.append_basic_block(function, "entry");
         builder.position_at_end(entry);
 
+        env.new_scope();
+        function
+            .get_param_iter()
+            .zip(self.parameters.iter())
+            .map(|(llvm_param, param)| (llvm_param, param.name))
+            .for_each(|(llvm_param, param_name)| {
+                let name = interner.get(param_name);
+                llvm_param.set_name(name);
+                let pointer =
+                    create_entry_block_alloca(&function, builder, llvm_param.get_type(), name);
+                builder.build_store(pointer, llvm_param);
+                env.define(param_name, pointer);
+            });
+
         let expression = self
             .body
-            .code_gen_function(context, module, builder, &function, interner)?;
+            .code_gen_function(context, module, builder, &function, interner, env)?;
         if self.return_type == Type::Void {
             builder.build_return(None);
         } else {
             builder.build_return(Some(&expression));
         }
 
-        function.verify(true);
-        Ok(())
+        env.remove_top_scope();
+        if function.verify(true) {
+            Ok(())
+        } else {
+            unsafe {
+                function.delete();
+            }
+
+            Err(Error::LLVMFunctionFailure)
+        }
     }
 }
 
@@ -116,6 +149,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
         builder: &Builder<'ctx>,
         current_function: &FunctionValue<'ctx>,
         interner: &mut Interner<String>,
+        env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
         match self.1 {
             TypedExpressionKind::Int(value) => {
@@ -132,24 +166,45 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
             TypedExpressionKind::Boolean(value) => Ok(BasicValueEnum::IntValue(
                 context.bool_type().const_int(value as u64, false),
             )),
-            TypedExpressionKind::String(id) => Ok(BasicValueEnum::VectorValue(
-                context.const_string(interner.get(id).as_bytes(), true),
-            )),
+            TypedExpressionKind::String(id) => Ok(
+                builder.build_global_string_ptr(interner.get(id), "").as_basic_value_enum(),
+            ),
             TypedExpressionKind::Identifier(ref inner) => {
-                inner.code_gen_function(context, module, builder, current_function, interner)
+                inner.code_gen_function(context, module, builder, current_function, interner, env)
             }
             TypedExpressionKind::Unary(ref inner) => {
-                inner.code_gen_function(context, module, builder, current_function, interner)
+                inner.code_gen_function(context, module, builder, current_function, interner, env)
             }
             TypedExpressionKind::Binary(ref inner) => {
-                inner.code_gen_function(context, module, builder, current_function, interner)
+                inner.code_gen_function(context, module, builder, current_function, interner, env)
             }
             TypedExpressionKind::If(ref inner) => {
-                inner.code_gen_function(context, module, builder, current_function, interner)
+                inner.code_gen_function(context, module, builder, current_function, interner, env)
             }
             TypedExpressionKind::Let(ref inner) => {
-                inner.code_gen_function(context, module, builder, current_function, interner)
+                inner.code_gen_function(
+                    context,
+                    module,
+                    builder,
+                    current_function,
+                    interner,
+                    env,
+                )?;
+                Ok(BasicValueEnum::IntValue(context.i64_type().const_zero()))
             }
+            TypedExpressionKind::Block(ref expressions) => expressions.iter().fold(
+                Ok(BasicValueEnum::IntValue(context.i64_type().const_zero())),
+                |_, expression| {
+                    expression.code_gen_function(
+                        context,
+                        module,
+                        builder,
+                        current_function,
+                        interner,
+                        env,
+                    )
+                },
+            ),
         }
     }
 }
@@ -160,13 +215,15 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIdentifier {
 
     fn code_gen_function(
         &self,
-        context: &'ctx Context,
-        module: &Module<'ctx>,
+        _: &'ctx Context,
+        _: &Module<'ctx>,
         builder: &Builder<'ctx>,
-        current_function: &FunctionValue<'ctx>,
+        _: &FunctionValue<'ctx>,
         interner: &mut Interner<String>,
+        env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
-        todo!()
+        let value = env.get(self.id).unwrap();
+        Ok(builder.build_load(value, interner.get(self.id)))
     }
 }
 
@@ -181,6 +238,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedUnary<'a> {
         builder: &Builder<'ctx>,
         current_function: &FunctionValue<'ctx>,
         interner: &mut Interner<String>,
+        env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
         let expression = self.expression.code_gen_function(
             context,
@@ -188,6 +246,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedUnary<'a> {
             builder,
             current_function,
             interner,
+            env,
         )?;
         let value = match (self.operation, expression) {
             (UnaryOperation::Plus, value) => value,
@@ -218,13 +277,24 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedBinary<'a> {
         builder: &Builder<'ctx>,
         current_function: &FunctionValue<'ctx>,
         interner: &mut Interner<String>,
+        env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
-        let left =
-            self.left
-                .code_gen_function(context, module, builder, current_function, interner)?;
-        let right =
-            self.right
-                .code_gen_function(context, module, builder, current_function, interner)?;
+        let left = self.left.code_gen_function(
+            context,
+            module,
+            builder,
+            current_function,
+            interner,
+            env,
+        )?;
+        let right = self.right.code_gen_function(
+            context,
+            module,
+            builder,
+            current_function,
+            interner,
+            env,
+        )?;
         let value = match (self.operation, left, right) {
             (
                 BinaryOperation::Plus,
@@ -236,14 +306,6 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedBinary<'a> {
                 BasicValueEnum::FloatValue(left),
                 BasicValueEnum::FloatValue(right),
             ) => BasicValueEnum::FloatValue(builder.build_float_add(left, right, "floatadd")),
-            (
-                BinaryOperation::Plus,
-                BasicValueEnum::VectorValue(left),
-                BasicValueEnum::VectorValue(right),
-            ) if left.is_const_string() && right.is_const_string() => {
-                let concated = format!("{}{}", convert_to_str(left), convert_to_str(right));
-                BasicValueEnum::VectorValue(context.const_string(concated.as_bytes(), true))
-            }
             (
                 BinaryOperation::Minus,
                 BasicValueEnum::IntValue(left),
@@ -292,6 +354,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
         builder: &Builder<'ctx>,
         current_function: &FunctionValue<'ctx>,
         interner: &mut Interner<String>,
+        env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
         let then_block = context.append_basic_block(*current_function, "ifthen");
         let else_block = context.append_basic_block(*current_function, "ifelse");
@@ -303,6 +366,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
             builder,
             current_function,
             interner,
+            env,
         )?;
         builder.build_conditional_branch(condition.into_int_value(), then_block, else_block);
 
@@ -313,6 +377,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
             builder,
             current_function,
             interner,
+            env,
         )?;
         builder.build_unconditional_branch(end_block);
 
@@ -324,6 +389,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
                 builder,
                 current_function,
                 interner,
+                env,
             )?;
             builder.build_unconditional_branch(end_block);
             builder.position_at_end(end_block);
@@ -340,7 +406,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
 }
 
 impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedLet<'a> {
-    type Output = BasicValueEnum<'ctx>;
+    type Output = ();
     type Error = Error<'a>;
 
     fn code_gen_function(
@@ -350,9 +416,38 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedLet<'a> {
         builder: &Builder<'ctx>,
         current_function: &FunctionValue<'ctx>,
         interner: &mut Interner<String>,
+        env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
-        todo!()
+        let value = self.expression.code_gen_function(
+            context,
+            module,
+            builder,
+            current_function,
+            interner,
+            env,
+        )?;
+        let id = self.name.1.id;
+        let pointer = create_entry_block_alloca(
+            current_function,
+            builder,
+            value.get_type(),
+            interner.get(id),
+        );
+        builder.build_store(pointer, value);
+        env.define(id, pointer);
+        Ok(())
     }
+}
+
+fn create_entry_block_alloca<'ctx>(
+    function: &FunctionValue<'ctx>,
+    builder: &Builder<'ctx>,
+    ty: BasicTypeEnum<'ctx>,
+    name: &str,
+) -> PointerValue<'ctx> {
+    let entry_block = function.get_first_basic_block().unwrap();
+    builder.position_at_end(entry_block);
+    builder.build_alloca(ty, name)
 }
 
 fn convert_type(ty: Type, context: &Context) -> Box<dyn BasicType + '_> {
@@ -360,7 +455,7 @@ fn convert_type(ty: Type, context: &Context) -> Box<dyn BasicType + '_> {
         Type::Int => Box::new(context.i64_type()),
         Type::Float => Box::new(context.f64_type()),
         Type::Boolean => Box::new(context.bool_type()),
-        Type::String => Box::new(context.i8_type()),
+        Type::String => Box::new(context.i8_type().ptr_type(AddressSpace::Generic)),
         _ => unreachable!(),
     }
 }
@@ -370,16 +465,7 @@ fn convert_basic_type(ty: Type, context: &Context) -> BasicTypeEnum {
         Type::Int => BasicTypeEnum::IntType(context.i64_type()),
         Type::Float => BasicTypeEnum::FloatType(context.f64_type()),
         Type::Boolean => BasicTypeEnum::IntType(context.bool_type()),
-        Type::String => BasicTypeEnum::VectorType(context.i8_type().vec_type(0)),
+        Type::String => BasicTypeEnum::PointerType(context.i8_type().ptr_type(AddressSpace::Generic)),
         _ => unreachable!(),
     }
-}
-
-/// Converts a `VectorValue` to a &str. This function expects that
-/// the check has already been performed on this value.
-///
-/// # Arguments
-/// * `value` - The `VectorValue` to convert.
-fn convert_to_str(value: VectorValue) -> String {
-    value.get_string_constant().to_str().unwrap().to_string()
 }

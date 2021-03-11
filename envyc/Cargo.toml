@@ -1,5 +1,5 @@
 [package]
-name = "envious"
+name = "envyc"
 version = "0.1.0"
 authors = ["Revanth Pothukuchi <revanthpothukuchi123@gmail.com>"]
 edition = "2018"

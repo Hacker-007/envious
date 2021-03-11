@@ -25,6 +25,7 @@ pub enum TypedExpressionKind<'a> {
     Binary(TypedBinary<'a>),
     If(TypedIf<'a>),
     Let(TypedLet<'a>),
+    Block(Vec<TypedExpression<'a>>),
 }
 
 #[derive(Debug)]

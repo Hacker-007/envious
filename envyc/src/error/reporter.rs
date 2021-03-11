@@ -84,6 +84,10 @@ impl<'a> ErrorReporter<'a> {
                 println!("Expected a function to be selected when compiling to LLVM.");
                 return;
             }
+            Error::LLVMFunctionFailure => {
+                println!("An unexpected error occurred when compiling a function to LLVM.");
+                return;
+            }
         };
 
         let writer = StandardStream::stderr(ColorChoice::Always);

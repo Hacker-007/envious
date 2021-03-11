@@ -9,20 +9,13 @@ use crate::{
     semantic_analyzer::types::Type,
 };
 
-use self::{
-    ast::{Function, Parameter, Program},
-    parselets::{
-        infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet,
-        BinaryOperationParselet, BooleanParselet, FloatParselet, IdentifierParselet, IfParselet,
-        IntParselet, PrefixOperationParselet, StringParselet,
-    },
-};
+use self::{ast::{Function, Parameter, Program}, parselets::{BinaryOperationParselet, BlockParselet, BooleanParselet, FloatParselet, IdentifierParselet, IfParselet, IntParselet, PrefixOperationParselet, StringParselet, infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet}};
 
-pub mod typed_ast;
 pub mod ast;
-pub mod typed_expression;
 pub mod expression;
 pub mod parselets;
+pub mod typed_ast;
+pub mod typed_expression;
 
 /// Struct that transforms the vector of tokens into a vector of expressions.
 ///
@@ -178,6 +171,7 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                 .parse(self, token),
             TokenKind::If => IfParselet.parse(self, token),
             TokenKind::Let => LetParselet.parse(self, token),
+            TokenKind::LeftCurlyBrace => BlockParselet.parse(self, token),
             _ => Err(Error::ExpectedPrefixExpression {
                 span: token.0,
                 found_kind: token.1,
