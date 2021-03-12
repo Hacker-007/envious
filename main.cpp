@@ -1,9 +1,10 @@
 #include <iostream>
 
 extern "C" {
-    int test(int);
+    int add_two(int);
 }
 
 int main() {
-    std::cout << "test: " << test(1) << std::endl;
+    std::cout << "1 + 2 = " << add_two(1) << std::endl;
 }
+

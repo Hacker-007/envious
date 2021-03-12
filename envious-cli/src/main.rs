@@ -33,10 +33,11 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     for (file, source) in options.files.iter().zip(sources.iter()) {
         let file_name = file.file_name().unwrap().to_str().unwrap();
+        let file_stem = file.file_stem().unwrap().to_str().unwrap();
         error_reporter.add(file_name, source);
         let bytes = source.as_bytes();
         let compilation_start = Instant::now();
-        compile_code(&error_reporter, &mut interner, file_name.to_string(), bytes);
+        compile_code(&error_reporter, &mut interner, file_name, file_stem, bytes);
         println!(
             "Finished full compilation process after {} seconds",
             compilation_start.elapsed().as_millis() as f32 / 1000.0 - 2.0
@@ -49,12 +50,13 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 fn compile_code(
     error_reporter: &ErrorReporter,
     interner: &mut Interner<String>,
-    file_name: String,
+    file_name: &str,
+    file_stem: &str,
     bytes: &[u8],
 ) -> Option<()> {
     let mut progress_bar = ProgressBar::new(4);
     let tokens = time(&mut progress_bar, "Lexing", &file_name, &error_reporter, || {
-        Lexer::new(&file_name, bytes).get_tokens(interner)
+        Lexer::new(file_name, bytes).get_tokens(interner)
     })?;
 
     let filtered_tokens = tokens
@@ -67,12 +69,12 @@ fn compile_code(
     })?;
 
     let mut type_env = Environment::default();
-    let typed_program = time(&mut progress_bar, "Checking", &file_name, &error_reporter, || {
+    let typed_program = time(&mut progress_bar, "Checking", file_name, &error_reporter, || {
         program.check(&mut type_env)
     })?;
 
     time(&mut progress_bar, "Compiling", &file_name, &error_reporter, || {
-        run(&typed_program, &file_name, interner)
+        run(&typed_program, &file_name, file_stem, interner)
     })?;
 
     Some(())

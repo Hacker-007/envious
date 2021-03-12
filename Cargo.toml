@@ -1,7 +1,6 @@
 [workspace]
 
 members = [
-    "dark",
     "envyc",
     "envious-cli",
 ]

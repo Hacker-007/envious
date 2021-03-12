@@ -18,6 +18,7 @@ pub mod semantic_analyzer;
 pub fn run<'a>(
     program: &TypedProgram<'a>,
     module_name: &str,
+    output_file_name: &str,
     interner: &mut Interner<String>,
 ) -> Result<(), Vec<Error<'a>>> {
     let context = Context::create();
@@ -63,6 +64,6 @@ pub fn run<'a>(
     
     module.set_data_layout(&target_machine.get_target_data().get_data_layout());
     target_machine.add_analysis_passes(&pass_manager);
-    target_machine.write_to_file(&module, FileType::Object, Path::new("./test.o")).unwrap();
+    target_machine.write_to_file(&module, FileType::Object, Path::new(&format!("./{}.o", output_file_name))).unwrap();
     Ok(())
 }
