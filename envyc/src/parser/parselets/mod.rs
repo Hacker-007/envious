@@ -9,7 +9,6 @@ pub mod let_parselet;
 pub mod precedence;
 pub mod prefix_operation_parselet;
 pub mod prefix_parselet;
-pub mod string_parselet;
 pub mod block_parselet;
 
 pub use binary_operation_parselet::BinaryOperationParselet;
@@ -20,5 +19,4 @@ pub use if_parselet::IfParselet;
 pub use int_parselet::IntParselet;
 pub use let_parselet::LetParselet;
 pub use prefix_operation_parselet::PrefixOperationParselet;
-pub use string_parselet::StringParselet;
 pub use block_parselet::BlockParselet;

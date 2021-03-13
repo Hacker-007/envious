@@ -1,21 +1,11 @@
 use std::u64;
 
-use inkwell::{AddressSpace, builder::Builder, context::Context, module::Module, types::{BasicType, BasicTypeEnum}, values::{BasicValue, BasicValueEnum, FunctionValue, PointerValue}};
+use inkwell::{builder::Builder, context::Context, module::Module, types::{BasicType, BasicTypeEnum}, values::{BasicValue, BasicValueEnum, FunctionValue, PointerValue}};
 
-use crate::{
-    environment::Environment,
-    error::Error,
-    interner::Interner,
-    parser::{
-        expression::{BinaryOperation, UnaryOperation},
-        typed_ast::{TypedFunction, TypedProgram},
-        typed_expression::{
+use crate::{environment::Environment, error::Error, interner::Interner, parser::{expression::{BinaryOperation, UnaryOperation}, typed_ast::{TypedFunction, TypedProgram, TypedPrototype}, typed_expression::{
             TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier, TypedIf, TypedLet,
             TypedUnary,
-        },
-    },
-    semantic_analyzer::types::Type,
-};
+        }}, semantic_analyzer::types::Type};
 
 pub trait CodeGenerator<'a, 'ctx> {
     type Output;
@@ -60,6 +50,9 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedProgram<'a> {
     ) -> Result<Self::Output, Self::Error> {
         let mut errors = vec![];
         for function in &self.functions {
+            if let Err(error) = function.prototype.code_gen(context, module, builder, interner, env) {
+                errors.push(error);
+            }
             if let Err(error) = function.code_gen(context, module, builder, interner, env) {
                 errors.push(error);
             }
@@ -68,8 +61,41 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedProgram<'a> {
         if !errors.is_empty() {
             Err(errors)
         } else {
-            Ok(())
+            for function in &self.functions {
+                if let Err(error) = function.code_gen(context, module, builder, interner, env) {
+                    errors.push(error);
+                }
+            }
+
+            if !errors.is_empty() {
+                Err(errors)
+            } else {
+                Ok(())
+            }
         }
+    }
+}
+
+impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedPrototype<'a> {
+    type Output = ();
+    type Error = Error<'a>;
+
+    fn code_gen(&self, context: &'ctx Context, module: &Module<'ctx>, _: &Builder<'ctx>, interner: &mut Interner<String>, _: &mut Environment<PointerValue<'ctx>>) -> Result<Self::Output, Self::Error> {
+        let parameter_types = self
+            .parameters
+            .iter()
+            .map(|parameter| parameter.ty)
+            .map(|ty| convert_basic_type(ty, context))
+            .collect::<Vec<_>>();
+
+        let function_type = if let Type::Void = self.return_type {
+            context.void_type().fn_type(&parameter_types, false)
+        } else {
+            convert_type(self.return_type, context).fn_type(&parameter_types, false)
+        };
+
+        module.add_function(&interner.get(self.name), function_type, None);
+        Ok(())
     }
 }
 
@@ -85,27 +111,14 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
-        let parameter_types = self
-            .parameters
-            .iter()
-            .map(|parameter| parameter.ty)
-            .map(|ty| convert_basic_type(ty, context))
-            .collect::<Vec<_>>();
-
-        let function_type = if let Type::Void = self.return_type {
-            context.void_type().fn_type(&parameter_types, false)
-        } else {
-            convert_type(self.return_type, context).fn_type(&parameter_types, false)
-        };
-
-        let function = module.add_function(&interner.get(self.name), function_type, None);
+        let function = module.get_function(interner.get(self.prototype.name)).ok_or(Error::UnknownFunction(self.prototype.span))?;
         let entry = context.append_basic_block(function, "entry");
         builder.position_at_end(entry);
 
         env.new_scope();
         function
             .get_param_iter()
-            .zip(self.parameters.iter())
+            .zip(self.prototype.parameters.iter())
             .map(|(llvm_param, param)| (llvm_param, param.name))
             .for_each(|(llvm_param, param_name)| {
                 let name = interner.get(param_name);
@@ -119,7 +132,7 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
         let expression = self
             .body
             .code_gen_function(context, module, builder, &function, interner, env)?;
-        if self.return_type == Type::Void {
+        if self.prototype.return_type == Type::Void {
             builder.build_return(None);
         } else {
             builder.build_return(Some(&expression));
@@ -166,9 +179,6 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
             TypedExpressionKind::Boolean(value) => Ok(BasicValueEnum::IntValue(
                 context.bool_type().const_int(value as u64, false),
             )),
-            TypedExpressionKind::String(id) => Ok(
-                builder.build_global_string_ptr(interner.get(id), "").as_basic_value_enum(),
-            ),
             TypedExpressionKind::Identifier(ref inner) => {
                 inner.code_gen_function(context, module, builder, current_function, interner, env)
             }
@@ -455,7 +465,6 @@ fn convert_type(ty: Type, context: &Context) -> Box<dyn BasicType + '_> {
         Type::Int => Box::new(context.i64_type()),
         Type::Float => Box::new(context.f64_type()),
         Type::Boolean => Box::new(context.bool_type()),
-        Type::String => Box::new(context.i8_type().ptr_type(AddressSpace::Generic)),
         _ => unreachable!(),
     }
 }
@@ -465,7 +474,6 @@ fn convert_basic_type(ty: Type, context: &Context) -> BasicTypeEnum {
         Type::Int => BasicTypeEnum::IntType(context.i64_type()),
         Type::Float => BasicTypeEnum::FloatType(context.f64_type()),
         Type::Boolean => BasicTypeEnum::IntType(context.bool_type()),
-        Type::String => BasicTypeEnum::PointerType(context.i8_type().ptr_type(AddressSpace::Generic)),
         _ => unreachable!(),
     }
 }

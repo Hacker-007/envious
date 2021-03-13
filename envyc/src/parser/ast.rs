@@ -14,27 +14,27 @@ impl<'a> Program<'a> {
 }
 
 #[derive(Debug)]
-pub struct Function<'a> {
+pub struct Prototype<'a> {
     pub span: Span<'a>,
     pub name: usize,
     pub parameters: Vec<Parameter<'a>>,
-    pub body: Expression<'a>,
     pub return_type: Option<Type>,
+}
+
+#[derive(Debug)]
+pub struct Function<'a> {
+    pub prototype: Prototype<'a>,
+    pub body: Expression<'a>,
 }
 
 impl<'a> Function<'a> {
     pub fn new(
-        span: Span<'a>,
-        name: usize,
-        parameters: Vec<Parameter<'a>>,
+        prototype: Prototype<'a>,
         body: Expression<'a>,
     ) -> Self {
         Self {
-            span,
-            name,
-            parameters,
+            prototype,
             body,
-            return_type: None,
         }
     }
 }

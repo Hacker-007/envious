@@ -14,6 +14,7 @@ pub mod interner;
 pub mod lexer;
 pub mod parser;
 pub mod semantic_analyzer;
+pub mod type_checking;
 
 pub fn run<'a>(
     program: &TypedProgram<'a>,

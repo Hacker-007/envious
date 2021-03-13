@@ -16,10 +16,9 @@ pub enum TypedExpressionKind<'a> {
     Int(i64),
     Float(f64),
     Boolean(bool),
-    // The actual value for both the `String` and the `Identifier` are
+    // The actual value for the `Identifier` are
     // stored in the `Interner` to reduce redundency in values. Instead,
     // the id's are stored in the variant.
-    String(usize),
     Identifier(TypedIdentifier),
     Unary(TypedUnary<'a>),
     Binary(TypedBinary<'a>),

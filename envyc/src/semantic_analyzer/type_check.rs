@@ -7,7 +7,7 @@ use crate::{
             Binary, BinaryOperation, Expression, ExpressionKind, Identifier, If, Let, Unary,
             UnaryOperation,
         },
-        typed_ast::{TypedFunction, TypedParameter, TypedProgram},
+        typed_ast::{TypedFunction, TypedParameter, TypedProgram, TypedPrototype},
         typed_expression::{
             TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier, TypedIf, TypedLet,
             TypedUnary,
@@ -75,7 +75,7 @@ impl<'a> TypeCheck<'a> for Function<'a> {
     fn check(self, env: &mut Environment<Type>) -> Result<Self::Output, Self::Error> {
         env.new_scope();
         let mut typed_params = vec![];
-        for parameter in self.parameters {
+        for parameter in self.prototype.parameters {
             if parameter.ty == Type::Void {
                 return Err(Error::IllegalType(parameter.span));
             } else {
@@ -91,7 +91,7 @@ impl<'a> TypeCheck<'a> for Function<'a> {
         let typed_body = self.body.check(env)?;
         let return_type = get_type(&typed_body.1);
         let typed_function =
-            TypedFunction::new(self.span, self.name, typed_params, typed_body, return_type);
+            TypedFunction::new(TypedPrototype::new(self.prototype.span, self.prototype.name, typed_params, return_type), typed_body);
         env.remove_top_scope();
         Ok(typed_function)
     }
@@ -115,7 +115,6 @@ impl<'a> TypeCheck<'a> for Expression<'a> {
             ExpressionKind::Int(value) => Ok((self.0, TypedExpressionKind::Int(value))),
             ExpressionKind::Float(value) => Ok((self.0, TypedExpressionKind::Float(value))),
             ExpressionKind::Boolean(value) => Ok((self.0, TypedExpressionKind::Boolean(value))),
-            ExpressionKind::String(id) => Ok((self.0, TypedExpressionKind::String(id))),
             ExpressionKind::Identifier(inner) => inner.check_span(self.0, env),
             ExpressionKind::Unary(inner) => inner.check_span(self.0, env),
             ExpressionKind::Binary(inner) => inner.check_span(self.0, env),
@@ -345,7 +344,6 @@ fn get_type(typed_expression_kind: &TypedExpressionKind) -> Type {
         TypedExpressionKind::Int(_) => Type::Int,
         TypedExpressionKind::Float(_) => Type::Float,
         TypedExpressionKind::Boolean(_) => Type::Boolean,
-        TypedExpressionKind::String(_) => Type::String,
         TypedExpressionKind::Identifier(ref inner) => inner.ty,
         TypedExpressionKind::Unary(ref inner) => inner.ty,
         TypedExpressionKind::Binary(ref inner) => inner.ty,

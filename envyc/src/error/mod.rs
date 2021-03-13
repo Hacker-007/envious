@@ -56,6 +56,7 @@ pub enum Error<'a> {
     IllegalType(Span<'a>),
     UndefinedVariable(Span<'a>),
 
+    UnknownFunction(Span<'a>),
     /// Occurs when a function was expected during the LLVM compilation.
     ExpectedFunction,
     LLVMFunctionFailure,

@@ -9,7 +9,7 @@ use crate::{
     semantic_analyzer::types::Type,
 };
 
-use self::{ast::{Function, Parameter, Program}, parselets::{BinaryOperationParselet, BlockParselet, BooleanParselet, FloatParselet, IdentifierParselet, IfParselet, IntParselet, PrefixOperationParselet, StringParselet, infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet}};
+use self::{ast::{Function, Parameter, Program, Prototype}, parselets::{BinaryOperationParselet, BlockParselet, BooleanParselet, FloatParselet, IdentifierParselet, IfParselet, IntParselet, PrefixOperationParselet, infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet}};
 
 pub mod ast;
 pub mod expression;
@@ -66,7 +66,14 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
             let (right_paren_span, _) = self.expect(TokenKind::RightParenthesis, last_span)?;
             let (eq_span, _) = self.expect(TokenKind::EqualSign, right_paren_span)?;
             let body = self.parse_expression(0, eq_span)?;
-            Ok(Function::new(function_name_span, id, parameters, body))
+            let prototype = Prototype {
+                span: function_name_span,
+                name: id,
+                parameters,
+                return_type: None,
+            };
+
+            Ok(Function::new(prototype, body))
         } else {
             unreachable!()
         }
@@ -98,7 +105,6 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                 TokenKind::Int => Type::Int,
                 TokenKind::Float => Type::Float,
                 TokenKind::Boolean => Type::Boolean,
-                TokenKind::String => Type::String,
                 _ => {
                     return Err(Error::ExpectedKind {
                         span: type_span,
@@ -107,7 +113,6 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                             TokenKind::Int,
                             TokenKind::Float,
                             TokenKind::Boolean,
-                            TokenKind::String,
                         ],
                         actual_kind: kind,
                     })
@@ -157,7 +162,6 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
             TokenKind::IntegerLiteral(_) => IntParselet.parse(self, token),
             TokenKind::FloatLiteral(_) => FloatParselet.parse(self, token),
             TokenKind::BooleanLiteral(_) => BooleanParselet.parse(self, token),
-            TokenKind::StringLiteral(_) => StringParselet.parse(self, token),
             TokenKind::Identifier(_) => IdentifierParselet.parse(self, token),
             TokenKind::Plus => {
                 PrefixOperationParselet::new(Precedence::Unary, UnaryOperation::Plus)

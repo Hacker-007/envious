@@ -79,12 +79,6 @@ impl<'a> Lexer<'a> {
                         Err(error) => errors.push(error),
                     }
                 }
-                string_start @ b'\'' | string_start @ b'"' => {
-                    match self.form_string(string_start, interner) {
-                        Ok(token) => tokens.push(token),
-                        Err(error) => errors.push(error),
-                    }
-                }
                 letter if letter.is_ascii_alphabetic() || letter == b'_' => {
                     match self.form_word(letter as char, interner) {
                         Ok(token) => tokens.push(token),
@@ -207,49 +201,6 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Greedily walks through consecutive bytes and forms the largest possible string.
-    /// A string can start with either a ' or a ". However, the string must end with the same
-    /// character that it started with.
-    ///
-    /// # Arguments
-    /// * `string_start` - The character with which the string started with.
-    /// * `interner` - The `Interner` which stores the different string literals.
-    fn form_string(&mut self, string_start: u8, interner: &mut Interner<String>) -> LexResult<'a> {
-        let (start_line, start_column) = (self.current_line, self.current_column);
-        let mut string = String::new();
-        let mut is_terminated = false;
-        while let Some(next) = self.peek() {
-            if next == string_start {
-                self.next();
-                is_terminated = true;
-                break;
-            } else {
-                string.push(next as char);
-                if next == b'\n' {
-                    self.current_line += 1;
-                    self.current_column = 0;
-                }
-
-                self.next();
-            }
-        }
-
-        let span = Span::new(
-            self.file_name,
-            start_line,
-            start_column,
-            self.current_line,
-            self.current_column,
-        );
-
-        if !is_terminated {
-            Err(Error::UnterminatedString(span))
-        } else {
-            let id = interner.insert(string);
-            Ok((span, TokenKind::StringLiteral(id)))
-        }
-    }
-
     /// Greedily walks through consecutive bytes and forms the largest possible word.
     /// This word may represent a type, a literal, or an identifier.
     ///
@@ -274,7 +225,6 @@ impl<'a> Lexer<'a> {
             "Int" => Ok((self.make_span(start_column), TokenKind::Int)),
             "Float" => Ok((self.make_span(start_column), TokenKind::Float)),
             "Boolean" => Ok((self.make_span(start_column), TokenKind::Boolean)),
-            "String" => Ok((self.make_span(start_column), TokenKind::String)),
             "true" => Ok((
                 self.make_span(start_column),
                 TokenKind::BooleanLiteral(true),

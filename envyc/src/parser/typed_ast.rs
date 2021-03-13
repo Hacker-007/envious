@@ -14,28 +14,38 @@ impl<'a> TypedProgram<'a> {
 }
 
 #[derive(Debug)]
-pub struct TypedFunction<'a> {
+pub struct TypedPrototype<'a> {
     pub span: Span<'a>,
     pub name: usize,
     pub parameters: Vec<TypedParameter<'a>>,
-    pub body: TypedExpression<'a>,
     pub return_type: Type,
 }
 
-impl<'a> TypedFunction<'a> {
-    pub fn new(
-        span: Span<'a>,
-        name: usize,
-        parameters: Vec<TypedParameter<'a>>,
-        body: TypedExpression<'a>,
-        return_type: Type,
-    ) -> Self {
+impl<'a> TypedPrototype<'a> {
+    pub fn new(span: Span<'a>, name: usize, parameters: Vec<TypedParameter<'a>>, return_type: Type) -> Self {
         Self {
             span,
             name,
             parameters,
-            body,
             return_type,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct TypedFunction<'a> {
+    pub prototype: TypedPrototype<'a>,
+    pub body: TypedExpression<'a>,
+}
+
+impl<'a> TypedFunction<'a> {
+    pub fn new(
+        prototype: TypedPrototype<'a>,
+        body: TypedExpression<'a>,
+    ) -> Self {
+        Self {
+            prototype,
+            body,
         }
     }
 }

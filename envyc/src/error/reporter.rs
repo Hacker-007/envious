@@ -80,6 +80,7 @@ impl<'a> ErrorReporter<'a> {
             } => self.handle_conflicting_type(first_span, first_type, second_span, second_type),
             Error::IllegalType(span) => self.handle_illegal_type(span),
             Error::UndefinedVariable(span) => self.handle_undefined_variable(span),
+            Error::UnknownFunction(span) => self.handle_unknown_function(span),
             Error::ExpectedFunction => {
                 println!("Expected a function to be selected when compiling to LLVM.");
                 return;
@@ -345,6 +346,20 @@ impl<'a> ErrorReporter<'a> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
             .with_message("found undefined variable")
+            .with_labels(vec![Label::primary(
+                self.get_file_id(&span.file_name),
+                start_column..end_column,
+            )])
+    }
+
+    /// Handles an unknown function error.
+    ///
+    /// # Arguments
+    /// `span` - The `Span` of this error.
+    fn handle_unknown_function(&self, span: &Span) -> Diagnostic<usize> {
+        let (start_column, end_column) = self.construct_source(span);
+        Diagnostic::error()
+            .with_message("found unknown function")
             .with_labels(vec![Label::primary(
                 self.get_file_id(&span.file_name),
                 start_column..end_column,
