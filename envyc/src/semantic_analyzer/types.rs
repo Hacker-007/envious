@@ -10,6 +10,7 @@ pub enum Type {
     Int,
     Float,
     Boolean,
+    Char,
 }
 
 impl Display for Type {
@@ -19,6 +20,7 @@ impl Display for Type {
             Type::Int => write!(f, "Int"),
             Type::Float => write!(f, "Float"),
             Type::Boolean => write!(f, "Boolean"),
+            Type::Char => write!(f, "Char"),
         }
     }
 }

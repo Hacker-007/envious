@@ -79,6 +79,12 @@ impl<'a> Lexer<'a> {
                         Err(error) => errors.push(error),
                     }
                 }
+                b'\'' => {
+                    match self.form_char() {
+                        Ok(token) => tokens.push(token),
+                        Err(error) => errors.push(error),
+                    }
+                }
                 letter if letter.is_ascii_alphabetic() || letter == b'_' => {
                     match self.form_word(letter as char, interner) {
                         Ok(token) => tokens.push(token),
@@ -201,6 +207,29 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Walks through the character and ensures that exactly one character is represented.
+    fn form_char(&mut self) -> LexResult<'a> {
+        let (start_line, start_column) = (self.current_line, self.current_column);
+        let ch = if let Some(ch) = self.next() {
+            ch as char
+        } else {
+            return Err(Error::UnexpectedEndOfInput(Span::new(self.file_name, start_line, start_column, self.current_line, self.current_column)))
+        };
+
+        if let Some(b'\'') = self.next() {
+            let span = Span::new(
+            self.file_name,
+            start_line,
+            start_column,
+            self.current_line,
+            self.current_column,
+        );
+            Ok((span, TokenKind::CharLiteral(ch)))
+        } else {
+            return Err(Error::UnterminatedChar(Span::new(self.file_name, start_line, start_column, self.current_line, self.current_column)))
+        }
+    }
+
     /// Greedily walks through consecutive bytes and forms the largest possible word.
     /// This word may represent a type, a literal, or an identifier.
     ///
@@ -225,6 +254,7 @@ impl<'a> Lexer<'a> {
             "Int" => Ok((self.make_span(start_column), TokenKind::Int)),
             "Float" => Ok((self.make_span(start_column), TokenKind::Float)),
             "Boolean" => Ok((self.make_span(start_column), TokenKind::Boolean)),
+            "Char" => Ok((self.make_span(start_column), TokenKind::Char)),
             "true" => Ok((
                 self.make_span(start_column),
                 TokenKind::BooleanLiteral(true),

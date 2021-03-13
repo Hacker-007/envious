@@ -1,5 +1,6 @@
 pub mod binary_operation_parselet;
 pub mod boolean_parselet;
+pub mod char_parselet;
 pub mod float_parselet;
 pub mod identifier_parselet;
 pub mod if_parselet;
@@ -13,6 +14,7 @@ pub mod block_parselet;
 
 pub use binary_operation_parselet::BinaryOperationParselet;
 pub use boolean_parselet::BooleanParselet;
+pub use char_parselet::CharParselet;
 pub use float_parselet::FloatParselet;
 pub use identifier_parselet::IdentifierParselet;
 pub use if_parselet::IfParselet;

@@ -19,9 +19,11 @@ pub enum TokenKind {
     Int,
     Float,
     Boolean,
+    Char,
     IntegerLiteral(i64),
     FloatLiteral(f64),
     BooleanLiteral(bool),
+    CharLiteral(char),
     // The actual value for the `Identifier` are
     // stored in the `Interner` to reduce redundency in values. Instead,
     // the id's are stored in the variant.
@@ -66,9 +68,11 @@ impl Display for TokenKind {
             TokenKind::Int => write!(f, "Int"),
             TokenKind::Float => write!(f, "Float"),
             TokenKind::Boolean => write!(f, "Boolean"),
+            TokenKind::Char => write!(f, "Char"),
             TokenKind::IntegerLiteral(_) => write!(f, "integer literal"),
             TokenKind::FloatLiteral(_) => write!(f, "float literal"),
             TokenKind::BooleanLiteral(_) => write!(f, "boolean literal"),
+            TokenKind::CharLiteral(_) => write!(f, "char literal"),
             TokenKind::Identifier(_) => write!(f, "identifier"),
             TokenKind::LeftParenthesis => write!(f, "("),
             TokenKind::RightParenthesis => write!(f, ")"),

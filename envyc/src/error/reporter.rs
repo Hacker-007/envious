@@ -51,6 +51,7 @@ impl<'a> ErrorReporter<'a> {
         let diagnostic = match error {
             Error::IntegerOverflow(span) => self.handle_integer_overflow(span),
             Error::FloatOverflow(span) => self.handle_float_overflow(span),
+            Error::UnterminatedChar(span) => self.handle_unterminated_char(span),
             Error::UnrecognizedCharacter(span) => self.handle_unrecognized_character(span),
             Error::UnexpectedEndOfInput(span) => self.handle_end_of_input(span),
             Error::ExpectedPrefixExpression {
@@ -132,6 +133,21 @@ impl<'a> ErrorReporter<'a> {
                 f64::MIN,
                 f64::MAX
             )])
+    }
+
+    /// Handles an unterminated char error.
+    ///
+    /// # Arguments
+    /// `span` - The `Span` of this error.
+    fn handle_unterminated_char(&self, span: &Span) -> Diagnostic<usize> {
+        let (start_column, end_column) = self.construct_source(span);
+        Diagnostic::error()
+            .with_message("unterminated char")
+            .with_labels(vec![Label::primary(
+                self.get_file_id(&span.file_name),
+                start_column..end_column,
+            )])
+            .with_notes(vec!["try ending the char with a \'".to_string()])
     }
 
     /// Handles an unrecognized character error.

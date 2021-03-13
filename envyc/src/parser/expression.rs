@@ -14,6 +14,7 @@ pub enum ExpressionKind<'a> {
     Int(i64),
     Float(f64),
     Boolean(bool),
+    Char(char),
     // The actual value for the `Identifier` are
     // stored in the `Interner` to reduce redundency in values. Instead,
     // the id's are stored in the variant.

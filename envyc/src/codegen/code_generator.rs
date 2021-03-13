@@ -53,9 +53,6 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedProgram<'a> {
             if let Err(error) = function.prototype.code_gen(context, module, builder, interner, env) {
                 errors.push(error);
             }
-            if let Err(error) = function.code_gen(context, module, builder, interner, env) {
-                errors.push(error);
-            }
         }
 
         if !errors.is_empty() {
@@ -178,6 +175,9 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
             )),
             TypedExpressionKind::Boolean(value) => Ok(BasicValueEnum::IntValue(
                 context.bool_type().const_int(value as u64, false),
+            )),
+            TypedExpressionKind::Char(value) => Ok(BasicValueEnum::IntValue(
+                context.i8_type().const_int(value as u64, false),
             )),
             TypedExpressionKind::Identifier(ref inner) => {
                 inner.code_gen_function(context, module, builder, current_function, interner, env)
@@ -465,6 +465,7 @@ fn convert_type(ty: Type, context: &Context) -> Box<dyn BasicType + '_> {
         Type::Int => Box::new(context.i64_type()),
         Type::Float => Box::new(context.f64_type()),
         Type::Boolean => Box::new(context.bool_type()),
+        Type::Char => Box::new(context.i8_type()),
         _ => unreachable!(),
     }
 }
@@ -474,6 +475,7 @@ fn convert_basic_type(ty: Type, context: &Context) -> BasicTypeEnum {
         Type::Int => BasicTypeEnum::IntType(context.i64_type()),
         Type::Float => BasicTypeEnum::FloatType(context.f64_type()),
         Type::Boolean => BasicTypeEnum::IntType(context.bool_type()),
+        Type::Char => BasicTypeEnum::IntType(context.i8_type()),
         _ => unreachable!(),
     }
 }

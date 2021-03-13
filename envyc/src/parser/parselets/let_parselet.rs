@@ -37,6 +37,7 @@ impl<'a> PrefixParselet<'a> for LetParselet {
                     (span, TokenKind::Int) => (Some(Type::Int), Some(span)),
                     (span, TokenKind::Float) => (Some(Type::Float), Some(span)),
                     (span, TokenKind::Boolean) => (Some(Type::Boolean), Some(span)),
+                    (span, TokenKind::Char) => (Some(Type::Char), Some(span)),
                     (span, actual_kind) => {
                         return Err(Error::ExpectedKind {
                             span,
@@ -45,6 +46,7 @@ impl<'a> PrefixParselet<'a> for LetParselet {
                                 TokenKind::Int,
                                 TokenKind::Float,
                                 TokenKind::Boolean,
+                                TokenKind::Char,
                             ],
                             actual_kind,
                         })

@@ -9,7 +9,7 @@ use crate::{
     semantic_analyzer::types::Type,
 };
 
-use self::{ast::{Function, Parameter, Program, Prototype}, parselets::{BinaryOperationParselet, BlockParselet, BooleanParselet, FloatParselet, IdentifierParselet, IfParselet, IntParselet, PrefixOperationParselet, infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet}};
+use self::{ast::{Function, Parameter, Program, Prototype}, parselets::{BinaryOperationParselet, BlockParselet, BooleanParselet, CharParselet, FloatParselet, IdentifierParselet, IfParselet, IntParselet, PrefixOperationParselet, infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet}};
 
 pub mod ast;
 pub mod expression;
@@ -105,6 +105,7 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                 TokenKind::Int => Type::Int,
                 TokenKind::Float => Type::Float,
                 TokenKind::Boolean => Type::Boolean,
+                TokenKind::Char => Type::Char,
                 _ => {
                     return Err(Error::ExpectedKind {
                         span: type_span,
@@ -113,6 +114,7 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                             TokenKind::Int,
                             TokenKind::Float,
                             TokenKind::Boolean,
+                            TokenKind::Char,
                         ],
                         actual_kind: kind,
                     })
@@ -162,6 +164,7 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
             TokenKind::IntegerLiteral(_) => IntParselet.parse(self, token),
             TokenKind::FloatLiteral(_) => FloatParselet.parse(self, token),
             TokenKind::BooleanLiteral(_) => BooleanParselet.parse(self, token),
+            TokenKind::CharLiteral(_) => CharParselet.parse(self, token),
             TokenKind::Identifier(_) => IdentifierParselet.parse(self, token),
             TokenKind::Plus => {
                 PrefixOperationParselet::new(Precedence::Unary, UnaryOperation::Plus)
