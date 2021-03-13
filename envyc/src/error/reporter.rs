@@ -51,7 +51,6 @@ impl<'a> ErrorReporter<'a> {
         let diagnostic = match error {
             Error::IntegerOverflow(span) => self.handle_integer_overflow(span),
             Error::FloatOverflow(span) => self.handle_float_overflow(span),
-            Error::UnterminatedString(span) => self.handle_unterminated_string(span),
             Error::UnrecognizedCharacter(span) => self.handle_unrecognized_character(span),
             Error::UnexpectedEndOfInput(span) => self.handle_end_of_input(span),
             Error::ExpectedPrefixExpression {
@@ -132,29 +131,6 @@ impl<'a> ErrorReporter<'a> {
                 "floats must be >= {} and <= {}",
                 f64::MIN,
                 f64::MAX
-            )])
-    }
-
-    /// Handles an unterminated string error.
-    ///
-    /// # Arguments
-    /// `span` - The `Span` of this error.
-    fn handle_unterminated_string(&self, span: &Span) -> Diagnostic<usize> {
-        let (start_column, end_column) = self.construct_source(span);
-        let string_start = self
-            .get_file_source(&span.file_name)
-            .chars()
-            .nth(start_column)
-            .unwrap();
-        Diagnostic::error()
-            .with_message("unterminated string")
-            .with_labels(vec![Label::primary(
-                self.get_file_id(&span.file_name),
-                start_column..end_column,
-            )])
-            .with_notes(vec![format!(
-                "try ending the string with a {}",
-                string_start
             )])
     }
 

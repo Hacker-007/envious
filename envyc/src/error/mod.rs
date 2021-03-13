@@ -11,8 +11,6 @@ pub enum Error<'a> {
     IntegerOverflow(Span<'a>),
     // Occurs when a float that exceeeds the maximum possible value of a float.
     FloatOverflow(Span<'a>),
-    // Occurs when a string that has been started but not closed.
-    UnterminatedString(Span<'a>),
     // Occurs when a character that is not recognized by the `Lexer`.
     UnrecognizedCharacter(Span<'a>),
 
