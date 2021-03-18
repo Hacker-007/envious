@@ -1,11 +1,27 @@
 use std::u64;
 
-use inkwell::{builder::Builder, context::Context, module::Module, types::{BasicType, BasicTypeEnum}, values::{BasicValue, BasicValueEnum, FunctionValue, PointerValue}};
+use inkwell::{
+    builder::Builder,
+    context::Context,
+    module::Module,
+    types::{BasicType, BasicTypeEnum},
+    values::{BasicValue, BasicValueEnum, FunctionValue, PointerValue},
+};
 
-use crate::{environment::Environment, error::Error, interner::Interner, parser::{expression::{BinaryOperation, UnaryOperation}, typed_ast::{TypedFunction, TypedProgram, TypedPrototype}, typed_expression::{
+use crate::{
+    environment::Environment,
+    error::Error,
+    interner::Interner,
+    parser::{
+        expression::{BinaryOperation, UnaryOperation},
+        typed_ast::{TypedFunction, TypedProgram, TypedPrototype},
+        typed_expression::{
             TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier, TypedIf, TypedLet,
             TypedUnary,
-        }}, semantic_analyzer::types::Type};
+        },
+    },
+    semantic_analyzer::types::Type,
+};
 
 pub trait CodeGenerator<'a, 'ctx> {
     type Output;
@@ -50,7 +66,10 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedProgram<'a> {
     ) -> Result<Self::Output, Self::Error> {
         let mut errors = vec![];
         for function in &self.functions {
-            if let Err(error) = function.prototype.code_gen(context, module, builder, interner, env) {
+            if let Err(error) = function
+                .prototype
+                .code_gen(context, module, builder, interner, env)
+            {
                 errors.push(error);
             }
         }
@@ -77,7 +96,14 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedPrototype<'a> {
     type Output = ();
     type Error = Error<'a>;
 
-    fn code_gen(&self, context: &'ctx Context, module: &Module<'ctx>, _: &Builder<'ctx>, interner: &mut Interner<String>, _: &mut Environment<PointerValue<'ctx>>) -> Result<Self::Output, Self::Error> {
+    fn code_gen(
+        &self,
+        context: &'ctx Context,
+        module: &Module<'ctx>,
+        _: &Builder<'ctx>,
+        interner: &mut Interner<String>,
+        _: &mut Environment<PointerValue<'ctx>>,
+    ) -> Result<Self::Output, Self::Error> {
         let parameter_types = self
             .parameters
             .iter()
@@ -108,7 +134,9 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
-        let function = module.get_function(interner.get(self.prototype.name)).ok_or(Error::UnknownFunction(self.prototype.span))?;
+        let function = module
+            .get_function(interner.get(self.prototype.name))
+            .ok_or(Error::UnknownFunction(self.prototype.span))?;
         let entry = context.append_basic_block(function, "entry");
         builder.position_at_end(entry);
 

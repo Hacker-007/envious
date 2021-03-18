@@ -1,11 +1,26 @@
-use std::{error::Error, fs, thread, time::{Duration, Instant}};
+use std::{
+    error::Error,
+    fs, thread,
+    time::{Duration, Instant},
+};
 
-use envyc::{environment::Environment, error::reporter::{ErrorReporter, Reporter}, interner::Interner, lexer::{token::TokenKind, Lexer}, parser::Parser, run, semantic_analyzer::type_check::TypeCheck};
+use envyc::{
+    environment::Environment,
+    error::reporter::{ErrorReporter, Reporter},
+    interner::Interner,
+    lexer::{token::TokenKind, Lexer},
+    parser::Parser,
+    run,
+    semantic_analyzer::type_check::TypeCheck,
+};
 use options::Options;
 
 mod options;
 
-use progress_bar::{color::{Color, Style}, progress_bar::ProgressBar};
+use progress_bar::{
+    color::{Color, Style},
+    progress_bar::ProgressBar,
+};
 use structopt::StructOpt;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
@@ -41,7 +56,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         println!(
             "Finished full compilation process after {} seconds",
             compilation_start.elapsed().as_millis() as f32 / 1000.0 - 2.0
-        ); 
+        );
     }
 
     Ok(())
@@ -55,27 +70,43 @@ fn compile_code(
     bytes: &[u8],
 ) -> Option<()> {
     let mut progress_bar = ProgressBar::new(4);
-    let tokens = time(&mut progress_bar, "Lexing", &file_name, &error_reporter, || {
-        Lexer::new(file_name, bytes).get_tokens(interner)
-    })?;
+    let tokens = time(
+        &mut progress_bar,
+        "Lexing",
+        &file_name,
+        &error_reporter,
+        || Lexer::new(file_name, bytes).get_tokens(interner),
+    )?;
 
     let filtered_tokens = tokens
         .into_iter()
         .filter(|token| !matches!(token.1, TokenKind::Whitespace(_)))
         .peekable();
 
-    let program = time(&mut progress_bar, "Parsing", &file_name, &error_reporter, || {
-        Parser::new(filtered_tokens).parse()
-    })?;
+    let program = time(
+        &mut progress_bar,
+        "Parsing",
+        &file_name,
+        &error_reporter,
+        || Parser::new(filtered_tokens).parse(),
+    )?;
 
     let mut type_env = Environment::default();
-    let typed_program = time(&mut progress_bar, "Checking", file_name, &error_reporter, || {
-        program.check(&mut type_env)
-    })?;
+    let typed_program = time(
+        &mut progress_bar,
+        "Checking",
+        file_name,
+        &error_reporter,
+        || program.check(&mut type_env),
+    )?;
 
-    time(&mut progress_bar, "Compiling", &file_name, &error_reporter, || {
-        run(&typed_program, &file_name, file_stem, interner)
-    })?;
+    time(
+        &mut progress_bar,
+        "Compiling",
+        &file_name,
+        &error_reporter,
+        || run(&typed_program, &file_name, file_stem, interner),
+    )?;
 
     Some(())
 }
@@ -95,6 +126,6 @@ fn time<O: Reporter>(
     } else {
         progress_bar.inc();
     }
-    
+
     value.report(error_reporter)
 }

@@ -3,7 +3,12 @@ use std::path::Path;
 use codegen::code_generator::CodeGenerator;
 use environment::Environment;
 use error::Error;
-use inkwell::{OptimizationLevel, context::Context, passes::{PassManager, PassManagerBuilder}, targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine}};
+use inkwell::{
+    context::Context,
+    passes::{PassManager, PassManagerBuilder},
+    targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine},
+    OptimizationLevel,
+};
 use interner::Interner;
 use parser::typed_ast::TypedProgram;
 
@@ -27,7 +32,7 @@ pub fn run<'a>(
 
     let mut value_env = Environment::default();
     program.code_gen(&context, &module, &builder, interner, &mut value_env)?;
-    
+
     let pass_manager_builder = PassManagerBuilder::create();
     pass_manager_builder.set_optimization_level(OptimizationLevel::Default);
     let pass_manager = PassManager::create(());
@@ -39,7 +44,7 @@ pub fn run<'a>(
     pass_manager.add_gvn_pass();
     pass_manager.add_cfg_simplification_pass();
     pass_manager.run_on(&module);
-    
+
     let target_triple = TargetMachine::get_default_triple();
     let init_config = InitializationConfig {
         asm_parser: true,
@@ -49,23 +54,31 @@ pub fn run<'a>(
         info: true,
         machine_code: true,
     };
-    
+
     Target::initialize_all(&init_config);
     let target = Target::from_triple(&target_triple).unwrap();
     module.set_triple(&target_triple);
-    let target_machine = target.create_target_machine(
-        &target_triple,
-        "generic",
-        "",
-        OptimizationLevel::Default,
-        RelocMode::Default,
-        CodeModel::Default
-    ).unwrap();
-    
+    let target_machine = target
+        .create_target_machine(
+            &target_triple,
+            "generic",
+            "",
+            OptimizationLevel::Default,
+            RelocMode::Default,
+            CodeModel::Default,
+        )
+        .unwrap();
+
     module.set_data_layout(&target_machine.get_target_data().get_data_layout());
     target_machine.add_analysis_passes(&pass_manager);
-    target_machine.write_to_file(&module, FileType::Object, Path::new(&format!("./{}.o", output_file_name))).unwrap();
+    target_machine
+        .write_to_file(
+            &module,
+            FileType::Object,
+            Path::new(&format!("./{}.o", output_file_name)),
+        )
+        .unwrap();
     module.print_to_stderr();
-    
+
     Ok(())
 }

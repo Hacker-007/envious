@@ -503,10 +503,7 @@ impl<'a, T> Reporter for Result<T, Vec<Error<'a>>> {
     type Output = T;
 
     fn is_err(&self) -> bool {
-        match self {
-            Err(errors) if !errors.is_empty() => true,
-            _ => false,
-        }
+        matches!(self, Err(errors) if !errors.is_empty())
     }
 
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {

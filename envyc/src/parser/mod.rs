@@ -9,7 +9,14 @@ use crate::{
     semantic_analyzer::types::Type,
 };
 
-use self::{ast::{Function, Parameter, Program, Prototype}, parselets::{BinaryOperationParselet, BlockParselet, BooleanParselet, CharParselet, FloatParselet, IdentifierParselet, IfParselet, IntParselet, PrefixOperationParselet, infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet}};
+use self::{
+    ast::{Function, Parameter, Program, Prototype},
+    parselets::{
+        infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet,
+        BinaryOperationParselet, BlockParselet, BooleanParselet, CharParselet, FloatParselet,
+        IdentifierParselet, IfParselet, IntParselet, PrefixOperationParselet,
+    },
+};
 
 pub mod ast;
 pub mod expression;

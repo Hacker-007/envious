@@ -28,14 +28,8 @@ pub struct Function<'a> {
 }
 
 impl<'a> Function<'a> {
-    pub fn new(
-        prototype: Prototype<'a>,
-        body: Expression<'a>,
-    ) -> Self {
-        Self {
-            prototype,
-            body,
-        }
+    pub fn new(prototype: Prototype<'a>, body: Expression<'a>) -> Self {
+        Self { prototype, body }
     }
 }
 

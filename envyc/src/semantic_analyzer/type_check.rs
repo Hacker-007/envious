@@ -90,8 +90,15 @@ impl<'a> TypeCheck<'a> for Function<'a> {
 
         let typed_body = self.body.check(env)?;
         let return_type = get_type(&typed_body.1);
-        let typed_function =
-            TypedFunction::new(TypedPrototype::new(self.prototype.span, self.prototype.name, typed_params, return_type), typed_body);
+        let typed_function = TypedFunction::new(
+            TypedPrototype::new(
+                self.prototype.span,
+                self.prototype.name,
+                typed_params,
+                return_type,
+            ),
+            typed_body,
+        );
         env.remove_top_scope();
         Ok(typed_function)
     }

@@ -22,7 +22,12 @@ pub struct TypedPrototype<'a> {
 }
 
 impl<'a> TypedPrototype<'a> {
-    pub fn new(span: Span<'a>, name: usize, parameters: Vec<TypedParameter<'a>>, return_type: Type) -> Self {
+    pub fn new(
+        span: Span<'a>,
+        name: usize,
+        parameters: Vec<TypedParameter<'a>>,
+        return_type: Type,
+    ) -> Self {
         Self {
             span,
             name,
@@ -39,14 +44,8 @@ pub struct TypedFunction<'a> {
 }
 
 impl<'a> TypedFunction<'a> {
-    pub fn new(
-        prototype: TypedPrototype<'a>,
-        body: TypedExpression<'a>,
-    ) -> Self {
-        Self {
-            prototype,
-            body,
-        }
+    pub fn new(prototype: TypedPrototype<'a>, body: TypedExpression<'a>) -> Self {
+        Self { prototype, body }
     }
 }
 

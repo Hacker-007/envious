@@ -79,12 +79,10 @@ impl<'a> Lexer<'a> {
                         Err(error) => errors.push(error),
                     }
                 }
-                b'\'' => {
-                    match self.form_char() {
-                        Ok(token) => tokens.push(token),
-                        Err(error) => errors.push(error),
-                    }
-                }
+                b'\'' => match self.form_char() {
+                    Ok(token) => tokens.push(token),
+                    Err(error) => errors.push(error),
+                },
                 letter if letter.is_ascii_alphabetic() || letter == b'_' => {
                     match self.form_word(letter as char, interner) {
                         Ok(token) => tokens.push(token),
@@ -213,20 +211,32 @@ impl<'a> Lexer<'a> {
         let ch = if let Some(ch) = self.next() {
             ch as char
         } else {
-            return Err(Error::UnexpectedEndOfInput(Span::new(self.file_name, start_line, start_column, self.current_line, self.current_column)))
+            return Err(Error::UnexpectedEndOfInput(Span::new(
+                self.file_name,
+                start_line,
+                start_column,
+                self.current_line,
+                self.current_column,
+            )));
         };
 
         if let Some(b'\'') = self.next() {
             let span = Span::new(
-            self.file_name,
-            start_line,
-            start_column,
-            self.current_line,
-            self.current_column,
-        );
+                self.file_name,
+                start_line,
+                start_column,
+                self.current_line,
+                self.current_column,
+            );
             Ok((span, TokenKind::CharLiteral(ch)))
         } else {
-            return Err(Error::UnterminatedChar(Span::new(self.file_name, start_line, start_column, self.current_line, self.current_column)))
+            return Err(Error::UnterminatedChar(Span::new(
+                self.file_name,
+                start_line,
+                start_column,
+                self.current_line,
+                self.current_column,
+            )));
         }
     }
 
