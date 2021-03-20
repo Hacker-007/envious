@@ -1,7 +1,7 @@
 use std::{
     error::Error,
-    fs, thread,
-    time::{Duration, Instant},
+    fs,
+    time::Instant,
 };
 
 use envyc::{
@@ -16,11 +16,6 @@ use envyc::{
 use options::Options;
 
 mod options;
-
-use progress_bar::{
-    color::{Color, Style},
-    progress_bar::ProgressBar,
-};
 use structopt::StructOpt;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
@@ -54,8 +49,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         let compilation_start = Instant::now();
         compile_code(&error_reporter, &mut interner, file_name, file_stem, bytes);
         println!(
-            "Finished full compilation process after {} seconds",
-            compilation_start.elapsed().as_millis() as f32 / 1000.0 - 2.0
+            "Finished full compilation process after {} seconds.",
+            compilation_start.elapsed().as_secs_f64()
         );
     }
 
@@ -69,11 +64,8 @@ fn compile_code(
     file_stem: &str,
     bytes: &[u8],
 ) -> Option<()> {
-    let mut progress_bar = ProgressBar::new(4);
     let tokens = time(
-        &mut progress_bar,
         "Lexing",
-        &file_name,
         &error_reporter,
         || Lexer::new(file_name, bytes).get_tokens(interner),
     )?;
@@ -84,26 +76,20 @@ fn compile_code(
         .peekable();
 
     let program = time(
-        &mut progress_bar,
         "Parsing",
-        &file_name,
         &error_reporter,
         || Parser::new(filtered_tokens).parse(),
     )?;
 
     let mut type_env = Environment::default();
     let typed_program = time(
-        &mut progress_bar,
         "Checking",
-        file_name,
         &error_reporter,
         || program.check(&mut type_env),
     )?;
 
     time(
-        &mut progress_bar,
         "Compiling",
-        &file_name,
         &error_reporter,
         || run(&typed_program, &file_name, file_stem, interner),
     )?;
@@ -112,20 +98,12 @@ fn compile_code(
 }
 
 fn time<O: Reporter>(
-    progress_bar: &mut ProgressBar,
     name: &str,
-    value: &str,
     error_reporter: &ErrorReporter,
     function: impl FnOnce() -> O,
 ) -> Option<O::Output> {
-    thread::sleep(Duration::from_millis(500));
-    progress_bar.print_info(name, value, Color::Green, Style::Bold);
+    let start = Instant::now();
     let value = function();
-    if value.is_err() {
-        progress_bar.finalize();
-    } else {
-        progress_bar.inc();
-    }
-
+    println!("Process `{}` took {} seconds.", name, start.elapsed().as_secs_f64());
     value.report(error_reporter)
 }
