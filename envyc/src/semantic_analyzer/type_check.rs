@@ -62,6 +62,12 @@ impl<'a> TypeCheck<'a> for Program<'a> {
     type Error = Vec<Error<'a>>;
 
     fn check(self, env: &mut Environment<Type>) -> Result<Self::Output, Self::Error> {
+        for function in &self.functions {
+            let function_name = function.prototype.name;
+            let function_return_type = function.prototype.return_type.0;
+            env.define(function_name, function_return_type);
+        }
+
         Ok(TypedProgram {
             functions: self.functions.check(env)?,
         })
