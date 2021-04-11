@@ -18,7 +18,7 @@ pub struct Prototype<'a> {
     pub span: Span<'a>,
     pub name: usize,
     pub parameters: Vec<Parameter<'a>>,
-    pub return_type: Option<Type>,
+    pub return_type: (Type, Span<'a>),
 }
 
 #[derive(Debug)]

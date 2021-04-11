@@ -1,1 +1,1 @@
-define hello(x: Char) = x
+define hello(x: Char) :: Char = x

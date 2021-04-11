@@ -90,6 +90,14 @@ impl<'a> TypeCheck<'a> for Function<'a> {
 
         let typed_body = self.body.check(env)?;
         let return_type = get_type(&typed_body.1);
+        if self.prototype.return_type.0 != return_type {
+            return Err(Error::TypeMismatch {
+                span: typed_body.0,
+                expected_type: self.prototype.return_type.0,
+                actual_type: return_type,
+            });
+        }
+
         let typed_function = TypedFunction::new(
             TypedPrototype::new(
                 self.prototype.span,

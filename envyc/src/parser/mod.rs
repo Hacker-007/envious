@@ -71,13 +71,35 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                 .last()
                 .map_or(left_paren_span, |param| param.span);
             let (right_paren_span, _) = self.expect(TokenKind::RightParenthesis, last_span)?;
+            let (type_colon_span, _) = self.expect(TokenKind::ColonColon, right_paren_span)?;
+            let return_type = match self.consume(type_colon_span)? {
+                (span, TokenKind::Void) => (Type::Void, span),
+                (span, TokenKind::Int) => (Type::Int, span),
+                (span, TokenKind::Float) => (Type::Float, span),
+                (span, TokenKind::Boolean) => (Type::Boolean, span),
+                (span, TokenKind::Char) => (Type::Char, span),
+                (span, actual_kind) => {
+                    return Err(Error::ExpectedKind {
+                        span,
+                        expected_kinds: vec![
+                            TokenKind::Void,
+                            TokenKind::Int,
+                            TokenKind::Float,
+                            TokenKind::Boolean,
+                            TokenKind::Char,
+                        ],
+                        actual_kind,
+                    })
+                }
+            };
+
             let (eq_span, _) = self.expect(TokenKind::EqualSign, right_paren_span)?;
             let body = self.parse_expression(0, eq_span)?;
             let prototype = Prototype {
                 span: function_name_span,
                 name: id,
                 parameters,
-                return_type: None,
+                return_type,
             };
 
             Ok(Function::new(prototype, body))

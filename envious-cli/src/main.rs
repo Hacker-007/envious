@@ -1,8 +1,4 @@
-use std::{
-    error::Error,
-    fs,
-    time::Instant,
-};
+use std::{error::Error, fs, time::Instant};
 
 use envyc::{
     environment::Environment,
@@ -64,35 +60,25 @@ fn compile_code(
     file_stem: &str,
     bytes: &[u8],
 ) -> Option<()> {
-    let tokens = time(
-        "Lexing",
-        &error_reporter,
-        || Lexer::new(file_name, bytes).get_tokens(interner),
-    )?;
+    let tokens = time("Lexing", &error_reporter, || {
+        Lexer::new(file_name, bytes).get_tokens(interner)
+    })?;
 
     let filtered_tokens = tokens
         .into_iter()
         .filter(|token| !matches!(token.1, TokenKind::Whitespace(_)))
         .peekable();
 
-    let program = time(
-        "Parsing",
-        &error_reporter,
-        || Parser::new(filtered_tokens).parse(),
-    )?;
+    let program = time("Parsing", &error_reporter, || {
+        Parser::new(filtered_tokens).parse()
+    })?;
 
     let mut type_env = Environment::default();
-    let typed_program = time(
-        "Checking",
-        &error_reporter,
-        || program.check(&mut type_env),
-    )?;
+    let typed_program = time("Checking", &error_reporter, || program.check(&mut type_env))?;
 
-    time(
-        "Compiling",
-        &error_reporter,
-        || run(&typed_program, &file_name, file_stem, interner),
-    )?;
+    time("Compiling", &error_reporter, || {
+        run(&typed_program, &file_name, file_stem, interner)
+    })?;
 
     Some(())
 }
@@ -104,6 +90,10 @@ fn time<O: Reporter>(
 ) -> Option<O::Output> {
     let start = Instant::now();
     let value = function();
-    println!("Process `{}` took {} seconds.", name, start.elapsed().as_secs_f64());
+    println!(
+        "Process `{}` took {} seconds.",
+        name,
+        start.elapsed().as_secs_f64()
+    );
     value.report(error_reporter)
 }
