@@ -1,6 +1,7 @@
 use crate::{
     environment::Environment,
     error::{Error, Span},
+    function_table::FunctionTable,
     parser::{
         ast::{Function, Parameter, Program},
         expression::{
@@ -21,7 +22,11 @@ pub trait TypeCheck<'a> {
     type Output;
     type Error;
 
-    fn check(self, env: &mut Environment<Type>) -> Result<Self::Output, Self::Error>;
+    fn check(
+        self,
+        env: &mut Environment<Type>,
+        function_table: &mut FunctionTable<'a>,
+    ) -> Result<Self::Output, Self::Error>;
 }
 
 pub trait TypeCheckSpan<'a> {
@@ -32,6 +37,7 @@ pub trait TypeCheckSpan<'a> {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
+        function_table: &mut FunctionTable<'a>,
     ) -> Result<Self::Output, Self::Error>;
 }
 
@@ -39,11 +45,15 @@ impl<'a, T: TypeCheck<'a>> TypeCheck<'a> for Vec<T> {
     type Output = Vec<T::Output>;
     type Error = Vec<T::Error>;
 
-    fn check(self, env: &mut Environment<Type>) -> Result<Self::Output, Self::Error> {
+    fn check(
+        self,
+        env: &mut Environment<Type>,
+        function_table: &mut FunctionTable<'a>,
+    ) -> Result<Self::Output, Self::Error> {
         let mut results = vec![];
         let mut errors = vec![];
         for value in self {
-            match value.check(env) {
+            match value.check(env, function_table) {
                 Ok(result) => results.push(result),
                 Err(error) => errors.push(error),
             }
@@ -61,7 +71,11 @@ impl<'a> TypeCheck<'a> for Program<'a> {
     type Output = TypedProgram<'a>;
     type Error = Vec<Error<'a>>;
 
-    fn check(self, env: &mut Environment<Type>) -> Result<Self::Output, Self::Error> {
+    fn check(
+        self,
+        env: &mut Environment<Type>,
+        function_table: &mut FunctionTable<'a>,
+    ) -> Result<Self::Output, Self::Error> {
         for function in &self.functions {
             let function_name = function.prototype.name;
             let function_return_type = function.prototype.return_type.0;
@@ -69,7 +83,7 @@ impl<'a> TypeCheck<'a> for Program<'a> {
         }
 
         Ok(TypedProgram {
-            functions: self.functions.check(env)?,
+            functions: self.functions.check(env, function_table)?,
         })
     }
 }
@@ -78,7 +92,11 @@ impl<'a> TypeCheck<'a> for Function<'a> {
     type Output = TypedFunction<'a>;
     type Error = Error<'a>;
 
-    fn check(self, env: &mut Environment<Type>) -> Result<Self::Output, Self::Error> {
+    fn check(
+        self,
+        env: &mut Environment<Type>,
+        function_table: &mut FunctionTable<'a>,
+    ) -> Result<Self::Output, Self::Error> {
         env.new_scope();
         let mut typed_params = vec![];
         for parameter in self.prototype.parameters {
@@ -94,7 +112,7 @@ impl<'a> TypeCheck<'a> for Function<'a> {
             }
         }
 
-        let typed_body = self.body.check(env)?;
+        let typed_body = self.body.check(env, function_table)?;
         let return_type = get_type(&typed_body.1);
         if self.prototype.return_type.0 != return_type {
             return Err(Error::TypeMismatch {
@@ -122,7 +140,11 @@ impl<'a> TypeCheck<'a> for Parameter<'a> {
     type Output = TypedParameter<'a>;
     type Error = Error<'a>;
 
-    fn check(self, _: &mut Environment<Type>) -> Result<Self::Output, Self::Error> {
+    fn check(
+        self,
+        _: &mut Environment<Type>,
+        _: &mut FunctionTable<'a>,
+    ) -> Result<Self::Output, Self::Error> {
         Ok(TypedParameter::new(self.span, self.ty, self.name))
     }
 }
@@ -131,24 +153,28 @@ impl<'a> TypeCheck<'a> for Expression<'a> {
     type Output = TypedExpression<'a>;
     type Error = Error<'a>;
 
-    fn check(self, env: &mut Environment<Type>) -> Result<Self::Output, Self::Error> {
+    fn check(
+        self,
+        env: &mut Environment<Type>,
+        function_table: &mut FunctionTable<'a>,
+    ) -> Result<Self::Output, Self::Error> {
         match self.1 {
             ExpressionKind::Int(value) => Ok((self.0, TypedExpressionKind::Int(value))),
             ExpressionKind::Float(value) => Ok((self.0, TypedExpressionKind::Float(value))),
             ExpressionKind::Boolean(value) => Ok((self.0, TypedExpressionKind::Boolean(value))),
             ExpressionKind::Char(value) => Ok((self.0, TypedExpressionKind::Char(value))),
-            ExpressionKind::Identifier(inner) => inner.check_span(self.0, env),
-            ExpressionKind::Unary(inner) => inner.check_span(self.0, env),
-            ExpressionKind::Binary(inner) => inner.check_span(self.0, env),
-            ExpressionKind::If(inner) => inner.check_span(self.0, env),
-            ExpressionKind::Let(inner) => inner.check_span(self.0, env),
-            ExpressionKind::Block(expressions) => match expressions.check(env) {
+            ExpressionKind::Identifier(inner) => inner.check_span(self.0, env, function_table),
+            ExpressionKind::Unary(inner) => inner.check_span(self.0, env, function_table),
+            ExpressionKind::Binary(inner) => inner.check_span(self.0, env, function_table),
+            ExpressionKind::If(inner) => inner.check_span(self.0, env, function_table),
+            ExpressionKind::Let(inner) => inner.check_span(self.0, env, function_table),
+            ExpressionKind::Block(expressions) => match expressions.check(env, function_table) {
                 Ok(typed_expressions) => {
                     Ok((self.0, TypedExpressionKind::Block(typed_expressions)))
                 }
                 Err(errors) => Err(errors.into_iter().next().unwrap()),
             },
-            ExpressionKind::Application(inner) => inner.check_span(self.0, env),
+            ExpressionKind::Application(inner) => inner.check_span(self.0, env, function_table),
         }
     }
 }
@@ -161,6 +187,7 @@ impl<'a> TypeCheckSpan<'a> for Identifier {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
+        function_table: &mut FunctionTable<'a>,
     ) -> Result<Self::Output, Self::Error> {
         match env.get(self.0) {
             Some(ty) => Ok((
@@ -180,8 +207,9 @@ impl<'a> TypeCheckSpan<'a> for Unary<'a> {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
+        function_table: &mut FunctionTable<'a>,
     ) -> Result<Self::Output, Self::Error> {
-        let typed_expression = self.expression.check(env)?;
+        let typed_expression = self.expression.check(env, function_table)?;
         let expression_type = get_type(&typed_expression.1);
         let operation_ty = match (self.operation, expression_type) {
             (UnaryOperation::Plus, Type::Int) => Some(Type::Int),
@@ -220,9 +248,10 @@ impl<'a> TypeCheckSpan<'a> for Binary<'a> {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
+        function_table: &mut FunctionTable<'a>,
     ) -> Result<Self::Output, Self::Error> {
-        let typed_left = self.left.check(env)?;
-        let typed_right = self.right.check(env)?;
+        let typed_left = self.left.check(env, function_table)?;
+        let typed_right = self.right.check(env, function_table)?;
         let left_type = get_type(&typed_left.1);
         let right_type = get_type(&typed_right.1);
         let result_type = match (self.operation, left_type, right_type) {
@@ -269,8 +298,9 @@ impl<'a> TypeCheckSpan<'a> for If<'a> {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
+        function_table: &mut FunctionTable<'a>,
     ) -> Result<Self::Output, Self::Error> {
-        let typed_condition = self.condition.check(env)?;
+        let typed_condition = self.condition.check(env, function_table)?;
         let condition_type = get_type(&typed_condition.1);
         if condition_type != Type::Boolean {
             return Err(Error::TypeMismatch {
@@ -280,10 +310,10 @@ impl<'a> TypeCheckSpan<'a> for If<'a> {
             });
         }
 
-        let typed_then = self.then_branch.check(env)?;
+        let typed_then = self.then_branch.check(env, function_table)?;
         let then_type = get_type(&typed_then.1);
         if let Some(else_branch) = self.else_branch {
-            let typed_else = else_branch.check(env)?;
+            let typed_else = else_branch.check(env, function_table)?;
             let else_type = get_type(&typed_else.1);
 
             if then_type == else_type {
@@ -326,8 +356,9 @@ impl<'a> TypeCheckSpan<'a> for Let<'a> {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
+        function_table: &mut FunctionTable<'a>,
     ) -> Result<Self::Output, Self::Error> {
-        let typed_expression = self.expression.check(env)?;
+        let typed_expression = self.expression.check(env, function_table)?;
         let expression_type = get_type(&typed_expression.1);
         if let Some(given_type) = self.given_type {
             if expression_type != given_type {
@@ -370,6 +401,7 @@ impl<'a> TypeCheckSpan<'a> for Application<'a> {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
+        function_table: &mut FunctionTable<'a>,
     ) -> Result<Self::Output, Self::Error> {
         todo!()
     }

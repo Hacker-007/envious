@@ -7,12 +7,6 @@ pub struct FunctionTable<'a> {
 }
 
 impl<'a> FunctionTable<'a> {
-    pub fn new() -> Self {
-        Self {
-            function_definitions: HashMap::new(),
-        }
-    }
-
     pub fn add_function_definition(&mut self, function_name: usize, function_prototype: &'a Prototype<'a>) {
         self.function_definitions.insert(function_name, function_prototype);
     }
@@ -22,6 +16,14 @@ impl<'a> FunctionTable<'a> {
             Ok(*function_definition)
         } else {
             Err(Error::UnknownFunction(function_span))
+        }
+    }
+}
+
+impl<'a> Default for FunctionTable<'a> {
+    fn default() -> Self {
+        Self {
+            function_definitions: HashMap::new(),
         }
     }
 }

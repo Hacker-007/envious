@@ -3,6 +3,7 @@ use std::{error::Error, fs, time::Instant};
 use envyc::{
     environment::Environment,
     error::reporter::{ErrorReporter, Reporter},
+    function_table::FunctionTable,
     interner::Interner,
     lexer::{token::TokenKind, Lexer},
     parser::Parser,
@@ -74,7 +75,10 @@ fn compile_code(
     })?;
 
     let mut type_env = Environment::default();
-    let typed_program = time("Checking", &error_reporter, || program.check(&mut type_env))?;
+    let mut function_table = FunctionTable::default();
+    let typed_program = time("Checking", &error_reporter, || {
+        program.check(&mut type_env, &mut function_table)
+    })?;
 
     time("Compiling", &error_reporter, || {
         run(&typed_program, &file_name, file_stem, interner)
