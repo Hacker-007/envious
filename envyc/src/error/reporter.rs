@@ -57,12 +57,12 @@ impl<'a> ErrorReporter<'a> {
             Error::ExpectedPrefixExpression {
                 span,
                 found_kind: kind,
-            } => self.handle_expected_prefix_expression(*span, kind),
+            } => self.handle_expected_prefix_expression(*span, *kind),
             Error::ExpectedKind {
                 span,
                 expected_kinds,
                 actual_kind,
-            } => self.handle_expected_kind(*span, expected_kinds, actual_kind),
+            } => self.handle_expected_kind(*span, expected_kinds, *actual_kind),
             Error::UnsupportedOperation {
                 operation_span,
                 operands,
@@ -192,7 +192,7 @@ impl<'a> ErrorReporter<'a> {
     /// # Arguments
     /// * `span` - The `Span` of this error.
     /// * `kind` - The `TokenKind` found.
-    fn handle_expected_prefix_expression(&self, span: Span, kind: &TokenKind) -> Diagnostic<usize> {
+    fn handle_expected_prefix_expression(&self, span: Span, kind: TokenKind) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
         Diagnostic::error()
             .with_message("expected prefix expression")
@@ -216,7 +216,7 @@ impl<'a> ErrorReporter<'a> {
         &self,
         span: Span,
         expected_kinds: &[TokenKind],
-        actual_kind: &TokenKind,
+        actual_kind: TokenKind,
     ) -> Diagnostic<usize> {
         let (start_column, end_column) = self.construct_source(span);
         let expected_kinds = expected_kinds

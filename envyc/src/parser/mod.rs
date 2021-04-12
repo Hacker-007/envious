@@ -252,7 +252,7 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
         }
     }
 
-    /// Analyzes the type of the next token without consuming i
+    /// Analyzes the type of the next token without consuming it
     /// and then returns the precedence associated with the token.
     fn get_precedence(&mut self) -> usize {
         if let Some((_, kind)) = self.tokens.peek() {

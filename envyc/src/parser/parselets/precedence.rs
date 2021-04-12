@@ -1,12 +1,13 @@
 /// Enum that details the precedence for
 /// different expressions. This is used in the
 /// Pratt parsing algorithm utilized by the
-/// * `Parser`.
+/// `Parser`.
 pub enum Precedence {
     Constant,
     Addition,
     Multiplication,
     Unary,
+    Application,
     If,
 }
 
@@ -17,7 +18,8 @@ impl From<Precedence> for usize {
             Precedence::Addition => 2,
             Precedence::Multiplication => 3,
             Precedence::Unary => 4,
-            Precedence::If => 5,
+            Precedence::Application => 5,
+            Precedence::If => 6,
         }
     }
 }

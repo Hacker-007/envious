@@ -1,1 +1,7 @@
-define hello(x: Char) :: Char = x
+define hello(x: Char) :: Char = {
+    let y = test()
+    let y = y + 1
+    x
+}
+
+define test() :: Int = 1

@@ -11,7 +11,7 @@ pub type Token<'a> = (Span<'a>, TokenKind);
 /// by the `Lexer`. The `TokenKind` should strive to only store types that
 /// are small in nature and any other types (i.e. String) should be stored in the
 /// * `Interner`.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     Whitespace(char),
 
