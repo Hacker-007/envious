@@ -15,7 +15,7 @@ impl<T: Hash + Eq> Interner<T> {
     /// returned.
     ///
     /// # Arguments
-    /// `value` - The value to insert into the map.
+    /// * `value` - The value to insert into the map.
     pub fn insert(&mut self, value: T) -> usize {
         if let Some(id) = self.intern_map.get_by_right(&value) {
             *id
@@ -28,7 +28,7 @@ impl<T: Hash + Eq> Interner<T> {
 
     /// Gets the value in the `Interner` with the given id.
     /// This function assumes that the id exists within the
-    /// `Interner`. Using this function without that check
+    /// * `Interner`. Using this function without that check
     /// will cause it to panic.
     ///
     /// # Arguments

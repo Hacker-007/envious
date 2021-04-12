@@ -1,29 +1,41 @@
 use std::collections::HashMap;
 
-use crate::{error::{Error, Span}, parser::ast::Prototype};
+use crate::{
+    error::{Error, Span},
+    semantic_analyzer::types::Type,
+};
 
-pub struct FunctionTable<'a> {
-    function_definitions: HashMap<usize, &'a Prototype<'a>>,
+pub struct FunctionTable {
+    function_parameter_types: HashMap<usize, Vec<Type>>,
 }
 
-impl<'a> FunctionTable<'a> {
-    pub fn add_function_definition(&mut self, function_name: usize, function_prototype: &'a Prototype<'a>) {
-        self.function_definitions.insert(function_name, function_prototype);
+impl FunctionTable {
+    pub fn add_function_definition(
+        &mut self,
+        function_name: usize,
+        function_parameter_types: Vec<Type>,
+    ) {
+        self.function_parameter_types
+            .insert(function_name, function_parameter_types);
     }
 
-    pub fn get_function_definition(&self, function_name: usize, function_span: Span<'a>) -> Result<&'a Prototype<'a>, Error> {
-        if let Some(function_definition) = self.function_definitions.get(&function_name) {
-            Ok(*function_definition)
+    pub fn get_function_definition<'a>(
+        &self,
+        function_name: usize,
+        function_span: Span<'a>,
+    ) -> Result<&Vec<Type>, Error<'a>> {
+        if let Some(function_parameter_types) = self.function_parameter_types.get(&function_name) {
+            Ok(function_parameter_types)
         } else {
             Err(Error::UnknownFunction(function_span))
         }
     }
 }
 
-impl<'a> Default for FunctionTable<'a> {
+impl Default for FunctionTable {
     fn default() -> Self {
         Self {
-            function_definitions: HashMap::new(),
+            function_parameter_types: HashMap::new(),
         }
     }
 }

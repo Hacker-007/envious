@@ -10,7 +10,7 @@ pub type Token<'a> = (Span<'a>, TokenKind);
 /// Enum that details the different types of tokens that can be produced
 /// by the `Lexer`. The `TokenKind` should strive to only store types that
 /// are small in nature and any other types (i.e. String) should be stored in the
-/// `Interner`.
+/// * `Interner`.
 #[derive(Debug, PartialEq)]
 pub enum TokenKind {
     Whitespace(char),

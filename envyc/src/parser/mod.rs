@@ -277,7 +277,7 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
     /// more token remaining, but one was requested.
     ///
     /// # Arguments
-    /// `span` - The `Span` of the previous token.
+    /// * `span` - The `Span` of the previous token.
     fn consume(&mut self, span: Span<'a>) -> Result<Token<'a>, Error<'a>> {
         match self.tokens.next() {
             Some(token) => Ok(token),
@@ -292,7 +292,7 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
     ///
     /// # Arguments
     /// * `expected_kind` - The kind expected of the next token.
-    /// `span` - The `Span` of the previous token.
+    /// * `span` - The `Span` of the previous token.
     fn expect(&mut self, expected_kind: TokenKind, span: Span<'a>) -> Result<Token<'a>, Error<'a>> {
         let token = self.consume(span)?;
 

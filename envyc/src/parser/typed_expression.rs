@@ -10,7 +10,7 @@ pub type TypedExpression<'a> = (Span<'a>, TypedExpressionKind<'a>);
 /// Enum that details the different types of expressions that can be produced
 /// by the `Expression`. The `ExpressionKind` should strive to only store types that
 /// are small in nature and any other types (i.e. String) should be stored in the
-/// `Interner`.
+/// * `Interner`.
 #[derive(Debug)]
 pub enum TypedExpressionKind<'a> {
     Int(i64),
@@ -26,6 +26,7 @@ pub enum TypedExpressionKind<'a> {
     If(TypedIf<'a>),
     Let(TypedLet<'a>),
     Block(Vec<TypedExpression<'a>>),
+    Application(TypedApplication<'a>),
 }
 
 #[derive(Debug)]
@@ -62,5 +63,12 @@ pub struct TypedLet<'a> {
     pub name: (Span<'a>, TypedIdentifier),
     pub given_type: Option<Type>,
     pub expression: Box<TypedExpression<'a>>,
+    pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct TypedApplication<'a> {
+    pub function_name: (Span<'a>, usize),
+    pub parameters: Vec<TypedExpression<'a>>,
     pub ty: Type,
 }

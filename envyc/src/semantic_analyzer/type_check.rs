@@ -10,8 +10,8 @@ use crate::{
         },
         typed_ast::{TypedFunction, TypedParameter, TypedProgram, TypedPrototype},
         typed_expression::{
-            TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier, TypedIf, TypedLet,
-            TypedUnary,
+            TypedApplication, TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier,
+            TypedIf, TypedLet, TypedUnary,
         },
     },
 };
@@ -25,7 +25,7 @@ pub trait TypeCheck<'a> {
     fn check(
         self,
         env: &mut Environment<Type>,
-        function_table: &mut FunctionTable<'a>,
+        function_table: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error>;
 }
 
@@ -37,7 +37,7 @@ pub trait TypeCheckSpan<'a> {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
-        function_table: &mut FunctionTable<'a>,
+        function_table: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error>;
 }
 
@@ -48,7 +48,7 @@ impl<'a, T: TypeCheck<'a>> TypeCheck<'a> for Vec<T> {
     fn check(
         self,
         env: &mut Environment<Type>,
-        function_table: &mut FunctionTable<'a>,
+        function_table: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error> {
         let mut results = vec![];
         let mut errors = vec![];
@@ -74,12 +74,19 @@ impl<'a> TypeCheck<'a> for Program<'a> {
     fn check(
         self,
         env: &mut Environment<Type>,
-        function_table: &mut FunctionTable<'a>,
+        function_table: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error> {
         for function in &self.functions {
             let function_name = function.prototype.name;
             let function_return_type = function.prototype.return_type.0;
+            let parameter_types = function
+                .prototype
+                .parameters
+                .iter()
+                .map(|parameter| parameter.ty)
+                .collect::<Vec<_>>();
             env.define(function_name, function_return_type);
+            function_table.add_function_definition(function_name, parameter_types);
         }
 
         Ok(TypedProgram {
@@ -95,7 +102,7 @@ impl<'a> TypeCheck<'a> for Function<'a> {
     fn check(
         self,
         env: &mut Environment<Type>,
-        function_table: &mut FunctionTable<'a>,
+        function_table: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error> {
         env.new_scope();
         let mut typed_params = vec![];
@@ -143,7 +150,7 @@ impl<'a> TypeCheck<'a> for Parameter<'a> {
     fn check(
         self,
         _: &mut Environment<Type>,
-        _: &mut FunctionTable<'a>,
+        _: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error> {
         Ok(TypedParameter::new(self.span, self.ty, self.name))
     }
@@ -156,7 +163,7 @@ impl<'a> TypeCheck<'a> for Expression<'a> {
     fn check(
         self,
         env: &mut Environment<Type>,
-        function_table: &mut FunctionTable<'a>,
+        function_table: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error> {
         match self.1 {
             ExpressionKind::Int(value) => Ok((self.0, TypedExpressionKind::Int(value))),
@@ -187,7 +194,7 @@ impl<'a> TypeCheckSpan<'a> for Identifier {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
-        function_table: &mut FunctionTable<'a>,
+        _: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error> {
         match env.get(self.0) {
             Some(ty) => Ok((
@@ -207,7 +214,7 @@ impl<'a> TypeCheckSpan<'a> for Unary<'a> {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
-        function_table: &mut FunctionTable<'a>,
+        function_table: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error> {
         let typed_expression = self.expression.check(env, function_table)?;
         let expression_type = get_type(&typed_expression.1);
@@ -248,7 +255,7 @@ impl<'a> TypeCheckSpan<'a> for Binary<'a> {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
-        function_table: &mut FunctionTable<'a>,
+        function_table: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error> {
         let typed_left = self.left.check(env, function_table)?;
         let typed_right = self.right.check(env, function_table)?;
@@ -298,7 +305,7 @@ impl<'a> TypeCheckSpan<'a> for If<'a> {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
-        function_table: &mut FunctionTable<'a>,
+        function_table: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error> {
         let typed_condition = self.condition.check(env, function_table)?;
         let condition_type = get_type(&typed_condition.1);
@@ -356,7 +363,7 @@ impl<'a> TypeCheckSpan<'a> for Let<'a> {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
-        function_table: &mut FunctionTable<'a>,
+        function_table: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error> {
         let typed_expression = self.expression.check(env, function_table)?;
         let expression_type = get_type(&typed_expression.1);
@@ -401,9 +408,44 @@ impl<'a> TypeCheckSpan<'a> for Application<'a> {
         self,
         span: Span<'a>,
         env: &mut Environment<Type>,
-        function_table: &mut FunctionTable<'a>,
+        function_table: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error> {
-        todo!()
+        let mut parameters = Vec::new();
+        for parameter in self.parameters {
+            let typed_value = parameter.check(env, function_table)?;
+            parameters.push(typed_value);
+        }
+
+        let (function_span, Identifier(function_name)) = self.function_name;
+        let defined_types = function_table.get_function_definition(function_name, function_span)?;
+        if parameters.len() != defined_types.len() {
+            return Err(Error::ParameterMismatch {
+                span,
+                expected_parameter_count: defined_types.len(),
+                actual_parameter_count: parameters.len(),
+            });
+        }
+
+        for (&defined_parameter_type, actual_parameter) in defined_types.iter().zip(&parameters) {
+            let actual_parameter_type = get_type(&actual_parameter.1);
+            if defined_parameter_type != actual_parameter_type {
+                return Err(Error::TypeMismatch {
+                    span: actual_parameter.0,
+                    expected_type: defined_parameter_type,
+                    actual_type: actual_parameter_type,
+                });
+            }
+        }
+
+        let return_type = env.get(function_name).unwrap();
+        Ok((
+            span,
+            TypedExpressionKind::Application(TypedApplication {
+                function_name: (function_span, function_name),
+                parameters,
+                ty: return_type,
+            }),
+        ))
     }
 }
 
@@ -423,5 +465,6 @@ fn get_type(typed_expression_kind: &TypedExpressionKind) -> Type {
             .last()
             .map(|expression| get_type(&expression.1))
             .unwrap_or(Type::Void),
+        TypedExpressionKind::Application(ref inner) => inner.ty,
     }
 }

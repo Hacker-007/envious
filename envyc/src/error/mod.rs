@@ -36,7 +36,7 @@ pub enum Error<'a> {
         operation_span: Span<'a>,
         operands: Vec<(Span<'a>, Type)>,
     },
-    // // Occurs when the type of an expression does not match the expected type.
+    // Occurs when the type of an expression does not match the expected type.
     TypeMismatch {
         span: Span<'a>,
         expected_type: Type,
@@ -54,6 +54,11 @@ pub enum Error<'a> {
     // Occurs when a type was found that could not be used.
     IllegalType(Span<'a>),
     UndefinedVariable(Span<'a>),
+    ParameterMismatch {
+        span: Span<'a>,
+        expected_parameter_count: usize,
+        actual_parameter_count: usize,
+    },
 
     UnknownFunction(Span<'a>),
     /// Occurs when a function was expected during the LLVM compilation.

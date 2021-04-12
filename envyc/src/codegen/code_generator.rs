@@ -16,8 +16,8 @@ use crate::{
         expression::{BinaryOperation, UnaryOperation},
         typed_ast::{TypedFunction, TypedProgram, TypedPrototype},
         typed_expression::{
-            TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier, TypedIf, TypedLet,
-            TypedUnary,
+            TypedApplication, TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier,
+            TypedIf, TypedLet, TypedUnary,
         },
     },
     semantic_analyzer::types::Type,
@@ -243,6 +243,9 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
                     )
                 },
             ),
+            TypedExpressionKind::Application(ref inner) => {
+                inner.code_gen_function(context, module, builder, current_function, interner, env)
+            }
         }
     }
 }
@@ -474,6 +477,42 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedLet<'a> {
         builder.build_store(pointer, value);
         env.define(id, pointer);
         Ok(())
+    }
+}
+
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedApplication<'a> {
+    type Output = BasicValueEnum<'ctx>;
+    type Error = Error<'a>;
+
+    fn code_gen_function(
+        &self,
+        context: &'ctx Context,
+        module: &Module<'ctx>,
+        builder: &Builder<'ctx>,
+        current_function: &FunctionValue<'ctx>,
+        interner: &mut Interner<String>,
+        env: &mut Environment<PointerValue<'ctx>>,
+    ) -> Result<Self::Output, Self::Error> {
+        let function_name = interner.get(self.function_name.1);
+        let function_call = format!("call_{}", function_name);
+        let function = module.get_function(&function_name).unwrap();
+        let mut arguments = Vec::new();
+        for parameter in &self.parameters {
+            arguments.push(parameter.code_gen_function(
+                context,
+                module,
+                builder,
+                current_function,
+                interner,
+                env,
+            )?);
+        }
+
+        Ok(builder
+            .build_call(function, &arguments, &function_call)
+            .try_as_basic_value()
+            .left()
+            .unwrap_or_else(|| BasicValueEnum::IntValue(context.i64_type().const_zero())))
     }
 }
 
