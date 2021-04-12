@@ -15,6 +15,7 @@ use parser::typed_ast::TypedProgram;
 pub mod codegen;
 pub mod environment;
 pub mod error;
+pub mod function_table;
 pub mod interner;
 pub mod lexer;
 pub mod parser;

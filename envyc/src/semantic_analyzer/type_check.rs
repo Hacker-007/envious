@@ -4,8 +4,8 @@ use crate::{
     parser::{
         ast::{Function, Parameter, Program},
         expression::{
-            Binary, BinaryOperation, Expression, ExpressionKind, Identifier, If, Let, Unary,
-            UnaryOperation,
+            Application, Binary, BinaryOperation, Expression, ExpressionKind, Identifier, If, Let,
+            Unary, UnaryOperation,
         },
         typed_ast::{TypedFunction, TypedParameter, TypedProgram, TypedPrototype},
         typed_expression::{
@@ -148,6 +148,7 @@ impl<'a> TypeCheck<'a> for Expression<'a> {
                 }
                 Err(errors) => Err(errors.into_iter().next().unwrap()),
             },
+            ExpressionKind::Application(inner) => inner.check_span(self.0, env),
         }
     }
 }
@@ -358,6 +359,19 @@ impl<'a> TypeCheckSpan<'a> for Let<'a> {
                 ty: expression_type,
             }),
         ))
+    }
+}
+
+impl<'a> TypeCheckSpan<'a> for Application<'a> {
+    type Output = TypedExpression<'a>;
+    type Error = Error<'a>;
+
+    fn check_span(
+        self,
+        span: Span<'a>,
+        env: &mut Environment<Type>,
+    ) -> Result<Self::Output, Self::Error> {
+        todo!()
     }
 }
 

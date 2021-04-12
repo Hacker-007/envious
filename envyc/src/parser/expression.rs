@@ -24,6 +24,7 @@ pub enum ExpressionKind<'a> {
     If(If<'a>),
     Let(Let<'a>),
     Block(Vec<Expression<'a>>),
+    Application(Application<'a>),
 }
 
 #[derive(Debug)]
@@ -54,6 +55,12 @@ pub struct Let<'a> {
     pub name: (Span<'a>, Identifier),
     pub given_type: Option<Type>,
     pub expression: Box<Expression<'a>>,
+}
+
+#[derive(Debug)]
+pub struct Application<'a> {
+    pub function_name: (Span<'a>, Identifier),
+    pub parameters: Vec<Expression<'a>>,
 }
 
 /// Enum that details the different unary operations
