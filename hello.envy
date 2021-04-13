@@ -1,1 +1,4 @@
-define next_char(ch: Char) :: Char = ch + '\0'
+define main() :: Void = {
+    let i = 0
+    while i < 10 let i = i + 1
+}

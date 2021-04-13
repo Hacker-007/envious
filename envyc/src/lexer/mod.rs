@@ -14,7 +14,7 @@ type LexResult<'a> = Result<Token<'a>, Error<'a>>;
 /// The `Lexer` follows a simple procedure: first, it gets
 /// and decodes the next byte; then, consecutive bytes of
 /// the same token type are grouped together; finally, the
-/// * `Token` is constructed.
+/// `Token` is constructed.
 pub struct Lexer<'a> {
     // The name of the file currently being analyzed.
     file_name: &'a str,

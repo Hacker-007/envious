@@ -10,7 +10,7 @@ pub type TypedExpression<'a> = (Span<'a>, TypedExpressionKind<'a>);
 /// Enum that details the different types of expressions that can be produced
 /// by the `Expression`. The `ExpressionKind` should strive to only store types that
 /// are small in nature and any other types (i.e. String) should be stored in the
-/// * `Interner`.
+/// `Interner`.
 #[derive(Debug)]
 pub enum TypedExpressionKind<'a> {
     Int(i64),
