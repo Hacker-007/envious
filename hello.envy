@@ -1,7 +1,7 @@
-define hello(x: Char) :: Char = {
-    let y = test()
-    let y = y + 1
-    x
+define hello(x: Int) :: Int = {
+    let y = test(x)
+    let y = x + y + 1
+    y
 }
 
-define test() :: Int = 1
+define test(x: Int) :: Int = x * 2

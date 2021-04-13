@@ -1,13 +1,13 @@
 #include <iostream>
 
 extern "C" {
-    char hello(char);
-    int test();
+    int hello(int);
+    int test(int);
 }
 
 int main() {
-    char c = 'd';
-    std::cout << "hello('" << c << "') = " << hello(c) << std::endl;
-    std::cout << "test() = " << test() << std::endl;
+    int i = 1;
+    std::cout << "hello(" << i << ") = " << hello(i) << std::endl;
+    std::cout << "test(" << i << ") = " << test(i) << std::endl;
 }
 
