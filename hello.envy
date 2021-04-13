@@ -1,7 +1,1 @@
-define hello(x: Int) :: Int = {
-    let y = test(x)
-    let y = x + y + 1
-    y
-}
-
-define test(x: Int) :: Int = x * 2
+define next_char(ch: Char) :: Char = ch + '\0'

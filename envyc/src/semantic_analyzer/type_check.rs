@@ -264,6 +264,7 @@ impl<'a> TypeCheckSpan<'a> for Binary<'a> {
         let result_type = match (self.operation, left_type, right_type) {
             (BinaryOperation::Plus, Type::Int, Type::Int) => Some(Type::Int),
             (BinaryOperation::Plus, Type::Float, Type::Float) => Some(Type::Float),
+            (BinaryOperation::Plus, Type::Char, Type::Char) => Some(Type::Char),
 
             (BinaryOperation::Minus, Type::Int, Type::Int) => Some(Type::Int),
             (BinaryOperation::Minus, Type::Float, Type::Float) => Some(Type::Float),
