@@ -1,4 +1,5 @@
 /target
+/tests
 Cargo.lock
 *.cpp
 *.o
