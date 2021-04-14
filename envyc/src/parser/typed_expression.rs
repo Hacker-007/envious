@@ -27,6 +27,7 @@ pub enum TypedExpressionKind<'a> {
     Let(TypedLet<'a>),
     Block(Vec<TypedExpression<'a>>),
     Application(TypedApplication<'a>),
+    While(TypedWhile<'a>),
 }
 
 #[derive(Debug)]
@@ -71,4 +72,10 @@ pub struct TypedApplication<'a> {
     pub function_name: (Span<'a>, usize),
     pub parameters: Vec<TypedExpression<'a>>,
     pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct TypedWhile<'a> {
+    pub condition: Box<TypedExpression<'a>>,
+    pub expression: Box<TypedExpression<'a>>,
 }

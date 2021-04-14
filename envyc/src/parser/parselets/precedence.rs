@@ -4,6 +4,7 @@
 /// `Parser`.
 pub enum Precedence {
     Constant,
+    Comparison,
     Addition,
     Multiplication,
     Unary,
@@ -15,11 +16,12 @@ impl From<Precedence> for usize {
     fn from(precedence: Precedence) -> Self {
         match precedence {
             Precedence::Constant => 1,
-            Precedence::Addition => 2,
-            Precedence::Multiplication => 3,
-            Precedence::Unary => 4,
-            Precedence::Application => 5,
-            Precedence::If => 6,
+            Precedence::Comparison => 2,
+            Precedence::Addition => 3,
+            Precedence::Multiplication => 4,
+            Precedence::Unary => 5,
+            Precedence::Application => 6,
+            Precedence::If => 7,
         }
     }
 }

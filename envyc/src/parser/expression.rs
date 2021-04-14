@@ -25,6 +25,7 @@ pub enum ExpressionKind<'a> {
     Let(Let<'a>),
     Block(Vec<Expression<'a>>),
     Application(Application<'a>),
+    While(While<'a>),
 }
 
 #[derive(Debug)]
@@ -63,6 +64,12 @@ pub struct Application<'a> {
     pub parameters: Vec<Expression<'a>>,
 }
 
+#[derive(Debug)]
+pub struct While<'a> {
+    pub condition: Box<Expression<'a>>,
+    pub expression: Box<Expression<'a>>,
+}
+
 /// Enum that details the different unary operations
 /// that can be applied to any expression.
 /// Note that this enum should not contain any subexpressions.
@@ -84,4 +91,9 @@ pub enum BinaryOperation {
     Minus,
     Multiply,
     Divide,
+    Equals,
+    LessThan,
+    GreaterThan,
+    LessThanEquals,
+    GreaterThanEquals,
 }

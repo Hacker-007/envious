@@ -6,12 +6,12 @@ use crate::{
         ast::{Function, Parameter, Program},
         expression::{
             Application, Binary, BinaryOperation, Expression, ExpressionKind, Identifier, If, Let,
-            Unary, UnaryOperation,
+            Unary, UnaryOperation, While,
         },
         typed_ast::{TypedFunction, TypedParameter, TypedProgram, TypedPrototype},
         typed_expression::{
             TypedApplication, TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier,
-            TypedIf, TypedLet, TypedUnary,
+            TypedIf, TypedLet, TypedUnary, TypedWhile,
         },
     },
 };
@@ -182,6 +182,7 @@ impl<'a> TypeCheck<'a> for Expression<'a> {
                 Err(errors) => Err(errors.into_iter().next().unwrap()),
             },
             ExpressionKind::Application(inner) => inner.check_span(self.0, env, function_table),
+            ExpressionKind::While(inner) => inner.check_span(self.0, env, function_table),
         }
     }
 }
@@ -274,6 +275,20 @@ impl<'a> TypeCheckSpan<'a> for Binary<'a> {
 
             (BinaryOperation::Divide, Type::Int, Type::Int) => Some(Type::Int),
             (BinaryOperation::Divide, Type::Float, Type::Float) => Some(Type::Float),
+
+            (BinaryOperation::Equals, Type::Int, Type::Int)
+            | (BinaryOperation::Equals, Type::Float, Type::Float)
+            | (BinaryOperation::Equals, Type::Char, Type::Char)
+            | (BinaryOperation::Equals, Type::Boolean, Type::Boolean)
+            | (BinaryOperation::LessThan, Type::Int, Type::Int)
+            | (BinaryOperation::LessThan, Type::Float, Type::Float)
+            | (BinaryOperation::LessThan, Type::Char, Type::Char)
+            | (BinaryOperation::GreaterThan, Type::Int, Type::Int)
+            | (BinaryOperation::GreaterThan, Type::Float, Type::Float)
+            | (BinaryOperation::LessThanEquals, Type::Int, Type::Int)
+            | (BinaryOperation::LessThanEquals, Type::Float, Type::Float)
+            | (BinaryOperation::GreaterThanEquals, Type::Int, Type::Int)
+            | (BinaryOperation::GreaterThanEquals, Type::Float, Type::Float) => Some(Type::Boolean),
             _ => None,
         };
 
@@ -450,6 +465,37 @@ impl<'a> TypeCheckSpan<'a> for Application<'a> {
     }
 }
 
+impl<'a> TypeCheckSpan<'a> for While<'a> {
+    type Output = TypedExpression<'a>;
+    type Error = Error<'a>;
+
+    fn check_span(
+        self,
+        span: Span<'a>,
+        env: &mut Environment<Type>,
+        function_table: &mut FunctionTable,
+    ) -> Result<Self::Output, Self::Error> {
+        let typed_condition = self.condition.check(env, function_table)?;
+        let condition_type = get_type(&typed_condition.1);
+        if condition_type != Type::Boolean {
+            return Err(Error::TypeMismatch {
+                span: typed_condition.0,
+                expected_type: Type::Boolean,
+                actual_type: condition_type,
+            });
+        }
+
+        let typed_expression = self.expression.check(env, function_table)?;
+        Ok((
+            span,
+            TypedExpressionKind::While(TypedWhile {
+                condition: Box::new(typed_condition),
+                expression: Box::new(typed_expression),
+            }),
+        ))
+    }
+}
+
 fn get_type(typed_expression_kind: &TypedExpressionKind) -> Type {
     match typed_expression_kind {
         TypedExpressionKind::Int(_) => Type::Int,
@@ -467,5 +513,6 @@ fn get_type(typed_expression_kind: &TypedExpressionKind) -> Type {
             .map(|expression| get_type(&expression.1))
             .unwrap_or(Type::Void),
         TypedExpressionKind::Application(ref inner) => inner.ty,
+        TypedExpressionKind::While(_) => Type::Void,
     }
 }

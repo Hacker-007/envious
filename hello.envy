@@ -1,4 +1,8 @@
-define main() :: Void = {
+define test() :: Int = {
     let i = 0
-    while i < 10 let i = i + 1
+    while i < 10 {
+        let i = i + 1
+    }
+
+    i
 }

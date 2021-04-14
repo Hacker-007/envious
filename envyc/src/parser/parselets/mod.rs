@@ -8,9 +8,11 @@ pub mod if_parselet;
 pub mod infix_parselet;
 pub mod int_parselet;
 pub mod let_parselet;
+pub mod parenthesis_parselet;
 pub mod precedence;
 pub mod prefix_operation_parselet;
 pub mod prefix_parselet;
+pub mod while_parselet;
 
 pub use binary_operation_parselet::BinaryOperationParselet;
 pub use block_parselet::BlockParselet;
@@ -21,4 +23,6 @@ pub use identifier_parselet::IdentifierParselet;
 pub use if_parselet::IfParselet;
 pub use int_parselet::IntParselet;
 pub use let_parselet::LetParselet;
+pub use parenthesis_parselet::ParenthesisParselet;
 pub use prefix_operation_parselet::PrefixOperationParselet;
+pub use while_parselet::WhileParselet;

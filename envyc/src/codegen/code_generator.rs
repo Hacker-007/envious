@@ -6,6 +6,7 @@ use inkwell::{
     module::Module,
     types::{BasicType, BasicTypeEnum},
     values::{BasicValue, BasicValueEnum, FunctionValue, PointerValue},
+    FloatPredicate, IntPredicate,
 };
 
 use crate::{
@@ -17,7 +18,7 @@ use crate::{
         typed_ast::{TypedFunction, TypedProgram, TypedPrototype},
         typed_expression::{
             TypedApplication, TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier,
-            TypedIf, TypedLet, TypedUnary,
+            TypedIf, TypedLet, TypedUnary, TypedWhile,
         },
     },
     semantic_analyzer::types::Type,
@@ -46,7 +47,7 @@ pub trait CodeGeneratorFunction<'a, 'ctx> {
         context: &'ctx Context,
         module: &Module<'ctx>,
         builder: &Builder<'ctx>,
-        current_function: &FunctionValue<'ctx>,
+        current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error>;
@@ -148,15 +149,14 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
             .for_each(|(llvm_param, param_name)| {
                 let name = interner.get(param_name);
                 llvm_param.set_name(name);
-                let pointer =
-                    create_entry_block_alloca(&function, builder, llvm_param.get_type(), name);
+                let pointer = builder.build_alloca(llvm_param.get_type(), name);
                 builder.build_store(pointer, llvm_param);
                 env.define(param_name, pointer);
             });
 
         let expression = self
             .body
-            .code_gen_function(context, module, builder, &function, interner, env)?;
+            .code_gen_function(context, module, builder, function, interner, env)?;
         if self.prototype.return_type == Type::Void {
             builder.build_return(None);
         } else {
@@ -185,7 +185,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
         context: &'ctx Context,
         module: &Module<'ctx>,
         builder: &Builder<'ctx>,
-        current_function: &FunctionValue<'ctx>,
+        current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
@@ -246,6 +246,17 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
             TypedExpressionKind::Application(ref inner) => {
                 inner.code_gen_function(context, module, builder, current_function, interner, env)
             }
+            TypedExpressionKind::While(ref inner) => {
+                inner.code_gen_function(
+                    context,
+                    module,
+                    builder,
+                    current_function,
+                    interner,
+                    env,
+                )?;
+                Ok(BasicValueEnum::IntValue(context.i64_type().const_zero()))
+            }
         }
     }
 }
@@ -259,7 +270,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIdentifier {
         _: &'ctx Context,
         _: &Module<'ctx>,
         builder: &Builder<'ctx>,
-        _: &FunctionValue<'ctx>,
+        _: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
@@ -277,7 +288,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedUnary<'a> {
         context: &'ctx Context,
         module: &Module<'ctx>,
         builder: &Builder<'ctx>,
-        current_function: &FunctionValue<'ctx>,
+        current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
@@ -316,7 +327,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedBinary<'a> {
         context: &'ctx Context,
         module: &Module<'ctx>,
         builder: &Builder<'ctx>,
-        current_function: &FunctionValue<'ctx>,
+        current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
@@ -377,6 +388,30 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedBinary<'a> {
                 BasicValueEnum::FloatValue(left),
                 BasicValueEnum::FloatValue(right),
             ) => BasicValueEnum::FloatValue(builder.build_float_div(left, right, "floatdiv")),
+            (operation, BasicValueEnum::IntValue(left), BasicValueEnum::IntValue(right)) => {
+                let op = match operation {
+                    BinaryOperation::Equals => IntPredicate::EQ,
+                    BinaryOperation::LessThan => IntPredicate::SLT,
+                    BinaryOperation::GreaterThan => IntPredicate::SGT,
+                    BinaryOperation::LessThanEquals => IntPredicate::SLE,
+                    BinaryOperation::GreaterThanEquals => IntPredicate::SGE,
+                    _ => unreachable!(),
+                };
+
+                BasicValueEnum::IntValue(builder.build_int_compare(op, left, right, "intcmp"))
+            }
+            (operation, BasicValueEnum::FloatValue(left), BasicValueEnum::FloatValue(right)) => {
+                let op = match operation {
+                    BinaryOperation::Equals => FloatPredicate::OEQ,
+                    BinaryOperation::LessThan => FloatPredicate::OLT,
+                    BinaryOperation::GreaterThan => FloatPredicate::OGT,
+                    BinaryOperation::LessThanEquals => FloatPredicate::OLE,
+                    BinaryOperation::GreaterThanEquals => FloatPredicate::OGE,
+                    _ => unreachable!(),
+                };
+
+                BasicValueEnum::IntValue(builder.build_float_compare(op, left, right, "floatcmp"))
+            }
             _ => unreachable!(),
         };
 
@@ -393,13 +428,13 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
         context: &'ctx Context,
         module: &Module<'ctx>,
         builder: &Builder<'ctx>,
-        current_function: &FunctionValue<'ctx>,
+        current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
-        let then_block = context.append_basic_block(*current_function, "ifthen");
-        let else_block = context.append_basic_block(*current_function, "ifelse");
-        let end_block = context.append_basic_block(*current_function, "ifend");
+        let then_block = context.append_basic_block(current_function, "ifthen");
+        let else_block = context.append_basic_block(current_function, "ifelse");
+        let end_block = context.append_basic_block(current_function, "ifend");
 
         let condition = self.condition.code_gen_function(
             context,
@@ -455,7 +490,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedLet<'a> {
         context: &'ctx Context,
         module: &Module<'ctx>,
         builder: &Builder<'ctx>,
-        current_function: &FunctionValue<'ctx>,
+        current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
@@ -468,14 +503,13 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedLet<'a> {
             env,
         )?;
         let id = self.name.1.id;
-        let pointer = create_entry_block_alloca(
-            current_function,
-            builder,
-            value.get_type(),
-            interner.get(id),
-        );
-        builder.build_store(pointer, value);
-        env.define(id, pointer);
+        if let Some(pointer) = env.get(id) {
+            builder.build_store(pointer, value);
+        } else {
+            let pointer = builder.build_alloca(value.get_type(), interner.get(id));
+            env.define(id, pointer);
+        }
+
         Ok(())
     }
 }
@@ -489,7 +523,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedApplication<'a> {
         context: &'ctx Context,
         module: &Module<'ctx>,
         builder: &Builder<'ctx>,
-        current_function: &FunctionValue<'ctx>,
+        current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
@@ -516,15 +550,49 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedApplication<'a> {
     }
 }
 
-fn create_entry_block_alloca<'ctx>(
-    function: &FunctionValue<'ctx>,
-    builder: &Builder<'ctx>,
-    ty: BasicTypeEnum<'ctx>,
-    name: &str,
-) -> PointerValue<'ctx> {
-    let entry_block = function.get_first_basic_block().unwrap();
-    builder.position_at_end(entry_block);
-    builder.build_alloca(ty, name)
+impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedWhile<'a> {
+    type Output = ();
+    type Error = Error<'a>;
+
+    fn code_gen_function(
+        &self,
+        context: &'ctx Context,
+        module: &Module<'ctx>,
+        builder: &Builder<'ctx>,
+        current_function: FunctionValue<'ctx>,
+        interner: &mut Interner<String>,
+        env: &mut Environment<PointerValue<'ctx>>,
+    ) -> Result<Self::Output, Self::Error> {
+        let condition_check_block = context.append_basic_block(current_function, "condition_check");
+        let loop_block = context.append_basic_block(current_function, "loop");
+        let after_loop_block = context.append_basic_block(current_function, "after_loop");
+        builder.build_unconditional_branch(condition_check_block);
+
+        builder.position_at_end(condition_check_block);
+        let condition = self.condition.code_gen_function(
+            context,
+            module,
+            builder,
+            current_function,
+            interner,
+            env,
+        )?;
+
+        builder.build_conditional_branch(condition.into_int_value(), loop_block, after_loop_block);
+        builder.position_at_end(loop_block);
+        self.expression.code_gen_function(
+            context,
+            module,
+            builder,
+            current_function,
+            interner,
+            env,
+        )?;
+
+        builder.build_unconditional_branch(condition_check_block);
+        builder.position_at_end(after_loop_block);
+        Ok(())
+    }
 }
 
 fn convert_type(ty: Type, context: &Context) -> Box<dyn BasicType + '_> {
