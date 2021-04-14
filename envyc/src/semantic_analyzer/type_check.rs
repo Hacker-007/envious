@@ -175,12 +175,16 @@ impl<'a> TypeCheck<'a> for Expression<'a> {
             ExpressionKind::Binary(inner) => inner.check_span(self.0, env, function_table),
             ExpressionKind::If(inner) => inner.check_span(self.0, env, function_table),
             ExpressionKind::Let(inner) => inner.check_span(self.0, env, function_table),
-            ExpressionKind::Block(expressions) => match expressions.check(env, function_table) {
-                Ok(typed_expressions) => {
-                    Ok((self.0, TypedExpressionKind::Block(typed_expressions)))
+            ExpressionKind::Block(expressions) => {
+                env.new_scope();
+                match expressions.check(env, function_table) {
+                    Ok(typed_expressions) => {
+                        env.remove_top_scope();
+                        Ok((self.0, TypedExpressionKind::Block(typed_expressions)))
+                    }
+                    Err(errors) => Err(errors.into_iter().next().unwrap()),
                 }
-                Err(errors) => Err(errors.into_iter().next().unwrap()),
-            },
+            }
             ExpressionKind::Application(inner) => inner.check_span(self.0, env, function_table),
             ExpressionKind::While(inner) => inner.check_span(self.0, env, function_table),
         }

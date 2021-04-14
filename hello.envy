@@ -1,8 +1,9 @@
 define test() :: Int = {
     let i = 0
-    while i < 10 {
-        let i = i + 1
+    {
+        let x = 1
     }
 
+    let i = x + 1
     i
 }
