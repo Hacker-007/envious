@@ -395,6 +395,16 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedBinary<'a> {
                     BinaryOperation::GreaterThan => IntPredicate::SGT,
                     BinaryOperation::LessThanEquals => IntPredicate::SLE,
                     BinaryOperation::GreaterThanEquals => IntPredicate::SGE,
+                    BinaryOperation::Or => {
+                        return Ok(BasicValueEnum::IntValue(
+                            builder.build_or(left, right, "boolor"),
+                        ));
+                    }
+                    BinaryOperation::And => {
+                        return Ok(BasicValueEnum::IntValue(
+                            builder.build_and(left, right, "booland"),
+                        ));
+                    }
                     _ => unreachable!(),
                 };
 

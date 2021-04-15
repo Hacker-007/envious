@@ -292,7 +292,9 @@ impl<'a> TypeCheckSpan<'a> for Binary<'a> {
             | (BinaryOperation::LessThanEquals, Type::Int, Type::Int)
             | (BinaryOperation::LessThanEquals, Type::Float, Type::Float)
             | (BinaryOperation::GreaterThanEquals, Type::Int, Type::Int)
-            | (BinaryOperation::GreaterThanEquals, Type::Float, Type::Float) => Some(Type::Boolean),
+            | (BinaryOperation::GreaterThanEquals, Type::Float, Type::Float)
+            | (BinaryOperation::Or, Type::Boolean, Type::Boolean)
+            | (BinaryOperation::And, Type::Boolean, Type::Boolean) => Some(Type::Boolean),
             _ => None,
         };
 

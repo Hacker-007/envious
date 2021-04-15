@@ -251,12 +251,10 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                 false,
             )
             .parse(self, left, token),
-            TokenKind::EqualSign => BinaryOperationParselet::new(
-                Precedence::Comparison,
-                BinaryOperation::Equals,
-                false,
-            )
-            .parse(self, left, token),
+            TokenKind::EqualSign => {
+                BinaryOperationParselet::new(Precedence::Comparison, BinaryOperation::Equals, false)
+                    .parse(self, left, token)
+            }
             TokenKind::LeftAngleBracket => BinaryOperationParselet::new(
                 Precedence::Comparison,
                 BinaryOperation::LessThan,
@@ -281,6 +279,14 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                 false,
             )
             .parse(self, left, token),
+            TokenKind::Or => {
+                BinaryOperationParselet::new(Precedence::Logic, BinaryOperation::Or, false)
+                    .parse(self, left, token)
+            }
+            TokenKind::And => {
+                BinaryOperationParselet::new(Precedence::Logic, BinaryOperation::And, false)
+                    .parse(self, left, token)
+            }
             _ => unreachable!(),
         }
     }
@@ -297,6 +303,7 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                 | TokenKind::RightAngleBracket
                 | TokenKind::LessThanEqualSign
                 | TokenKind::GreaterThanEqualSign => Precedence::Comparison.into(),
+                TokenKind::Or | TokenKind::And => Precedence::Logic.into(),
                 _ => 0,
             }
         } else {

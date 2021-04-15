@@ -96,4 +96,6 @@ pub enum BinaryOperation {
     GreaterThan,
     LessThanEquals,
     GreaterThanEquals,
+    Or,
+    And,
 }
