@@ -503,12 +503,13 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedLet<'a> {
             env,
         )?;
         let id = self.name.1.id;
-        if let Some(pointer) = env.get(id) {
-            builder.build_store(pointer, value);
-        } else {
+        if env.get(id).is_none() {
             let pointer = builder.build_alloca(value.get_type(), interner.get(id));
             env.define(id, pointer);
         }
+
+        let pointer = env.get(id).unwrap();
+        builder.build_store(pointer, value);
 
         Ok(())
     }
