@@ -3,12 +3,14 @@ use crate::{
     error::{Error, Span},
     function_table::FunctionTable,
     parser::{
-        ast::{Function, Parameter, Program},
+        ast::{ExternDeclaration, Function, Parameter, Program},
         expression::{
             Application, Binary, BinaryOperation, Expression, ExpressionKind, Identifier, If, Let,
             Unary, UnaryOperation, While,
         },
-        typed_ast::{TypedFunction, TypedParameter, TypedProgram, TypedPrototype},
+        typed_ast::{
+            TypedExternDeclaration, TypedFunction, TypedParameter, TypedProgram, TypedPrototype,
+        },
         typed_expression::{
             TypedApplication, TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier,
             TypedIf, TypedLet, TypedUnary, TypedWhile,
@@ -76,6 +78,7 @@ impl<'a> TypeCheck<'a> for Program<'a> {
         env: &mut Environment<Type>,
         function_table: &mut FunctionTable,
     ) -> Result<Self::Output, Self::Error> {
+        let extern_declarations = self.extern_declarations.check(env, function_table)?;
         for function in &self.functions {
             let function_name = function.prototype.name;
             let function_return_type = function.prototype.return_type.0;
@@ -90,7 +93,41 @@ impl<'a> TypeCheck<'a> for Program<'a> {
         }
 
         Ok(TypedProgram {
+            extern_declarations,
             functions: self.functions.check(env, function_table)?,
+        })
+    }
+}
+
+impl<'a> TypeCheck<'a> for ExternDeclaration<'a> {
+    type Output = TypedExternDeclaration<'a>;
+    type Error = Error<'a>;
+
+    fn check(
+        self,
+        env: &mut Environment<Type>,
+        function_table: &mut FunctionTable,
+    ) -> Result<Self::Output, Self::Error> {
+        let mut parameters = vec![];
+        for parameter in self.parameters {
+            if parameter.0 == Type::Void {
+                return Err(Error::IllegalType(parameter.1));
+            } else {
+                parameters.push((parameter.0, parameter.1));
+            }
+        }
+
+        env.define(self.name, self.return_type.0);
+        function_table.add_function_definition(
+            self.name,
+            parameters.iter().map(|parameter| parameter.0).collect(),
+        );
+
+        Ok(TypedExternDeclaration {
+            span: self.span,
+            name: self.name,
+            parameters,
+            return_type: self.return_type,
         })
     }
 }

@@ -2,7 +2,7 @@ use crate::{
     error::Error,
     lexer::token::{Token, TokenKind},
     parser::{
-        expression::{Expression, ExpressionKind, Identifier, Application},
+        expression::{Application, Expression, ExpressionKind, Identifier},
         Parser,
     },
 };
@@ -37,21 +37,20 @@ impl<'a> PrefixParselet<'a> for IdentifierParselet {
                 loop {
                     let expression = parser.parse_expression(0, last_span)?;
                     parameters.push(expression);
-                    
+
                     match parser.peek() {
                         Some((_, TokenKind::RightParenthesis)) => break,
                         Some((_, TokenKind::Comma)) => {
                             let (comma_span, _) = parser.consume(last_span)?;
                             last_span = comma_span;
                         }
-                        Some((span, kind)) => return Err(Error::ExpectedKind {
-                            span: *span,
-                            expected_kinds: vec![
-                                TokenKind::RightParenthesis,
-                                TokenKind::Comma,
-                            ],
-                            actual_kind: *kind,
-                        }),
+                        Some((span, kind)) => {
+                            return Err(Error::ExpectedKind {
+                                span: *span,
+                                expected_kinds: vec![TokenKind::RightParenthesis, TokenKind::Comma],
+                                actual_kind: *kind,
+                            })
+                        }
                         None => return Err(Error::UnexpectedEndOfInput(last_span)),
                     }
                 }
@@ -64,7 +63,7 @@ impl<'a> PrefixParselet<'a> for IdentifierParselet {
                 ExpressionKind::Application(Application {
                     function_name: (token.0, Identifier(id)),
                     parameters,
-                })
+                }),
             ))
         } else {
             Ok((token.0, ExpressionKind::Identifier(Identifier(id))))

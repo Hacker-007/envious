@@ -15,7 +15,7 @@ use crate::{
     interner::Interner,
     parser::{
         expression::{BinaryOperation, UnaryOperation},
-        typed_ast::{TypedFunction, TypedProgram, TypedPrototype},
+        typed_ast::{TypedExternDeclaration, TypedFunction, TypedProgram, TypedPrototype},
         typed_expression::{
             TypedApplication, TypedBinary, TypedExpression, TypedExpressionKind, TypedIdentifier,
             TypedIf, TypedLet, TypedUnary, TypedWhile,
@@ -66,6 +66,13 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedProgram<'a> {
         env: &mut Environment<PointerValue<'ctx>>,
     ) -> Result<Self::Output, Self::Error> {
         let mut errors = vec![];
+        for extern_declaration in &self.extern_declarations {
+            if let Err(error) = extern_declaration.code_gen(context, module, builder, interner, env)
+            {
+                errors.push(error);
+            }
+        }
+
         for function in &self.functions {
             if let Err(error) = function
                 .prototype
@@ -116,6 +123,36 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedPrototype<'a> {
             context.void_type().fn_type(&parameter_types, false)
         } else {
             convert_type(self.return_type, context).fn_type(&parameter_types, false)
+        };
+
+        module.add_function(&interner.get(self.name), function_type, None);
+        Ok(())
+    }
+}
+
+impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedExternDeclaration<'a> {
+    type Output = ();
+    type Error = Error<'a>;
+
+    fn code_gen(
+        &self,
+        context: &'ctx Context,
+        module: &Module<'ctx>,
+        _: &Builder<'ctx>,
+        interner: &mut Interner<String>,
+        _: &mut Environment<PointerValue<'ctx>>,
+    ) -> Result<Self::Output, Self::Error> {
+        let parameter_types = self
+            .parameters
+            .iter()
+            .map(|parameter| parameter.0)
+            .map(|ty| convert_basic_type(ty, context))
+            .collect::<Vec<_>>();
+
+        let function_type = if let Type::Void = self.return_type.0 {
+            context.void_type().fn_type(&parameter_types, false)
+        } else {
+            convert_type(self.return_type.0, context).fn_type(&parameter_types, false)
         };
 
         module.add_function(&interner.get(self.name), function_type, None);

@@ -58,6 +58,7 @@ pub enum TokenKind {
     Else,
     While,
     Define,
+    Extern,
 }
 
 impl Display for TokenKind {
@@ -102,6 +103,7 @@ impl Display for TokenKind {
             TokenKind::Else => write!(f, "else"),
             TokenKind::While => write!(f, "while"),
             TokenKind::Define => write!(f, "define"),
+            TokenKind::Extern => write!(f, "extern"),
         }
     }
 }

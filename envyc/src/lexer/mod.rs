@@ -282,6 +282,7 @@ impl<'a> Lexer<'a> {
             "else" => Ok((self.make_span(start_column), TokenKind::Else)),
             "while" => Ok((self.make_span(start_column), TokenKind::While)),
             "define" => Ok((self.make_span(start_column), TokenKind::Define)),
+            "extern" => Ok((self.make_span(start_column), TokenKind::Extern)),
             _ => {
                 let id = interner.insert(word);
                 Ok((self.make_span(start_column), TokenKind::Identifier(id)))

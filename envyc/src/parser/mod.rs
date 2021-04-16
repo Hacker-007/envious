@@ -1,5 +1,6 @@
 use std::{iter::Peekable, mem};
 
+use ast::ExternDeclaration;
 use expression::{BinaryOperation, Expression, UnaryOperation};
 use parselets::LetParselet;
 
@@ -42,30 +43,36 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
     /// Walks through the tokens and constructs a program, or a vector
     /// of functions.
     pub fn parse(&mut self) -> Result<Program<'a>, Vec<Error<'a>>> {
+        let mut extern_declarations = vec![];
         let mut functions = vec![];
         let mut errors = vec![];
-        while let Some((_, _)) = self.tokens.peek() {
-            let dummy_span = Span::new("", 1, 1, 1, 1);
-            match self.parse_function(dummy_span) {
-                Ok(function) => functions.push(function),
-                Err(error) => errors.push(error),
+        while let Some(&(span, kind)) = self.tokens.peek() {
+            match kind {
+                TokenKind::Define => match self.parse_function(span) {
+                    Ok(function) => functions.push(function),
+                    Err(error) => errors.push(error),
+                },
+                TokenKind::Extern => match self.parse_extern_declaration(span) {
+                    Ok(extern_declaration) => extern_declarations.push(extern_declaration),
+                    Err(error) => errors.push(error),
+                },
+                _ => return Err(errors),
             }
         }
 
         if !errors.is_empty() {
             Err(errors)
         } else {
-            Ok(Program::new(functions))
+            Ok(Program::new(extern_declarations, functions))
         }
     }
 
-    fn parse_function(&mut self, span: Span<'a>) -> Result<Function<'a>, Error<'a>> {
-        let (define_span, _) = self.expect(TokenKind::Define, span)?;
-        if let (function_name_span, TokenKind::Identifier(id)) =
-            self.expect(TokenKind::Identifier(0), define_span)?
+    fn parse_prototype(&mut self, span: Span<'a>) -> Result<(Span<'a>, Prototype<'a>), Error<'a>> {
+        if let (prototype_name_span, TokenKind::Identifier(id)) =
+            self.expect(TokenKind::Identifier(0), span)?
         {
             let (left_paren_span, _) =
-                self.expect(TokenKind::LeftParenthesis, function_name_span)?;
+                self.expect(TokenKind::LeftParenthesis, prototype_name_span)?;
             let parameters = self.parse_parameters()?;
             let last_span = parameters
                 .iter()
@@ -94,19 +101,117 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                 }
             };
 
-            let (eq_span, _) = self.expect(TokenKind::EqualSign, right_paren_span)?;
-            let body = self.parse_expression(0, eq_span)?;
+            let right_paren_span = return_type.1;
             let prototype = Prototype {
-                span: function_name_span,
+                span: prototype_name_span,
                 name: id,
                 parameters,
                 return_type,
             };
 
-            Ok(Function::new(prototype, body))
+            Ok((right_paren_span, prototype))
         } else {
             unreachable!()
         }
+    }
+
+    fn parse_extern_declaration(
+        &mut self,
+        span: Span<'a>,
+    ) -> Result<ExternDeclaration<'a>, Error<'a>> {
+        let (extern_span, _) = self.expect(TokenKind::Extern, span)?;
+        if let (prototype_name_span, TokenKind::Identifier(id)) =
+            self.expect(TokenKind::Identifier(0), extern_span)?
+        {
+            let (left_paren_span, _) =
+                self.expect(TokenKind::LeftParenthesis, prototype_name_span)?;
+            let parameters = self.parse_types_list()?;
+            let last_span = parameters
+                .iter()
+                .last()
+                .map_or(left_paren_span, |param| param.1);
+            let (right_paren_span, _) = self.expect(TokenKind::RightParenthesis, last_span)?;
+            let (type_colon_span, _) = self.expect(TokenKind::ColonColon, right_paren_span)?;
+            let return_type = match self.consume(type_colon_span)? {
+                (span, TokenKind::Void) => (Type::Void, span),
+                (span, TokenKind::Int) => (Type::Int, span),
+                (span, TokenKind::Float) => (Type::Float, span),
+                (span, TokenKind::Boolean) => (Type::Boolean, span),
+                (span, TokenKind::Char) => (Type::Char, span),
+                (span, actual_kind) => {
+                    return Err(Error::ExpectedKind {
+                        span,
+                        expected_kinds: vec![
+                            TokenKind::Void,
+                            TokenKind::Int,
+                            TokenKind::Float,
+                            TokenKind::Boolean,
+                            TokenKind::Char,
+                        ],
+                        actual_kind,
+                    })
+                }
+            };
+
+            let extern_declaration = ExternDeclaration {
+                span: prototype_name_span,
+                name: id,
+                parameters,
+                return_type,
+            };
+
+            Ok(extern_declaration)
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn parse_function(&mut self, span: Span<'a>) -> Result<Function<'a>, Error<'a>> {
+        let (define_span, _) = self.expect(TokenKind::Define, span)?;
+        let (right_paren_span, prototype) = self.parse_prototype(define_span)?;
+        let (eq_span, _) = self.expect(TokenKind::EqualSign, right_paren_span)?;
+        let body = self.parse_expression(0, eq_span)?;
+        Ok(Function::new(prototype, body))
+    }
+
+    fn parse_types_list(&mut self) -> Result<Vec<(Type, Span<'a>)>, Error<'a>> {
+        let mut types = vec![];
+        while let Some((_, kind)) = self.tokens.peek() {
+            if kind == &TokenKind::RightParenthesis {
+                break;
+            }
+
+            let (type_span, kind) = self.tokens.next().unwrap();
+            let ty = match kind {
+                TokenKind::Void => Type::Void,
+                TokenKind::Int => Type::Int,
+                TokenKind::Float => Type::Float,
+                TokenKind::Boolean => Type::Boolean,
+                TokenKind::Char => Type::Char,
+                _ => {
+                    return Err(Error::ExpectedKind {
+                        span: type_span,
+                        expected_kinds: vec![
+                            TokenKind::Void,
+                            TokenKind::Int,
+                            TokenKind::Float,
+                            TokenKind::Boolean,
+                            TokenKind::Char,
+                        ],
+                        actual_kind: kind,
+                    })
+                }
+            };
+
+            types.push((ty, type_span));
+            if let Some((_, TokenKind::Comma)) = self.tokens.peek() {
+                self.tokens.next();
+            } else {
+                break;
+            }
+        }
+
+        Ok(types)
     }
 
     fn parse_parameters(&mut self) -> Result<Vec<Parameter<'a>>, Error<'a>> {
@@ -151,7 +256,7 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                 }
             };
 
-            parameters.push(Parameter::new(param_span, ty, id));
+            parameters.push(Parameter::new(param_span, id, ty));
             if let Some((_, TokenKind::Comma)) = self.tokens.peek() {
                 self.tokens.next();
             } else {

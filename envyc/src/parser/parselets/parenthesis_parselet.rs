@@ -1,10 +1,7 @@
 use crate::{
     error::Error,
     lexer::token::{Token, TokenKind},
-    parser::{
-        expression::Expression,
-        Parser,
-    },
+    parser::{expression::Expression, Parser},
 };
 
 use super::prefix_parselet::PrefixParselet;
@@ -18,9 +15,6 @@ impl<'a> PrefixParselet<'a> for ParenthesisParselet {
     ) -> Result<Expression<'a>, Error<'a>> {
         let expression = parser.parse_expression(0, token.0)?;
         parser.expect(TokenKind::RightParenthesis, expression.0)?;
-        Ok((
-            token.0,
-            expression.1,
-        ))
+        Ok((token.0, expression.1))
     }
 }

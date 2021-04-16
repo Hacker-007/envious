@@ -4,12 +4,19 @@ use super::expression::Expression;
 
 #[derive(Debug)]
 pub struct Program<'a> {
+    pub extern_declarations: Vec<ExternDeclaration<'a>>,
     pub functions: Vec<Function<'a>>,
 }
 
 impl<'a> Program<'a> {
-    pub fn new(functions: Vec<Function<'a>>) -> Self {
-        Self { functions }
+    pub fn new(
+        extern_declarations: Vec<ExternDeclaration<'a>>,
+        functions: Vec<Function<'a>>,
+    ) -> Self {
+        Self {
+            extern_declarations,
+            functions,
+        }
     }
 }
 
@@ -18,6 +25,14 @@ pub struct Prototype<'a> {
     pub span: Span<'a>,
     pub name: usize,
     pub parameters: Vec<Parameter<'a>>,
+    pub return_type: (Type, Span<'a>),
+}
+
+#[derive(Debug)]
+pub struct ExternDeclaration<'a> {
+    pub span: Span<'a>,
+    pub name: usize,
+    pub parameters: Vec<(Type, Span<'a>)>,
     pub return_type: (Type, Span<'a>),
 }
 
@@ -36,12 +51,12 @@ impl<'a> Function<'a> {
 #[derive(Debug)]
 pub struct Parameter<'a> {
     pub span: Span<'a>,
-    pub ty: Type,
     pub name: usize,
+    pub ty: Type,
 }
 
 impl<'a> Parameter<'a> {
-    pub fn new(span: Span<'a>, ty: Type, name: usize) -> Self {
-        Self { span, ty, name }
+    pub fn new(span: Span<'a>, name: usize, ty: Type) -> Self {
+        Self { span, name, ty }
     }
 }

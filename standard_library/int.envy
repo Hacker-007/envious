@@ -1,5 +1,5 @@
 define min(x: Int, y: Int) :: Int = if x < y then x else y
 define max(x: Int, y: Int) :: Int = if x > y then x else y
-define clamp(min: Int, value: Int, max: Int) :: Int = min(max(x, min), max)
-define negate(value: Int) :: Int = -x
-define abs(value: Int) :: Int = if value < 0 then -x else value
+define clamp(min: Int, value: Int, max: Int) :: Int = min(max(value, min), max)
+define negate(value: Int) :: Int = -value
+define abs(value: Int) :: Int = if value < 0 then -value else value

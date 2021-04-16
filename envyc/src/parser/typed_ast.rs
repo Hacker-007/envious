@@ -4,12 +4,19 @@ use super::typed_expression::TypedExpression;
 
 #[derive(Debug)]
 pub struct TypedProgram<'a> {
+    pub extern_declarations: Vec<TypedExternDeclaration<'a>>,
     pub functions: Vec<TypedFunction<'a>>,
 }
 
 impl<'a> TypedProgram<'a> {
-    pub fn new(functions: Vec<TypedFunction<'a>>) -> Self {
-        Self { functions }
+    pub fn new(
+        extern_declarations: Vec<TypedExternDeclaration<'a>>,
+        functions: Vec<TypedFunction<'a>>,
+    ) -> Self {
+        Self {
+            extern_declarations,
+            functions,
+        }
     }
 }
 
@@ -35,6 +42,14 @@ impl<'a> TypedPrototype<'a> {
             return_type,
         }
     }
+}
+
+#[derive(Debug)]
+pub struct TypedExternDeclaration<'a> {
+    pub span: Span<'a>,
+    pub name: usize,
+    pub parameters: Vec<(Type, Span<'a>)>,
+    pub return_type: (Type, Span<'a>),
 }
 
 #[derive(Debug)]
