@@ -26,6 +26,7 @@ pub enum ExpressionKind<'a> {
     Block(Vec<Expression<'a>>),
     Application(Application<'a>),
     While(While<'a>),
+    Return(Option<Box<Expression<'a>>>),
 }
 
 #[derive(Debug)]

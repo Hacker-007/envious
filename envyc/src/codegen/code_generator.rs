@@ -294,6 +294,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
                 )?;
                 Ok(BasicValueEnum::IntValue(context.i64_type().const_zero()))
             }
+            TypedExpressionKind::Return(_) => todo!("return statements"),
         }
     }
 }

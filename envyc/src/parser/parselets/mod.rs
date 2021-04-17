@@ -12,6 +12,7 @@ pub mod parenthesis_parselet;
 pub mod precedence;
 pub mod prefix_operation_parselet;
 pub mod prefix_parselet;
+pub mod return_parselet;
 pub mod while_parselet;
 
 pub use binary_operation_parselet::BinaryOperationParselet;
@@ -25,4 +26,5 @@ pub use int_parselet::IntParselet;
 pub use let_parselet::LetParselet;
 pub use parenthesis_parselet::ParenthesisParselet;
 pub use prefix_operation_parselet::PrefixOperationParselet;
+pub use return_parselet::ReturnParselet;
 pub use while_parselet::WhileParselet;

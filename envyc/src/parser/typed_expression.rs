@@ -28,6 +28,7 @@ pub enum TypedExpressionKind<'a> {
     Block(Vec<TypedExpression<'a>>),
     Application(TypedApplication<'a>),
     While(TypedWhile<'a>),
+    Return(Option<Box<TypedExpression<'a>>>),
 }
 
 #[derive(Debug)]

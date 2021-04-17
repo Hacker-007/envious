@@ -10,15 +10,7 @@ use crate::{
     semantic_analyzer::types::Type,
 };
 
-use self::{
-    ast::{Function, Parameter, Program, Prototype},
-    parselets::{
-        infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet,
-        BinaryOperationParselet, BlockParselet, BooleanParselet, CharParselet, FloatParselet,
-        IdentifierParselet, IfParselet, IntParselet, ParenthesisParselet, PrefixOperationParselet,
-        WhileParselet,
-    },
-};
+use self::{ast::{Function, Parameter, Program, Prototype}, parselets::{BinaryOperationParselet, BlockParselet, BooleanParselet, CharParselet, FloatParselet, IdentifierParselet, IfParselet, IntParselet, ParenthesisParselet, PrefixOperationParselet, ReturnParselet, WhileParselet, infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet}};
 
 pub mod ast;
 pub mod expression;
@@ -316,6 +308,7 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
             TokenKind::LeftCurlyBrace => BlockParselet.parse(self, token),
             TokenKind::While => WhileParselet.parse(self, token),
             TokenKind::LeftParenthesis => ParenthesisParselet.parse(self, token),
+            TokenKind::Return => ReturnParselet.parse(self, token),
             _ => Err(Error::ExpectedPrefixExpression {
                 span: token.0,
                 found_kind: token.1,
