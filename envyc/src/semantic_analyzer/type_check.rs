@@ -631,6 +631,7 @@ fn get_type(typed_expression_kind: &TypedExpressionKind) -> Type {
             .unwrap_or(Type::Void),
         TypedExpressionKind::Application(ref inner) => inner.ty,
         TypedExpressionKind::While(_) => Type::Void,
-        TypedExpressionKind::Return(_) => Type::Never,
+        TypedExpressionKind::Return(None) => Type::Void,
+        TypedExpressionKind::Return(Some(ref inner)) => get_type(&inner.1),
     }
 }

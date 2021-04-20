@@ -31,6 +31,26 @@ pub enum TypedExpressionKind<'a> {
     Return(Option<Box<TypedExpression<'a>>>),
 }
 
+impl<'a> TypedExpressionKind<'a> {
+    pub fn get_type(&self) -> Type {
+        match self {
+            TypedExpressionKind::Int(_) => Type::Int,
+            TypedExpressionKind::Float(_) => Type::Float,
+            TypedExpressionKind::Boolean(_) => Type::Boolean,
+            TypedExpressionKind::Char(_) => Type::Char,
+            TypedExpressionKind::Identifier(ref inner) => inner.ty,
+            TypedExpressionKind::Unary(ref inner) => inner.ty,
+            TypedExpressionKind::Binary(ref inner) => inner.ty,
+            TypedExpressionKind::If(ref inner) => inner.ty,
+            TypedExpressionKind::Let(ref inner) => inner.ty,
+            TypedExpressionKind::Block(ref expressions) => expressions.last().map_or(Type::Void, |(_, ref kind)| kind.get_type()),
+            TypedExpressionKind::Application(ref inner) => inner.ty,
+            TypedExpressionKind::While(_) => Type::Void,
+            TypedExpressionKind::Return(_) => Type::Never,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct TypedIdentifier {
     pub id: usize,

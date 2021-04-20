@@ -178,8 +178,9 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
         let function = module
             .get_function(interner.get(self.prototype.name))
             .ok_or(Error::UnknownFunction(self.prototype.span))?;
-        let entry = context.append_basic_block(function, "entry");
-        builder.position_at_end(entry);
+        let entry_block = context.append_basic_block(function, "entry");
+        let return_block = context.append_basic_block(function, "return");
+        builder.position_at_end(entry_block);
 
         env.new_scope();
         function
@@ -194,7 +195,7 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
                 env.define(param_name, pointer);
             });
 
-        let mut function_context = FunctionContext::new(self.prototype.name);
+        let mut function_context = FunctionContext::new(self.prototype.name, return_block);
         let expression = self.body.code_gen_function(
             context,
             module,
@@ -204,14 +205,33 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
             env,
             &mut function_context,
         )?;
-        
-        if self.prototype.return_type == Type::Void {
-            builder.build_return(None);
+
+        if self.body.1.get_type() != Type::Void {
+            function_context.add_return_block(builder.get_insert_block().unwrap(), Some(expression))
         } else {
-            builder.build_return(Some(&expression));
+            function_context.add_return_block(builder.get_insert_block().unwrap(), None)
+        }
+
+        builder.build_unconditional_branch(return_block);
+        builder.position_at_end(return_block);
+        if self.prototype.return_type != Type::Void {
+            let return_value = builder.build_phi(
+                convert_basic_type(self.prototype.return_type, context),
+                "return_value",
+            );
+            let phi_nodes = function_context
+                .return_blocks
+                .iter()
+                .map(|(block, value)| (value.as_ref().unwrap() as &dyn BasicValue<'ctx>, *block))
+                .collect::<Vec<_>>();
+            return_value.add_incoming(phi_nodes.as_slice());
+            builder.build_return(Some(&return_value.as_basic_value()));
+        } else {
+            builder.build_return(None);
         }
 
         env.remove_top_scope();
+        module.print_to_stderr();
         if function.verify(true) {
             Ok(())
         } else {
@@ -358,6 +378,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
                     .flatten();
                 function_context
                     .add_return_block(builder.get_insert_block().unwrap(), return_value);
+                builder.build_unconditional_branch(function_context.return_block);
                 Ok(BasicValueEnum::IntValue(context.i64_type().const_zero()))
             }
         }
@@ -577,11 +598,14 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
             env,
             function_context,
         )?;
-        builder.build_unconditional_branch(end_block);
+
+        if self.then_branch.1.get_type() != Type::Never {
+            builder.build_unconditional_branch(end_block);
+        }
 
         if let Some(ref else_branch) = self.else_branch {
             builder.position_at_end(else_block);
-            let else_branch = else_branch.code_gen_function(
+            let else_branch_gen = else_branch.code_gen_function(
                 context,
                 module,
                 builder,
@@ -590,11 +614,21 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
                 env,
                 function_context,
             )?;
-            builder.build_unconditional_branch(end_block);
+
+            if else_branch.1.get_type() != Type::Never {
+                builder.build_unconditional_branch(end_block);
+            }
+
             builder.position_at_end(end_block);
-            let phi = builder.build_phi(then_branch.get_type(), "ifphi");
-            phi.add_incoming(&[(&then_branch, then_block), (&else_branch, else_block)]);
-            Ok(phi.as_basic_value())
+            if self.then_branch.1.get_type() == Type::Never {
+                Ok(else_branch_gen)
+            } else if else_branch.1.get_type() == Type::Never {
+                Ok(then_branch)
+            } else {
+                let phi = builder.build_phi(then_branch.get_type(), "ifphi");
+                phi.add_incoming(&[(&then_branch, then_block), (&else_branch_gen, else_block)]);
+                Ok(phi.as_basic_value())
+            }
         } else {
             builder.position_at_end(else_block);
             builder.build_unconditional_branch(end_block);
@@ -720,7 +754,10 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedWhile<'a> {
             function_context,
         )?;
 
-        builder.build_unconditional_branch(condition_check_block);
+        if self.expression.1.get_type() != Type::Never {
+            builder.build_unconditional_branch(condition_check_block);
+        }
+
         builder.position_at_end(after_loop_block);
         Ok(())
     }
