@@ -206,19 +206,24 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
             &mut function_context,
         )?;
 
-        if self.body.1.get_type() != Type::Void {
-            function_context.add_return_block(builder.get_insert_block().unwrap(), Some(expression))
-        } else {
-            function_context.add_return_block(builder.get_insert_block().unwrap(), None)
+        if self.body.1.get_type() != Type::Never {
+            if self.body.1.get_type() != Type::Void {
+                function_context
+                    .add_return_block(builder.get_insert_block().unwrap(), Some(expression))
+            } else {
+                function_context.add_return_block(builder.get_insert_block().unwrap(), None)
+            }
+
+            builder.build_unconditional_branch(return_block);
         }
 
-        builder.build_unconditional_branch(return_block);
         builder.position_at_end(return_block);
         if self.prototype.return_type != Type::Void {
             let return_value = builder.build_phi(
                 convert_basic_type(self.prototype.return_type, context),
                 "return_value",
             );
+            
             let phi_nodes = function_context
                 .return_blocks
                 .iter()
@@ -379,7 +384,11 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
                 function_context
                     .add_return_block(builder.get_insert_block().unwrap(), return_value);
                 builder.build_unconditional_branch(function_context.return_block);
-                Ok(BasicValueEnum::IntValue(context.i64_type().const_zero()))
+                if let Some(value) = return_value {
+                    Ok(value)
+                } else {
+                    Ok(BasicValueEnum::IntValue(context.i64_type().const_zero()))
+                }
             }
         }
     }
