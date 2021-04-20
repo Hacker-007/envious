@@ -3,7 +3,7 @@ use inkwell::{basic_block::BasicBlock, values::BasicValueEnum};
 #[derive(Debug)]
 pub struct FunctionContext<'ctx> {
     function_name: usize,
-    pub return_blocks: Vec<(BasicBlock<'ctx>, BasicValueEnum<'ctx>)>,
+    pub return_blocks: Vec<(BasicBlock<'ctx>, Option<BasicValueEnum<'ctx>>)>,
 }
 
 impl<'ctx> FunctionContext<'ctx> {
@@ -14,7 +14,7 @@ impl<'ctx> FunctionContext<'ctx> {
         }
     }
 
-    pub fn add_return_block(&mut self, block: BasicBlock<'ctx>, value: BasicValueEnum<'ctx>) {
+    pub fn add_return_block(&mut self, block: BasicBlock<'ctx>, value: Option<BasicValueEnum<'ctx>>) {
         self.return_blocks.push((block, value));
     }
 }

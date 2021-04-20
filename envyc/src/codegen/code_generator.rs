@@ -24,6 +24,8 @@ use crate::{
     semantic_analyzer::types::Type,
 };
 
+use super::context::FunctionContext;
+
 pub trait CodeGenerator<'a, 'ctx> {
     type Output;
     type Error;
@@ -50,6 +52,7 @@ pub trait CodeGeneratorFunction<'a, 'ctx> {
         current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
+        function_context: &mut FunctionContext<'ctx>,
     ) -> Result<Self::Output, Self::Error>;
 }
 
@@ -191,9 +194,17 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
                 env.define(param_name, pointer);
             });
 
-        let expression = self
-            .body
-            .code_gen_function(context, module, builder, function, interner, env)?;
+        let mut function_context = FunctionContext::new(self.prototype.name);
+        let expression = self.body.code_gen_function(
+            context,
+            module,
+            builder,
+            function,
+            interner,
+            env,
+            &mut function_context,
+        )?;
+        
         if self.prototype.return_type == Type::Void {
             builder.build_return(None);
         } else {
@@ -225,6 +236,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
         current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
+        function_context: &mut FunctionContext<'ctx>,
     ) -> Result<Self::Output, Self::Error> {
         match self.1 {
             TypedExpressionKind::Int(value) => {
@@ -244,18 +256,42 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
             TypedExpressionKind::Char(value) => Ok(BasicValueEnum::IntValue(
                 context.i8_type().const_int(value as u64, false),
             )),
-            TypedExpressionKind::Identifier(ref inner) => {
-                inner.code_gen_function(context, module, builder, current_function, interner, env)
-            }
-            TypedExpressionKind::Unary(ref inner) => {
-                inner.code_gen_function(context, module, builder, current_function, interner, env)
-            }
-            TypedExpressionKind::Binary(ref inner) => {
-                inner.code_gen_function(context, module, builder, current_function, interner, env)
-            }
-            TypedExpressionKind::If(ref inner) => {
-                inner.code_gen_function(context, module, builder, current_function, interner, env)
-            }
+            TypedExpressionKind::Identifier(ref inner) => inner.code_gen_function(
+                context,
+                module,
+                builder,
+                current_function,
+                interner,
+                env,
+                function_context,
+            ),
+            TypedExpressionKind::Unary(ref inner) => inner.code_gen_function(
+                context,
+                module,
+                builder,
+                current_function,
+                interner,
+                env,
+                function_context,
+            ),
+            TypedExpressionKind::Binary(ref inner) => inner.code_gen_function(
+                context,
+                module,
+                builder,
+                current_function,
+                interner,
+                env,
+                function_context,
+            ),
+            TypedExpressionKind::If(ref inner) => inner.code_gen_function(
+                context,
+                module,
+                builder,
+                current_function,
+                interner,
+                env,
+                function_context,
+            ),
             TypedExpressionKind::Let(ref inner) => {
                 inner.code_gen_function(
                     context,
@@ -264,6 +300,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
                     current_function,
                     interner,
                     env,
+                    function_context,
                 )?;
                 Ok(BasicValueEnum::IntValue(context.i64_type().const_zero()))
             }
@@ -277,12 +314,19 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
                         current_function,
                         interner,
                         env,
+                        function_context,
                     )
                 },
             ),
-            TypedExpressionKind::Application(ref inner) => {
-                inner.code_gen_function(context, module, builder, current_function, interner, env)
-            }
+            TypedExpressionKind::Application(ref inner) => inner.code_gen_function(
+                context,
+                module,
+                builder,
+                current_function,
+                interner,
+                env,
+                function_context,
+            ),
             TypedExpressionKind::While(ref inner) => {
                 inner.code_gen_function(
                     context,
@@ -291,10 +335,31 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedExpression<'a> {
                     current_function,
                     interner,
                     env,
+                    function_context,
                 )?;
                 Ok(BasicValueEnum::IntValue(context.i64_type().const_zero()))
             }
-            TypedExpressionKind::Return(_) => todo!("return statements"),
+            TypedExpressionKind::Return(ref value) => {
+                let return_value = value
+                    .as_ref()
+                    .map(|expression| {
+                        expression
+                            .code_gen_function(
+                                context,
+                                module,
+                                builder,
+                                current_function,
+                                interner,
+                                env,
+                                function_context,
+                            )
+                            .ok()
+                    })
+                    .flatten();
+                function_context
+                    .add_return_block(builder.get_insert_block().unwrap(), return_value);
+                Ok(BasicValueEnum::IntValue(context.i64_type().const_zero()))
+            }
         }
     }
 }
@@ -311,6 +376,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIdentifier {
         _: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
+        _: &mut FunctionContext<'ctx>,
     ) -> Result<Self::Output, Self::Error> {
         let value = env.get(self.id).unwrap();
         Ok(builder.build_load(value, interner.get(self.id)))
@@ -329,6 +395,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedUnary<'a> {
         current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
+        function_context: &mut FunctionContext<'ctx>,
     ) -> Result<Self::Output, Self::Error> {
         let expression = self.expression.code_gen_function(
             context,
@@ -337,6 +404,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedUnary<'a> {
             current_function,
             interner,
             env,
+            function_context,
         )?;
         let value = match (self.operation, expression) {
             (UnaryOperation::Plus, value) => value,
@@ -368,6 +436,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedBinary<'a> {
         current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
+        function_context: &mut FunctionContext<'ctx>,
     ) -> Result<Self::Output, Self::Error> {
         let left = self.left.code_gen_function(
             context,
@@ -376,6 +445,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedBinary<'a> {
             current_function,
             interner,
             env,
+            function_context,
         )?;
         let right = self.right.code_gen_function(
             context,
@@ -384,6 +454,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedBinary<'a> {
             current_function,
             interner,
             env,
+            function_context,
         )?;
         let value = match (self.operation, left, right) {
             (
@@ -479,6 +550,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
         current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
+        function_context: &mut FunctionContext<'ctx>,
     ) -> Result<Self::Output, Self::Error> {
         let then_block = context.append_basic_block(current_function, "ifthen");
         let else_block = context.append_basic_block(current_function, "ifelse");
@@ -491,6 +563,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
             current_function,
             interner,
             env,
+            function_context,
         )?;
         builder.build_conditional_branch(condition.into_int_value(), then_block, else_block);
 
@@ -502,6 +575,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
             current_function,
             interner,
             env,
+            function_context,
         )?;
         builder.build_unconditional_branch(end_block);
 
@@ -514,6 +588,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedIf<'a> {
                 current_function,
                 interner,
                 env,
+                function_context,
             )?;
             builder.build_unconditional_branch(end_block);
             builder.position_at_end(end_block);
@@ -541,6 +616,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedLet<'a> {
         current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
+        function_context: &mut FunctionContext<'ctx>,
     ) -> Result<Self::Output, Self::Error> {
         let value = self.expression.code_gen_function(
             context,
@@ -549,6 +625,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedLet<'a> {
             current_function,
             interner,
             env,
+            function_context,
         )?;
         let id = self.name.1.id;
         if env.get(id).is_none() {
@@ -575,6 +652,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedApplication<'a> {
         current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
+        function_context: &mut FunctionContext<'ctx>,
     ) -> Result<Self::Output, Self::Error> {
         let function_name = interner.get(self.function_name.1);
         let function_call = format!("call_{}", function_name);
@@ -588,6 +666,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedApplication<'a> {
                 current_function,
                 interner,
                 env,
+                function_context,
             )?);
         }
 
@@ -611,6 +690,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedWhile<'a> {
         current_function: FunctionValue<'ctx>,
         interner: &mut Interner<String>,
         env: &mut Environment<PointerValue<'ctx>>,
+        function_context: &mut FunctionContext<'ctx>,
     ) -> Result<Self::Output, Self::Error> {
         let condition_check_block = context.append_basic_block(current_function, "condition_check");
         let loop_block = context.append_basic_block(current_function, "loop");
@@ -625,6 +705,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedWhile<'a> {
             current_function,
             interner,
             env,
+            function_context,
         )?;
 
         builder.build_conditional_branch(condition.into_int_value(), loop_block, after_loop_block);
@@ -636,6 +717,7 @@ impl<'a, 'ctx> CodeGeneratorFunction<'a, 'ctx> for TypedWhile<'a> {
             current_function,
             interner,
             env,
+            function_context,
         )?;
 
         builder.build_unconditional_branch(condition_check_block);
