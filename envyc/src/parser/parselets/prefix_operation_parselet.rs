@@ -30,11 +30,12 @@ impl<'a> PrefixParselet<'a> for PrefixOperationParselet {
         token: Token<'a>,
     ) -> Result<Expression<'a>, Error<'a>> {
         let operand = parser.parse_expression(self.precedence, token.0)?;
+        let span = token.0.combine(operand.0);
         let kind = ExpressionKind::Unary(Unary {
             operation: self.operation,
             expression: Box::new(operand),
         });
 
-        Ok((token.0, kind))
+        Ok((span, kind))
     }
 }

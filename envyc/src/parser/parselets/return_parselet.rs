@@ -21,6 +21,12 @@ impl<'a> PrefixParselet<'a> for ReturnParselet {
             expression = Some(Box::new(parser.parse_expression(0, token.0)?));
         }
 
-        Ok((token.0, ExpressionKind::Return(expression)))
+        let span = if let Some(expression) = &expression {
+            token.0.combine(expression.0)
+        } else {
+            token.0
+        };
+
+        Ok((span, ExpressionKind::Return(expression)))
     }
 }

@@ -78,6 +78,12 @@ impl<'a> ErrorReporter<'a> {
                 second_span,
                 second_type,
             } => self.handle_conflicting_type(*first_span, *first_type, *second_span, *second_type),
+            Error::ConflictingPreviousType {
+                name_span,
+                previous_type,
+                second_span,
+                second_type,
+            } => self.handle_conflicting_previous_type(*name_span, *previous_type, *second_span, *second_type),
             Error::IllegalType(span) => self.handle_illegal_type(*span),
             Error::UndefinedVariable(span) => self.handle_undefined_variable(*span),
             Error::ParameterMismatch {
@@ -313,6 +319,38 @@ impl<'a> ErrorReporter<'a> {
                     first_start_column..first_end_column,
                 )
                 .with_message(format!("results in `{}`", first_type)),
+                Label::primary(
+                    self.get_file_id(&second_span.file_name),
+                    second_start_column..second_end_column,
+                )
+                .with_message(format!("results in `{}`", second_type)),
+            ])
+    }
+
+    /// Handles a conflicting previous type error.
+    ///
+    /// # Arguments
+    /// * `name_span` - The `Span` of the name of the variable.
+    /// * `previous_type` - The `Type` that it previously was defined with.
+    /// * `second_span` - The `Span` of th second branch.
+    /// * `second_type` - The `Type` of the second branch.
+    fn handle_conflicting_previous_type(
+        &self,
+        name_span: Span,
+        previous_type: Type,
+        second_span: Span,
+        second_type: Type,
+    ) -> Diagnostic<usize> {
+        let (first_start_column, first_end_column) = self.construct_source(name_span);
+        let (second_start_column, second_end_column) = self.construct_source(second_span);
+        Diagnostic::error()
+            .with_message("type conflict occurred")
+            .with_labels(vec![
+                Label::primary(
+                    self.get_file_id(&name_span.file_name),
+                    first_start_column..first_end_column,
+                )
+                .with_message(format!("was defined as `{}`", previous_type)),
                 Label::primary(
                     self.get_file_id(&second_span.file_name),
                     second_start_column..second_end_column,

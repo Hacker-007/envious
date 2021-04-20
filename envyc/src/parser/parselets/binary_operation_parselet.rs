@@ -40,13 +40,15 @@ impl<'a> InfixParselet<'a> for BinaryOperationParselet {
             self.precedence - if self.is_right_associative { 1 } else { 0 },
             token.0,
         )?;
+
+        let binary_operation_span = left.0.combine(right.0);
         let kind = ExpressionKind::Binary(Binary {
             operation: self.operation,
             left: Box::new(left),
             right: Box::new(right),
         });
 
-        Ok((token.0, kind))
+        Ok((binary_operation_span, kind))
     }
 
     fn get_precedence(&self) -> usize {

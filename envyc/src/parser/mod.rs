@@ -10,7 +10,15 @@ use crate::{
     semantic_analyzer::types::Type,
 };
 
-use self::{ast::{Function, Parameter, Program, Prototype}, parselets::{BinaryOperationParselet, BlockParselet, BooleanParselet, CharParselet, FloatParselet, IdentifierParselet, IfParselet, IntParselet, ParenthesisParselet, PrefixOperationParselet, ReturnParselet, WhileParselet, infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet}};
+use self::{
+    ast::{Function, Parameter, Program, Prototype},
+    parselets::{
+        infix_parselet::InfixParselet, precedence::Precedence, prefix_parselet::PrefixParselet,
+        BinaryOperationParselet, BlockParselet, BooleanParselet, CharParselet, FloatParselet,
+        IdentifierParselet, IfParselet, IntParselet, ParenthesisParselet, PrefixOperationParselet,
+        ReturnParselet, WhileParselet,
+    },
+};
 
 pub mod ast;
 pub mod expression;
@@ -93,15 +101,15 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                 }
             };
 
-            let right_paren_span = return_type.1;
+            let return_type_span = return_type.1;
             let prototype = Prototype {
-                span: prototype_name_span,
+                span: span.combine(return_type_span),
                 name: id,
                 parameters,
                 return_type,
             };
 
-            Ok((right_paren_span, prototype))
+            Ok((return_type_span, prototype))
         } else {
             unreachable!()
         }
@@ -146,7 +154,7 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
             };
 
             let extern_declaration = ExternDeclaration {
-                span: prototype_name_span,
+                span: span.combine(return_type.1),
                 name: id,
                 parameters,
                 return_type,

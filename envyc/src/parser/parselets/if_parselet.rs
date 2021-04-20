@@ -25,8 +25,14 @@ impl<'a> PrefixParselet<'a> for IfParselet {
             else_branch = Some(Box::new(parser.parse_expression(0, else_span)?));
         }
 
+        let span = if let Some(else_branch) = &else_branch {
+            token.0.combine(else_branch.0)
+        } else {
+            token.0.combine(then_branch.0)
+        };
+
         Ok((
-            token.0,
+            span,
             ExpressionKind::If(If {
                 condition: Box::new(condition),
                 then_branch: Box::new(then_branch),

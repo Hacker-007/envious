@@ -507,6 +507,15 @@ impl<'a> TypeCheckSpanFunction<'a> for Let<'a> {
                     second_type: expression_type,
                 });
             }
+        } else if let Some(previously_defined_type) = env.get(self.name.1.0) {
+            if expression_type != previously_defined_type {
+                return Err(Error::ConflictingPreviousType {
+                    name_span: self.name.0,
+                    previous_type: previously_defined_type,
+                    second_span: typed_expression.0,
+                    second_type: expression_type,
+                });
+            }
         }
 
         let (identifier_span, Identifier(identifier_id)) = self.name;

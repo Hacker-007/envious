@@ -20,7 +20,7 @@ impl<'a> PrefixParselet<'a> for WhileParselet {
         let expression = parser.parse_expression(0, condition.0)?;
 
         Ok((
-            token.0,
+            token.0.combine(expression.0),
             ExpressionKind::While(While {
                 condition: Box::new(condition),
                 expression: Box::new(expression),

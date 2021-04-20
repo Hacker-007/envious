@@ -51,6 +51,13 @@ pub enum Error<'a> {
         second_span: Span<'a>,
         second_type: Type,
     },
+    // Occurs when the type of a variable does not match its previous definitions.
+    ConflictingPreviousType {
+        name_span: Span<'a>,
+        previous_type: Type,
+        second_span: Span<'a>,
+        second_type: Type,
+    },
     // Occurs when a type was found that could not be used.
     IllegalType(Span<'a>),
     UndefinedVariable(Span<'a>),

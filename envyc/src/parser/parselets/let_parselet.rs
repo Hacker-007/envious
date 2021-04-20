@@ -67,7 +67,7 @@ impl<'a> PrefixParselet<'a> for LetParselet {
         let expression = parser.parse_expression(0, equal_span)?;
 
         Ok((
-            token.0,
+            token.0.combine(expression.0),
             ExpressionKind::Let(Let {
                 name: (identifier.0, Identifier(id)),
                 given_type,

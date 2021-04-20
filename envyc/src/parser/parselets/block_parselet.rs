@@ -23,11 +23,11 @@ impl<'a> PrefixParselet<'a> for BlockParselet {
             last_span = expression.0;
             expressions.push(expression);
             if let Some((_, TokenKind::RightCurlyBrace)) = parser.peek() {
-                parser.consume(last_span)?;
+                last_span = parser.consume(last_span)?.0;
                 break;
             }
         }
 
-        Ok((token.0, ExpressionKind::Block(expressions)))
+        Ok((token.0.combine(last_span), ExpressionKind::Block(expressions)))
     }
 }
