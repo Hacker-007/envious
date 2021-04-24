@@ -39,12 +39,16 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     }
 
     for (file, source) in options.files.iter().zip(sources.iter()) {
-        let file_name = file.file_name().unwrap().to_str().unwrap();
-        let file_stem = file.file_stem().unwrap().to_str().unwrap();
-        error_reporter.add(file_name, source);
+        let module_name = file.file_stem().unwrap().to_str().unwrap();
+        let file_name = file.as_os_str().to_str().unwrap();
+        error_reporter.add(&file_name, source);
+        let mut output_path = file.clone();
+        output_path.pop();
+        output_path.push(format!("{}.o", module_name));
+        let output_file_path = output_path.as_os_str().to_str().unwrap();
         let bytes = source.as_bytes();
         let compilation_start = Instant::now();
-        compile_code(&error_reporter, &mut interner, file_name, file_stem, bytes);
+        compile_code(&error_reporter, &mut interner, &module_name, &file_name, output_file_path, bytes);
         println!(
             "Finished full compilation process after {} seconds.",
             compilation_start.elapsed().as_secs_f64()
@@ -57,12 +61,13 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 fn compile_code(
     error_reporter: &ErrorReporter,
     interner: &mut Interner<String>,
-    file_name: &str,
-    file_stem: &str,
+    module_name: &str,
+    file_path: &str,
+    output_file_path: &str,
     bytes: &[u8],
 ) -> Option<()> {
     let tokens = time("Lexing", &error_reporter, || {
-        Lexer::new(file_name, bytes).get_tokens(interner)
+        Lexer::new(file_path, bytes).get_tokens(interner)
     })?;
 
     let filtered_tokens = tokens
@@ -81,7 +86,7 @@ fn compile_code(
     })?;
 
     time("Compiling", &error_reporter, || {
-        run(&typed_program, &file_name, file_stem, interner)
+        run(&typed_program, module_name, output_file_path, interner)
     })?;
 
     Some(())

@@ -236,7 +236,6 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
         }
 
         env.remove_top_scope();
-        module.print_to_stderr();
         if function.verify(true) {
             Ok(())
         } else {

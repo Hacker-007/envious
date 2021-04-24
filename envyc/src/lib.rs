@@ -24,7 +24,7 @@ pub mod semantic_analyzer;
 pub fn run<'a>(
     program: &TypedProgram<'a>,
     module_name: &str,
-    output_file_name: &str,
+    output_file_path: &str,
     interner: &mut Interner<String>,
 ) -> Result<(), Vec<Error<'a>>> {
     let context = Context::create();
@@ -76,7 +76,7 @@ pub fn run<'a>(
         .write_to_file(
             &module,
             FileType::Object,
-            Path::new(&format!("./{}.o", output_file_name)),
+            Path::new(output_file_path),
         )
         .unwrap();
     module.print_to_stderr();
