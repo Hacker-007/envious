@@ -6,4 +6,6 @@ use structopt::StructOpt;
 pub struct Options {
     #[structopt(parse(from_os_str))]
     pub files: Vec<PathBuf>,
+    #[structopt(short, long)]
+    pub tui: bool
 }

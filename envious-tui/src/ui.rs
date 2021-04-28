@@ -1,7 +1,7 @@
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Span, Spans, Text},
     widgets::{Block, Borders, Paragraph},
     Frame,
@@ -52,10 +52,6 @@ pub fn render_editor_generated_output<B: Backend>(f: &mut Frame<B>, app: &mut Ap
         .split(area);
 
     let input = Paragraph::new(app.code.as_ref())
-        .style(match app.focused_block {
-            FocusedBlock::Output => Style::default(),
-            FocusedBlock::CodeEditor => Style::default().fg(Color::Yellow),
-        })
         .block(Block::default().borders(Borders::ALL).title("Code Editor"));
     f.render_widget(input, chunks[0]);
 
@@ -75,7 +71,8 @@ pub fn render_editor_generated_output<B: Backend>(f: &mut Frame<B>, app: &mut Ap
     f.render_widget(generated_code, chunks[1]);
 
     let output: String = app.output.join("\n");
-    let output = Paragraph::new(output).block(Block::default().borders(Borders::ALL).title("Output"));
+    let output =
+        Paragraph::new(output).block(Block::default().borders(Borders::ALL).title("Output"));
     f.render_widget(output, chunks[2]);
 }
 

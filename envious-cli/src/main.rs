@@ -1,6 +1,15 @@
 use std::{error::Error, fs, time::Instant};
 
-use envyc::{Config, compile, environment::Environment, error::reporter::{ErrorReporter, Reporter}, filter_tokens, function_table::FunctionTable, interner::Interner, lex, parse, type_check};
+use envious_tui::run_tui;
+use envyc::{
+    compile,
+    environment::Environment,
+    error::reporter::{ErrorReporter, Reporter},
+    filter_tokens,
+    function_table::FunctionTable,
+    interner::Interner,
+    lex, parse, type_check, Config,
+};
 use options::Options;
 
 mod options;
@@ -8,6 +17,11 @@ use structopt::StructOpt;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     let options: Options = Options::from_args();
+
+    if options.tui {
+        return run_tui();
+    }
+
     if options.files.is_empty() {
         println!("An input file must be provided.");
         return Ok(());
