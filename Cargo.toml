@@ -3,4 +3,5 @@
 members = [
     "envyc",
     "envious-cli",
+    "envious-tui",
 ]

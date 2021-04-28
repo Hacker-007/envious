@@ -1,14 +1,13 @@
 use std::{error::Error, fs, time::Instant};
 
 use envyc::{
+    compile,
     environment::Environment,
     error::reporter::{ErrorReporter, Reporter},
+    filter_tokens,
     function_table::FunctionTable,
     interner::Interner,
-    lexer::{token::TokenKind, Lexer},
-    parser::Parser,
-    run,
-    semantic_analyzer::type_check::TypeCheck,
+    lex, parse, type_check,
 };
 use options::Options;
 
@@ -40,17 +39,23 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     for (file, source) in options.files.iter().zip(sources.iter()) {
         let module_name = file.file_stem().unwrap().to_str().unwrap();
-        let file_name = file.as_os_str().to_str().unwrap();
-        error_reporter.add(&file_name, source);
-        let mut output_path = file.clone();
-        output_path.pop();
-        output_path.push(format!("{}.o", module_name));
+        let file_path = file.as_os_str().to_str().unwrap();
+        error_reporter.add(&file_path, source);
+        let output_path = file.parent().unwrap().join(format!("{}.o", module_name));
         let output_file_path = output_path.as_os_str().to_str().unwrap();
         let bytes = source.as_bytes();
         let compilation_start = Instant::now();
-        compile_code(&error_reporter, &mut interner, &module_name, &file_name, output_file_path, bytes);
+        compile_code(
+            &error_reporter,
+            &mut interner,
+            &module_name,
+            &file_path,
+            output_file_path,
+            bytes,
+        );
         println!(
-            "Finished full compilation process after {} seconds.",
+            "Finished full compilation process for file `{}` after {} seconds.",
+            file_path,
             compilation_start.elapsed().as_secs_f64()
         );
     }
@@ -67,26 +72,20 @@ fn compile_code(
     bytes: &[u8],
 ) -> Option<()> {
     let tokens = time("Lexing", &error_reporter, || {
-        Lexer::new(file_path, bytes).get_tokens(interner)
+        lex(file_path, bytes, interner)
     })?;
 
-    let filtered_tokens = tokens
-        .into_iter()
-        .filter(|token| !matches!(token.1, TokenKind::Whitespace(_)))
-        .peekable();
-
-    let program = time("Parsing", &error_reporter, || {
-        Parser::new(filtered_tokens).parse()
-    })?;
+    let filtered_tokens = filter_tokens(tokens);
+    let program = time("Parsing", &error_reporter, || parse(filtered_tokens))?;
 
     let mut type_env = Environment::default();
     let mut function_table = FunctionTable::default();
     let typed_program = time("Checking", &error_reporter, || {
-        program.check(&mut type_env, &mut function_table)
+        type_check(program, &mut type_env, &mut function_table)
     })?;
 
     time("Compiling", &error_reporter, || {
-        run(&typed_program, module_name, output_file_path, interner)
+        compile(&typed_program, module_name, output_file_path, interner)
     })?;
 
     Some(())

@@ -1,8 +1,9 @@
-use std::path::Path;
+use std::{iter::Peekable, path::Path};
 
 use codegen::code_generator::CodeGenerator;
 use environment::Environment;
 use error::Error;
+use function_table::FunctionTable;
 use inkwell::{
     context::Context,
     passes::{PassManager, PassManagerBuilder},
@@ -10,7 +11,11 @@ use inkwell::{
     OptimizationLevel,
 };
 use interner::Interner;
-use parser::typed_ast::TypedProgram;
+use lexer::{token::Token, Lexer};
+use parser::{ast::Program, typed_ast::TypedProgram, Parser};
+use semantic_analyzer::{type_check::TypeCheck, types::Type};
+
+use crate::lexer::token::TokenKind;
 
 pub mod codegen;
 pub mod environment;
@@ -21,7 +26,36 @@ pub mod lexer;
 pub mod parser;
 pub mod semantic_analyzer;
 
-pub fn run<'a>(
+pub fn lex<'a>(
+    file_path: &'a str,
+    bytes: &'a [u8],
+    interner: &mut Interner<String>,
+) -> Result<Vec<Token<'a>>, Vec<Error<'a>>> {
+    Lexer::new(file_path, bytes).get_tokens(interner)
+}
+
+pub fn filter_tokens<'a>(tokens: Vec<Token<'a>>) -> Peekable<impl Iterator<Item = Token<'a>>> {
+    tokens
+        .into_iter()
+        .filter(|token| !matches!(token.1, TokenKind::Whitespace(_)))
+        .peekable()
+}
+
+pub fn parse<'a>(
+    filtered_tokens: Peekable<impl Iterator<Item = Token<'a>>>,
+) -> Result<Program<'a>, Vec<Error<'a>>> {
+    Parser::new(filtered_tokens).parse()
+}
+
+pub fn type_check<'a>(
+    program: Program<'a>,
+    env: &mut Environment<Type>,
+    function_table: &mut FunctionTable,
+) -> Result<TypedProgram<'a>, Vec<Error<'a>>> {
+    program.check(env, function_table)
+}
+
+pub fn compile<'a>(
     program: &TypedProgram<'a>,
     module_name: &str,
     output_file_path: &str,
@@ -73,13 +107,9 @@ pub fn run<'a>(
     module.set_data_layout(&target_machine.get_target_data().get_data_layout());
     target_machine.add_analysis_passes(&pass_manager);
     target_machine
-        .write_to_file(
-            &module,
-            FileType::Object,
-            Path::new(output_file_path),
-        )
+        .write_to_file(&module, FileType::Object, Path::new(output_file_path))
         .unwrap();
+        
     module.print_to_stderr();
-
     Ok(())
 }

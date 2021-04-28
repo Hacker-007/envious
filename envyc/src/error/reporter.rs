@@ -1,10 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::{self, Write}};
 
-use codespan_reporting::{
-    diagnostic::{Diagnostic, Label},
-    files::SimpleFiles,
-    term::termcolor::{ColorChoice, StandardStream},
-};
+use codespan_reporting::{diagnostic::{Diagnostic, Label}, files::SimpleFiles, term::termcolor::{BufferWriter, ColorChoice}};
 
 use crate::{lexer::token::TokenKind, semantic_analyzer::types::Type};
 
@@ -47,7 +43,7 @@ impl<'a> ErrorReporter<'a> {
     ///
     /// # Arguments
     /// * `error` - The error to report.
-    pub fn report(&self, error: &Error) {
+    pub fn report(&self, error: &Error) -> Vec<u8> {
         let diagnostic = match error {
             Error::IntegerOverflow(span) => self.handle_integer_overflow(*span),
             Error::FloatOverflow(span) => self.handle_float_overflow(*span),
@@ -97,19 +93,20 @@ impl<'a> ErrorReporter<'a> {
             ),
             Error::UnknownFunction(span) => self.handle_unknown_function(*span),
             Error::ExpectedFunction => {
-                println!("Expected a function to be selected when compiling to LLVM.");
-                return;
+                return "Expected a function to be selected when compiling to LLVM.".as_bytes().to_vec()
             }
             Error::LLVMFunctionFailure => {
-                println!("An unexpected error occurred when compiling a function to LLVM.");
-                return;
+                return "An unexpected error occurred when compiling a function to LLVM.".as_bytes().to_vec()
             }
         };
 
-        let writer = StandardStream::stderr(ColorChoice::Always);
+        let buffer_writer = BufferWriter::stderr(ColorChoice::Always);
+        let mut buffer = buffer_writer.buffer();
         let config = codespan_reporting::term::Config::default();
-        codespan_reporting::term::emit(&mut writer.lock(), &config, &self.files, &diagnostic)
+        codespan_reporting::term::emit(&mut buffer, &config, &self.files, &diagnostic)
             .unwrap();
+        
+        buffer.as_slice().to_vec()
     }
 
     /// Handles an integer overflow error.
@@ -517,7 +514,8 @@ impl<'a> Reporter for Vec<Error<'a>> {
 
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
         for error in &self {
-            error_reporter.report(error);
+            let bytes = error_reporter.report(error);
+            io::stdout().write(&bytes).ok()?;
         }
 
         if !self.is_empty() {
@@ -537,7 +535,8 @@ impl<'a> Reporter for Option<Error<'a>> {
 
     fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
         if let Some(ref error) = self {
-            error_reporter.report(error);
+            let bytes = error_reporter.report(error);
+            io::stdout().write(&bytes).ok()?;
         }
 
         if self.is_some() {
@@ -559,7 +558,8 @@ impl<'a, T> Reporter for Result<T, Error<'a>> {
         match self {
             Ok(val) => Some(val),
             Err(error) => {
-                error_reporter.report(&error);
+                let bytes = error_reporter.report(&error);
+                io::stdout().write(&bytes).ok()?;
                 None
             }
         }
