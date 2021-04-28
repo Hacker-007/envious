@@ -55,12 +55,17 @@ pub fn type_check<'a>(
     program.check(env, function_table)
 }
 
+pub struct Config<'a> {
+    pub writing_to_file: bool,
+    pub output_file_path: &'a str,
+}
+
 pub fn compile<'a>(
     program: &TypedProgram<'a>,
     module_name: &str,
-    output_file_path: &str,
     interner: &mut Interner<String>,
-) -> Result<(), Vec<Error<'a>>> {
+    config: Option<Config<'a>>,
+) -> Result<String, Vec<Error<'a>>> {
     let context = Context::create();
     let module = context.create_module(module_name);
     let builder = context.create_builder();
@@ -80,36 +85,40 @@ pub fn compile<'a>(
     pass_manager.add_cfg_simplification_pass();
     pass_manager.run_on(&module);
 
-    let target_triple = TargetMachine::get_default_triple();
-    let init_config = InitializationConfig {
-        asm_parser: true,
-        asm_printer: true,
-        base: true,
-        disassembler: true,
-        info: true,
-        machine_code: true,
-    };
+    if let Some(config) = config {
+        let target_triple = TargetMachine::get_default_triple();
+        let init_config = InitializationConfig {
+            asm_parser: true,
+            asm_printer: true,
+            base: true,
+            disassembler: true,
+            info: true,
+            machine_code: true,
+        };
 
-    Target::initialize_all(&init_config);
-    let target = Target::from_triple(&target_triple).unwrap();
-    module.set_triple(&target_triple);
-    let target_machine = target
-        .create_target_machine(
-            &target_triple,
-            "generic",
-            "",
-            OptimizationLevel::Default,
-            RelocMode::Default,
-            CodeModel::Default,
-        )
-        .unwrap();
+        Target::initialize_all(&init_config);
+        let target = Target::from_triple(&target_triple).unwrap();
+        module.set_triple(&target_triple);
+        let target_machine = target
+            .create_target_machine(
+                &target_triple,
+                "generic",
+                "",
+                OptimizationLevel::Default,
+                RelocMode::Default,
+                CodeModel::Default,
+            )
+            .unwrap();
 
-    module.set_data_layout(&target_machine.get_target_data().get_data_layout());
-    target_machine.add_analysis_passes(&pass_manager);
-    target_machine
-        .write_to_file(&module, FileType::Object, Path::new(output_file_path))
-        .unwrap();
-        
-    module.print_to_stderr();
-    Ok(())
+        module.set_data_layout(&target_machine.get_target_data().get_data_layout());
+        target_machine.add_analysis_passes(&pass_manager);
+
+        if config.writing_to_file {
+            target_machine
+                .write_to_file(&module, FileType::Object, Path::new(config.output_file_path))
+                .unwrap();
+        }
+    }
+
+    Ok(module.print_to_string().to_string())
 }

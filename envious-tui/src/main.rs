@@ -1,43 +1,36 @@
-use std::{error::Error, io};
+use std::{
+    cmp::{max, min},
+    error::Error,
+    io,
+};
 
+use app::App;
+use envyc::{
+    compile,
+    environment::Environment,
+    error::reporter::{ErrorReporter, ReporterResult},
+    filter_tokens,
+    function_table::FunctionTable,
+    interner::Interner,
+    lex, parse, type_check,
+};
 use event::{Event, Events};
-use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
+use termion::{event::Key, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
     backend::TermionBackend,
     layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
-    text::{Span, Spans, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
     Terminal,
 };
-use unicode_width::UnicodeWidthStr;
+use ui::{get_current_line_width, render_editor_generated_output, render_help_message};
 
+use crate::app::FocusedBlock;
+
+pub mod app;
 pub mod event;
-
-enum InputMode {
-    Normal,
-    Editing,
-}
-
-pub struct App {
-    input: String,
-    input_mode: InputMode,
-    messages: Vec<String>,
-}
-
-impl App {
-    pub fn new() -> Self {
-        Self {
-            input: String::new(),
-            input_mode: InputMode::Normal,
-            messages: Vec::new(),
-        }
-    }
-}
+pub mod ui;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let stdout = io::stdout().into_raw_mode()?;
-    let stdout = MouseTerminal::from(stdout);
     let stdout = AlternateScreen::from(stdout);
     let backend = TermionBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
@@ -49,106 +42,90 @@ fn main() -> Result<(), Box<dyn Error>> {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .margin(2)
-                .constraints(
-                    [
-                        Constraint::Length(1),
-                        Constraint::Length(3),
-                        Constraint::Min(1),
-                    ]
-                    .as_ref(),
-                )
+                .constraints([Constraint::Length(1), Constraint::Min(1)].as_ref())
                 .split(f.size());
 
-            let (msg, style) = match app.input_mode {
-                InputMode::Normal => (
-                    vec![
-                        Span::raw("Press "),
-                        Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to exit, "),
-                        Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to start editing."),
-                    ],
-                    Style::default().add_modifier(Modifier::RAPID_BLINK),
-                ),
-                InputMode::Editing => (
-                    vec![
-                        Span::raw("Press "),
-                        Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to stop editing, "),
-                        Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to record the message"),
-                    ],
-                    Style::default(),
-                ),
-            };
-            let mut text = Text::from(Spans::from(msg));
-            text.patch_style(style);
-            let help_message = Paragraph::new(text);
-            f.render_widget(help_message, chunks[0]);
-
-            let input = Paragraph::new(app.input.as_ref())
-                .style(match app.input_mode {
-                    InputMode::Normal => Style::default(),
-                    InputMode::Editing => Style::default().fg(Color::Yellow),
-                })
-                .block(Block::default().borders(Borders::ALL).title("Input"));
-            f.render_widget(input, chunks[1]);
-            match app.input_mode {
-                InputMode::Normal =>
-                    // Hide the cursor. `Frame` does this by default, so we don't need to do anything here
-                    {}
-
-                InputMode::Editing => {
-                    // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering
-                    f.set_cursor(
-                        // Put cursor past the end of the input text
-                        chunks[1].x + app.input.width() as u16 + 1,
-                        // Move one line down, from the border to the input line
-                        chunks[1].y + 1,
-                    )
-                }
-            }
-
-            let messages: Vec<ListItem> = app
-                .messages
-                .iter()
-                .enumerate()
-                .map(|(i, m)| {
-                    let content = vec![Spans::from(Span::raw(format!("{}: {}", i, m)))];
-                    ListItem::new(content)
-                })
-                .collect();
-            let messages =
-                List::new(messages).block(Block::default().borders(Borders::ALL).title("Messages"));
-            f.render_widget(messages, chunks[2]);
+            render_help_message(f, &mut app, chunks[0]);
+            render_editor_generated_output(f, &mut app, chunks[1]);
         })?;
 
-        // Handle input
-        if let Event::Input(input) = events.next()? {
-            match app.input_mode {
-                InputMode::Normal => match input {
+        if let Event::Input(key) = events.next()? {
+            match app.focused_block {
+                FocusedBlock::Output => match key {
                     Key::Char('e') => {
-                        app.input_mode = InputMode::Editing;
+                        app.focused_block = FocusedBlock::CodeEditor;
                         events.disable_exit_key();
+                        app.generated_code.drain(..);
                     }
-                    Key::Char('q') => {
+                    Key::Esc => {
                         break;
                     }
                     _ => {}
                 },
-                InputMode::Editing => match input {
-                    Key::Char('\n') => {
-                        app.messages.push(app.input.drain(..).collect());
+                FocusedBlock::CodeEditor => match key {
+                    Key::Char('\t') => {
+                        app.add_tab();
                     }
-                    Key::Char(c) => {
-                        app.input.push(c);
+                    Key::Char(ch) => {
+                        app.add_char(ch);
                     }
                     Key::Backspace => {
-                        app.input.pop();
+                        let popped = app.code.pop();
+                        if let Some('\n') = popped {
+                            if app.current_line > 1 {
+                                if app.current_line == app.line_count {
+                                    app.line_count -= 1;
+                                }
+
+                                app.current_line -= 1;
+                                let current_line_width = get_current_line_width(&app);
+                                app.line_width = max(app.line_width, current_line_width);
+                                if let Some('\r') = app.code.chars().nth(app.line_width as usize) {
+                                    app.code.pop();
+                                    app.line_width -= 1;
+                                }
+                            }
+                        } else if app.line_width != 0 {
+                            app.line_width -= 1;
+                        }
+                    }
+                    Key::Left => {
+                        if app.line_width != 0 {
+                            app.line_width -= 1;
+                        }
+                    }
+                    Key::Right => {
+                        if app.line_width != get_current_line_width(&app) {
+                            app.line_width += 1;
+                        }
+                    }
+                    Key::Up => {
+                        if app.current_line > 1 {
+                            app.current_line -= 1;
+                            let current_line_width = get_current_line_width(&app);
+                            app.line_width = min(app.line_width, current_line_width);
+                        }
+                    }
+                    Key::Down => {
+                        if app.current_line < app.line_count {
+                            app.current_line += 1;
+                            let current_line_width = get_current_line_width(&app);
+                            app.line_width = min(app.line_width, current_line_width);
+                        }
                     }
                     Key::Esc => {
-                        app.input_mode = InputMode::Normal;
+                        app.focused_block = FocusedBlock::Output;
                         events.enable_exit_key();
+                        match compile_code(&app.code) {
+                            Ok(generated_code) => {
+                                app.generated_code = generated_code;
+                                app.output = vec![];
+                            }
+                            Err(errors) => {
+                                app.output = errors;
+                                continue;
+                            }
+                        }
                     }
                     _ => {}
                 },
@@ -157,4 +134,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+fn compile_code(code: &str) -> Result<String, Vec<String>> {
+    let mut error_reporter = ErrorReporter::new(vec![]);
+    let mut interner = Interner::default();
+    error_reporter.add("editor", code);
+    let tokens = lex("editor", code.as_bytes(), &mut interner).report_result(&error_reporter, false)?;
+    let filtered_tokens = filter_tokens(tokens);
+    let program = parse(filtered_tokens).report_result(&error_reporter, false)?;
+    let mut type_env = Environment::default();
+    let mut function_table = FunctionTable::default();
+    let typed_program =
+        type_check(program, &mut type_env, &mut function_table).report_result(&error_reporter, false)?;
+    compile(&typed_program, "editor", &mut interner, None).report_result(&error_reporter, false)
 }

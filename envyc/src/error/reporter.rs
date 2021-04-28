@@ -1,6 +1,13 @@
-use std::{collections::HashMap, io::{self, Write}};
+use std::{
+    collections::HashMap,
+    io::{self, Write},
+};
 
-use codespan_reporting::{diagnostic::{Diagnostic, Label}, files::SimpleFiles, term::termcolor::{BufferWriter, ColorChoice}};
+use codespan_reporting::{
+    diagnostic::{Diagnostic, Label},
+    files::SimpleFiles,
+    term::termcolor::{BufferWriter, ColorChoice},
+};
 
 use crate::{lexer::token::TokenKind, semantic_analyzer::types::Type};
 
@@ -43,7 +50,7 @@ impl<'a> ErrorReporter<'a> {
     ///
     /// # Arguments
     /// * `error` - The error to report.
-    pub fn report(&self, error: &Error) -> Vec<u8> {
+    pub fn report(&self, error: &Error, color: bool) -> Vec<u8> {
         let diagnostic = match error {
             Error::IntegerOverflow(span) => self.handle_integer_overflow(*span),
             Error::FloatOverflow(span) => self.handle_float_overflow(*span),
@@ -79,7 +86,12 @@ impl<'a> ErrorReporter<'a> {
                 previous_type,
                 second_span,
                 second_type,
-            } => self.handle_conflicting_previous_type(*name_span, *previous_type, *second_span, *second_type),
+            } => self.handle_conflicting_previous_type(
+                *name_span,
+                *previous_type,
+                *second_span,
+                *second_type,
+            ),
             Error::IllegalType(span) => self.handle_illegal_type(*span),
             Error::UndefinedVariable(span) => self.handle_undefined_variable(*span),
             Error::ParameterMismatch {
@@ -93,19 +105,28 @@ impl<'a> ErrorReporter<'a> {
             ),
             Error::UnknownFunction(span) => self.handle_unknown_function(*span),
             Error::ExpectedFunction => {
-                return "Expected a function to be selected when compiling to LLVM.".as_bytes().to_vec()
+                return "Expected a function to be selected when compiling to LLVM."
+                    .as_bytes()
+                    .to_vec()
             }
             Error::LLVMFunctionFailure => {
-                return "An unexpected error occurred when compiling a function to LLVM.".as_bytes().to_vec()
+                return "An unexpected error occurred when compiling a function to LLVM."
+                    .as_bytes()
+                    .to_vec()
             }
         };
 
-        let buffer_writer = BufferWriter::stderr(ColorChoice::Always);
+        let color_choice = if color {
+            ColorChoice::Always
+        } else {
+            ColorChoice::Never  
+        };
+
+        let buffer_writer = BufferWriter::stderr(color_choice);
         let mut buffer = buffer_writer.buffer();
         let config = codespan_reporting::term::Config::default();
-        codespan_reporting::term::emit(&mut buffer, &config, &self.files, &diagnostic)
-            .unwrap();
-        
+        codespan_reporting::term::emit(&mut buffer, &config, &self.files, &diagnostic).unwrap();
+
         buffer.as_slice().to_vec()
     }
 
@@ -502,7 +523,28 @@ pub trait Reporter {
     ///
     /// # Arguments
     /// * `error_reporter` - The `ErrorReporter` reference to use to report errors.
-    fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output>;
+    fn report(self, error_reporter: &ErrorReporter, color: bool) -> Option<Self::Output>;
+}
+
+/// Trait to provide blanket implementations for containers of errors.
+/// This trait does not print the errors and instead, returns them.
+pub trait ReporterResult {
+    /// The value returned by the reporter once used.
+    type Output;
+    /// The error that is returned by the reported once used.
+    type Error;
+
+    /// Determines whether this container is in an error state.
+    fn is_err(&self) -> bool;
+
+    /// Returns the bytes of the errors if there was an error or
+    /// returns the value.
+    ///
+    /// If the error is not needed, consider using the `report` function instead.
+    ///
+    /// # Arguments
+    /// * `error_reporter` - The `ErrorReporter` reference to use to report errors.
+    fn report_result(self, error_reporter: &ErrorReporter, color: bool) -> Result<Self::Output, Self::Error>;
 }
 
 impl<'a> Reporter for Vec<Error<'a>> {
@@ -512,9 +554,9 @@ impl<'a> Reporter for Vec<Error<'a>> {
         !self.is_empty()
     }
 
-    fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
+    fn report(self, error_reporter: &ErrorReporter, color: bool) -> Option<Self::Output> {
         for error in &self {
-            let bytes = error_reporter.report(error);
+            let bytes = error_reporter.report(error, color);
             io::stdout().write(&bytes).ok()?;
         }
 
@@ -526,6 +568,27 @@ impl<'a> Reporter for Vec<Error<'a>> {
     }
 }
 
+impl<'a> ReporterResult for Vec<Error<'a>> {
+    type Output = ();
+    type Error = Vec<String>;
+
+    fn is_err(&self) -> bool {
+        !self.is_empty()
+    }
+
+    fn report_result(self, error_reporter: &ErrorReporter, color: bool) -> Result<Self::Output, Self::Error> {
+        let errors = self.iter()
+            .map(|error| String::from_utf8(error_reporter.report(error, color)).unwrap())
+            .collect::<Vec<_>>();
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+}
+
 impl<'a> Reporter for Option<Error<'a>> {
     type Output = ();
 
@@ -533,16 +596,31 @@ impl<'a> Reporter for Option<Error<'a>> {
         self.is_some()
     }
 
-    fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
+    fn report(self, error_reporter: &ErrorReporter, color: bool) -> Option<Self::Output> {
         if let Some(ref error) = self {
-            let bytes = error_reporter.report(error);
+            let bytes = error_reporter.report(error, color);
             io::stdout().write(&bytes).ok()?;
-        }
-
-        if self.is_some() {
-            None
-        } else {
             Some(())
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ReporterResult for Option<Error<'a>> {
+    type Output = ();
+    type Error = String;
+
+    fn is_err(&self) -> bool {
+        self.is_some()
+    }
+
+    fn report_result(self, error_reporter: &ErrorReporter, color: bool) -> Result<Self::Output, Self::Error> {
+        if let Some(ref error) = self {
+            let bytes = error_reporter.report(error, color);
+            Err(String::from_utf8(bytes).unwrap())
+        } else {
+            Ok(())
         }
     }
 }
@@ -554,13 +632,32 @@ impl<'a, T> Reporter for Result<T, Error<'a>> {
         self.is_err()
     }
 
-    fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
+    fn report(self, error_reporter: &ErrorReporter, color: bool) -> Option<Self::Output> {
         match self {
             Ok(val) => Some(val),
             Err(error) => {
-                let bytes = error_reporter.report(&error);
+                let bytes = error_reporter.report(&error, color);
                 io::stdout().write(&bytes).ok()?;
                 None
+            }
+        }
+    }
+}
+
+impl<'a, T> ReporterResult for Result<T, Error<'a>> {
+    type Output = T;
+    type Error = String;
+
+    fn is_err(&self) -> bool {
+        self.is_err()
+    }
+
+    fn report_result(self, error_reporter: &ErrorReporter, color: bool) -> Result<Self::Output, Self::Error> {
+        match self {
+            Ok(val) => Ok(val),
+            Err(error) => {
+                let bytes = error_reporter.report(&error, color);
+                Err(String::from_utf8(bytes).unwrap())
             }
         }
     }
@@ -573,13 +670,32 @@ impl<'a, T> Reporter for Result<T, Vec<Error<'a>>> {
         matches!(self, Err(errors) if !errors.is_empty())
     }
 
-    fn report(self, error_reporter: &ErrorReporter) -> Option<Self::Output> {
+    fn report(self, error_reporter: &ErrorReporter, color: bool) -> Option<Self::Output> {
         match self {
             Ok(val) => Some(val),
             Err(errors) => {
-                errors.report(error_reporter)?;
+                errors.report(error_reporter, color)?;
                 None
             }
+        }
+    }
+}
+
+impl<'a, T> ReporterResult for Result<T, Vec<Error<'a>>> {
+    type Output = T;
+    type Error = Vec<String>;
+
+    fn is_err(&self) -> bool {
+        matches!(self, Err(errors) if !errors.is_empty())
+    }
+
+    fn report_result(self, error_reporter: &ErrorReporter, color: bool) -> Result<Self::Output, Self::Error> {
+        match self {
+            Ok(val) => Ok(val),
+            Err(errors) if !errors.is_empty() => {
+                Err(errors.report_result(error_reporter, color).unwrap_err())
+            }
+            _ => Err(vec![]),
         }
     }
 }

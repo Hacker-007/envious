@@ -1,14 +1,6 @@
 use std::{error::Error, fs, time::Instant};
 
-use envyc::{
-    compile,
-    environment::Environment,
-    error::reporter::{ErrorReporter, Reporter},
-    filter_tokens,
-    function_table::FunctionTable,
-    interner::Interner,
-    lex, parse, type_check,
-};
+use envyc::{Config, compile, environment::Environment, error::reporter::{ErrorReporter, Reporter}, filter_tokens, function_table::FunctionTable, interner::Interner, lex, parse, type_check};
 use options::Options;
 
 mod options;
@@ -84,10 +76,16 @@ fn compile_code(
         type_check(program, &mut type_env, &mut function_table)
     })?;
 
-    time("Compiling", &error_reporter, || {
-        compile(&typed_program, module_name, output_file_path, interner)
+    let output = time("Compiling", &error_reporter, || {
+        let config = Config {
+            writing_to_file: true,
+            output_file_path,
+        };
+
+        compile(&typed_program, module_name, interner, Some(config))
     })?;
 
+    println!("{}", output);
     Some(())
 }
 
@@ -103,5 +101,5 @@ fn time<O: Reporter>(
         name,
         start.elapsed().as_secs_f64()
     );
-    value.report(error_reporter)
+    value.report(error_reporter, true)
 }

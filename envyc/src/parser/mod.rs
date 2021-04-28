@@ -56,7 +56,15 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                     Ok(extern_declaration) => extern_declarations.push(extern_declaration),
                     Err(error) => errors.push(error),
                 },
-                _ => return Err(errors),
+                _ => {
+                    errors.push(Error::ExpectedKind {
+                        span,
+                        expected_kinds: vec![TokenKind::Define, TokenKind::Extern],
+                        actual_kind: kind,
+                    });
+
+                    return Err(errors);
+                },
             }
         }
 

@@ -103,6 +103,7 @@ dependencies = [
 name = "envious-tui"
 version = "0.1.0"
 dependencies = [
+ "envyc",
  "termion",
  "tui",
  "unicode-width",
