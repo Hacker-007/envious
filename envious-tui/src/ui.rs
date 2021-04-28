@@ -1,4 +1,11 @@
-use tui::{Frame, backend::Backend, layout::{Constraint, Direction, Layout, Rect}, style::{Color, Modifier, Style}, text::{Span, Spans, Text}, widgets::{Block, Borders, List, ListItem, Paragraph}};
+use tui::{
+    backend::Backend,
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    text::{Span, Spans, Text},
+    widgets::{Block, Borders, Paragraph},
+    Frame,
+};
 use unicode_width::UnicodeWidthStr;
 
 use crate::app::{App, FocusedBlock};
@@ -19,7 +26,7 @@ pub fn render_help_message<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Re
             vec![
                 Span::raw("Press "),
                 Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to stop editing"),
+                Span::raw(" to evaluate."),
             ],
             Style::default(),
         ),
@@ -67,14 +74,8 @@ pub fn render_editor_generated_output<B: Backend>(f: &mut Frame<B>, app: &mut Ap
 
     f.render_widget(generated_code, chunks[1]);
 
-    let output: Vec<ListItem> = app
-        .output
-        .iter()
-        .map(|item| ListItem::new(item.as_str()))
-        .collect();
-
-    let output = List::new(output).block(Block::default().borders(Borders::ALL).title("Output"));
-
+    let output: String = app.output.join("\n");
+    let output = Paragraph::new(output).block(Block::default().borders(Borders::ALL).title("Output"));
     f.render_widget(output, chunks[2]);
 }
 
