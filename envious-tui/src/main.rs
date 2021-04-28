@@ -1,6 +1,7 @@
 use std::{cmp::{max, min}, error::Error, io};
 
 use app::App;
+use crossterm::{event::KeyCode, execute, terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode}};
 use envyc::{
     compile,
     environment::Environment,
@@ -11,12 +12,7 @@ use envyc::{
     lex, parse, type_check,
 };
 use event::{Event, Events};
-use termion::{event::Key, raw::IntoRawMode, screen::AlternateScreen};
-use tui::{
-    backend::TermionBackend,
-    layout::{Constraint, Direction, Layout},
-    Terminal,
-};
+use tui::{Terminal, backend::CrosstermBackend, layout::{Constraint, Direction, Layout}};
 use ui::{get_current_line_width, render_editor_generated_output, render_help_message};
 
 use crate::app::FocusedBlock;
@@ -26,9 +22,10 @@ pub mod event;
 pub mod ui;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let stdout = io::stdout().into_raw_mode()?;
-    let stdout = AlternateScreen::from(stdout);
-    let backend = TermionBackend::new(stdout);
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
     let mut events = Events::new();
@@ -47,25 +44,28 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         if let Event::Input(key) = events.next()? {
             match app.focused_block {
-                FocusedBlock::Output => match key {
-                    Key::Char('e') => {
+                FocusedBlock::Output => match key.code {
+                    KeyCode::Char('e') => {
                         app.focused_block = FocusedBlock::CodeEditor;
                         events.disable_exit_key();
                         app.generated_code.drain(..);
                     }
-                    Key::Esc => {
+                    KeyCode::Esc => {
+                        disable_raw_mode()?;
+                        execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+                        terminal.show_cursor()?;
                         break;
                     }
                     _ => {}
                 },
-                FocusedBlock::CodeEditor => match key {
-                    Key::Char('\t') => {
+                FocusedBlock::CodeEditor => match key.code {
+                    KeyCode::Char('\t') => {
                         app.add_tab();
                     }
-                    Key::Char(ch) => {
+                    KeyCode::Char(ch) => {
                         app.add_char(ch);
                     }
-                    Key::Backspace => {
+                    KeyCode::Backspace => {
                         let popped = app.code.pop();
                         if let Some('\n') = popped {
                             if app.current_line > 1 {
@@ -85,31 +85,31 @@ fn main() -> Result<(), Box<dyn Error>> {
                             app.line_width -= 1;
                         }
                     }
-                    Key::Left => {
+                    KeyCode::Left => {
                         if app.line_width != 0 {
                             app.line_width -= 1;
                         }
                     }
-                    Key::Right => {
+                    KeyCode::Right => {
                         if app.line_width != get_current_line_width(&app) {
                             app.line_width += 1;
                         }
                     }
-                    Key::Up => {
+                    KeyCode::Up => {
                         if app.current_line > 1 {
                             app.current_line -= 1;
                             let current_line_width = get_current_line_width(&app);
                             app.line_width = min(app.line_width, current_line_width);
                         }
                     }
-                    Key::Down => {
+                    KeyCode::Down => {
                         if app.current_line < app.line_count {
                             app.current_line += 1;
                             let current_line_width = get_current_line_width(&app);
                             app.line_width = min(app.line_width, current_line_width);
                         }
                     }
-                    Key::Esc => {
+                    KeyCode::Esc => {
                         app.focused_block = FocusedBlock::Output;
                         events.enable_exit_key();
                         match compile_code(&app.code) {
@@ -136,12 +136,12 @@ fn compile_code(code: &str) -> Result<String, Vec<String>> {
     let mut error_reporter = ErrorReporter::new(vec![]);
     let mut interner = Interner::default();
     error_reporter.add("editor", code);
-    let tokens = lex("editor", code.as_bytes(), &mut interner).report_result(&error_reporter, true)?;
+    let tokens = lex("editor", code.as_bytes(), &mut interner).report_result(&error_reporter, false)?;
     let filtered_tokens = filter_tokens(tokens);
-    let program = parse(filtered_tokens).report_result(&error_reporter, true)?;
+    let program = parse(filtered_tokens).report_result(&error_reporter, false)?;
     let mut type_env = Environment::default();
     let mut function_table = FunctionTable::default();
     let typed_program =
-        type_check(program, &mut type_env, &mut function_table).report_result(&error_reporter, true)?;
-    compile(&typed_program, "editor", &mut interner, None).report_result(&error_reporter, true)
+        type_check(program, &mut type_env, &mut function_table).report_result(&error_reporter, false)?;
+    compile(&typed_program, "editor", &mut interner, None).report_result(&error_reporter, false)
 }

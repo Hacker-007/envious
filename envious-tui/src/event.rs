@@ -1,15 +1,14 @@
 use std::{
-    io,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Receiver, RecvError},
         Arc,
     },
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
-use termion::{event::Key, input::TermRead};
+use crossterm::event::{KeyCode, KeyEvent, poll, read};
 
 pub enum Event<I> {
     Input(I),
@@ -17,54 +16,57 @@ pub enum Event<I> {
 }
 
 pub struct Events {
-    rx: Receiver<Event<Key>>,
+    rx: Receiver<Event<KeyEvent>>,
     ignore_exit_key: Arc<AtomicBool>,
-    _input_handle: JoinHandle<()>,
-    _tick_handle: JoinHandle<()>,
+    _handle: JoinHandle<()>,
 }
 
 impl Events {
     pub fn new() -> Events {
         let (tx, rx) = mpsc::channel();
         let ignore_exit_key = Arc::new(AtomicBool::new(false));
-        let input_handle = {
-            let tx = tx.clone();
+        let tick_rate = Duration::from_millis(250);
+        let handle = {
             let ignore_exit_key = ignore_exit_key.clone();
             thread::spawn(move || {
-                let stdin = io::stdin();
-                for event in stdin.keys() {
-                    if let Ok(key) = event {
-                        if tx.send(Event::Input(key)).is_err() {
-                            return;
-                        }
+                let mut last_tick = Instant::now();
+                loop {
+                    let timeout = tick_rate
+                        .checked_sub(last_tick.elapsed())
+                        .unwrap_or_else(|| Duration::from_secs(0));
+                    if poll(timeout).unwrap() {
+                        if let Ok(crossterm::event::Event::Key(key)) = read() {
+                            if tx.send(Event::Input(key)).is_err() {
+                                return;
+                            }
 
-                        if !ignore_exit_key.load(Ordering::Relaxed) && key == Key::Char('q') {
-                            return;
+                            if !ignore_exit_key.load(Ordering::Relaxed)
+                                && key.code == KeyCode::Char('q')
+                            {
+                                return;
+                            }
                         }
                     }
-                }
-            })
-        };
 
-        let tick_handle = {
-            thread::spawn(move || loop {
-                if tx.send(Event::Tick).is_err() {
-                    break;
-                }
+                    if last_tick.elapsed() >= tick_rate {
+                        if tx.send(Event::Tick).is_err() {
+                            return;
+                        }
 
-                thread::sleep(Duration::from_millis(250));
+                        last_tick = Instant::now();
+                    }
+                }
             })
         };
 
         Events {
             rx,
             ignore_exit_key,
-            _input_handle: input_handle,
-            _tick_handle: tick_handle,
+            _handle: handle,
         }
     }
 
-    pub fn next(&self) -> Result<Event<Key>, RecvError> {
+    pub fn next(&self) -> Result<Event<KeyEvent>, RecvError> {
         self.rx.recv()
     }
 
