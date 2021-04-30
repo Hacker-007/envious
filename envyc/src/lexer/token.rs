@@ -47,6 +47,7 @@ pub enum TokenKind {
     GreaterThanEqualSign,
     Comma,
     Colon,
+    SemiColon,
     ColonColon,
 
     Not,
@@ -94,6 +95,7 @@ impl Display for TokenKind {
             TokenKind::GreaterThanEqualSign => write!(f, ">="),
             TokenKind::Comma => write!(f, ","),
             TokenKind::Colon => write!(f, ":"),
+            TokenKind::SemiColon => write!(f, ";"),
             TokenKind::ColonColon => write!(f, "::"),
             TokenKind::Not => write!(f, "not"),
             TokenKind::Or => write!(f, "or"),

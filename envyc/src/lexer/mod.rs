@@ -152,6 +152,7 @@ impl<'a> Lexer<'a> {
                     tokens.push((self.make_span(start_column), TokenKind::ColonColon))
                 }
                 b':' => tokens.push((self.make_span(self.current_column), TokenKind::Colon)),
+                b';' => tokens.push((self.make_span(self.current_column), TokenKind::SemiColon)),
                 b'\0' => break,
                 _ => errors.push(Error::UnrecognizedCharacter(
                     self.make_span(self.current_column),

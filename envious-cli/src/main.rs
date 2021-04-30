@@ -1,4 +1,4 @@
-use std::{error::Error, fs, path::PathBuf, time::Instant};
+use std::{error::Error, fs, path::PathBuf, process::Command, time::Instant};
 
 use envious_tui::run_tui;
 use envyc::{
@@ -92,8 +92,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    if main_file.is_some() {
-        build_static_files(&options.files)
+    if let Some(main_file) = main_file {
+        build_static_files(&options.files, main_file)
     } else {
         Err(Box::<dyn Error + Send + Sync>::from(
             "Could not find the main method.".to_string(),
@@ -160,8 +160,42 @@ fn time<O: Reporter>(
     value.report(error_reporter, true)
 }
 
-fn build_static_files(_files: &[PathBuf]) -> Result<(), Box<dyn Error>> {
-    // Build linking command
+fn build_static_files(files: &[PathBuf], main_file_path: &PathBuf) -> Result<(), Box<dyn Error>> {
+    let mut command = Command::new("g++");
+    for file in files {
+        command.arg(
+            file.parent()
+                .unwrap()
+                .join(format!("{}.o", file.file_stem().unwrap().to_str().unwrap())),
+        );
+    }
+
+    let executable_path = main_file_path.parent().unwrap().join(format!(
+        "{}",
+        main_file_path.file_stem().unwrap().to_str().unwrap()
+    ));
+    let output = command
+        .arg("test/io.o")
+        .arg("-o")
+        .arg(&executable_path)
+        .output()
+        .expect("Failed to link files");
+
+    if !output.status.success() {
+        panic!("Failed to link files");
+    }
+
+    let output = Command::new(executable_path)
+        .output()
+        .expect("Failed to run executable");
+
+    if !output.stdout.is_empty() {
+        print!("{}", String::from_utf8(output.stdout).unwrap());
+    }
+
+    if !output.stderr.is_empty() {
+        print!("{}", String::from_utf8(output.stderr).unwrap());
+    }
 
     Ok(())
 }
