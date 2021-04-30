@@ -1,4 +1,4 @@
-use std::{error::Error, fs, time::Instant};
+use std::{error::Error, fs, path::PathBuf, time::Instant};
 
 use envious_tui::run_tui;
 use envyc::{
@@ -8,7 +8,9 @@ use envyc::{
     filter_tokens,
     function_table::FunctionTable,
     interner::Interner,
-    lex, parse, type_check, Config,
+    lex, parse,
+    semantic_analyzer::types::Type,
+    type_check, Config,
 };
 use options::Options;
 
@@ -43,6 +45,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         sources.push(source);
     }
 
+    let mut main_file = None;
     for (file, source) in options.files.iter().zip(sources.iter()) {
         let module_name = file.file_stem().unwrap().to_str().unwrap();
         let file_path = file.as_os_str().to_str().unwrap();
@@ -51,22 +54,51 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         let output_file_path = output_path.as_os_str().to_str().unwrap();
         let bytes = source.as_bytes();
         let compilation_start = Instant::now();
-        compile_code(
+        let result = compile_code(
             &error_reporter,
             &mut interner,
             &module_name,
             &file_path,
             output_file_path,
             bytes,
+            options.debug,
         );
-        println!(
-            "Finished full compilation process for file `{}` after {} seconds.",
-            file_path,
-            compilation_start.elapsed().as_secs_f64()
-        );
+
+        let errored = if let Some(found_main) = result {
+            match main_file {
+                Some(_) if found_main => {
+                    return Err(Box::<dyn Error + Send + Sync>::from(
+                        "Found multiple main methods.".to_string(),
+                    ))
+                }
+                None if found_main => main_file = Some(file),
+                _ => {}
+            }
+
+            false
+        } else {
+            true
+        };
+
+        if errored {
+            println!("Failed to compile file `{}`.", file_path);
+            return Ok(());
+        } else {
+            println!(
+                "Finished full compilation process for file `{}` after {} seconds.",
+                file_path,
+                compilation_start.elapsed().as_secs_f64()
+            );
+        }
     }
 
-    Ok(())
+    if main_file.is_some() {
+        build_static_files(&options.files)
+    } else {
+        Err(Box::<dyn Error + Send + Sync>::from(
+            "Could not find the main method.".to_string(),
+        ))
+    }
 }
 
 fn compile_code(
@@ -76,7 +108,8 @@ fn compile_code(
     file_path: &str,
     output_file_path: &str,
     bytes: &[u8],
-) -> Option<()> {
+    debug: bool,
+) -> Option<bool> {
     let tokens = time("Lexing", &error_reporter, || {
         lex(file_path, bytes, interner)
     })?;
@@ -99,8 +132,17 @@ fn compile_code(
         compile(&typed_program, module_name, interner, Some(config))
     })?;
 
-    println!("{}", output);
-    Some(())
+    if debug {
+        println!("{}", output);
+    }
+
+    let contains_main = typed_program.functions.iter().any(|function| {
+        function.prototype.name == interner.insert("main".to_string())
+            && function.prototype.parameters.is_empty()
+            && function.prototype.return_type == Type::Void
+    });
+
+    Some(contains_main)
 }
 
 fn time<O: Reporter>(
@@ -116,4 +158,10 @@ fn time<O: Reporter>(
         start.elapsed().as_secs_f64()
     );
     value.report(error_reporter, true)
+}
+
+fn build_static_files(_files: &[PathBuf]) -> Result<(), Box<dyn Error>> {
+    // Build linking command
+
+    Ok(())
 }

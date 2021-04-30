@@ -115,7 +115,11 @@ pub fn compile<'a>(
 
         if config.writing_to_file {
             target_machine
-                .write_to_file(&module, FileType::Object, Path::new(config.output_file_path))
+                .write_to_file(
+                    &module,
+                    FileType::Object,
+                    Path::new(config.output_file_path),
+                )
                 .unwrap();
         }
     }

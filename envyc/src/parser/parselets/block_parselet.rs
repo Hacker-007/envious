@@ -19,15 +19,19 @@ impl<'a> PrefixParselet<'a> for BlockParselet {
         let mut expressions = vec![];
         let mut last_span = token.0;
         loop {
-            let expression = parser.parse_expression(0, last_span)?;
-            last_span = expression.0;
-            expressions.push(expression);
             if let Some((_, TokenKind::RightCurlyBrace)) = parser.peek() {
                 last_span = parser.consume(last_span)?.0;
                 break;
             }
+
+            let expression = parser.parse_expression(0, last_span)?;
+            last_span = expression.0;
+            expressions.push(expression);
         }
 
-        Ok((token.0.combine(last_span), ExpressionKind::Block(expressions)))
+        Ok((
+            token.0.combine(last_span),
+            ExpressionKind::Block(expressions),
+        ))
     }
 }

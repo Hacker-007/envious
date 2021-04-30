@@ -43,7 +43,9 @@ impl<'a> TypedExpressionKind<'a> {
             TypedExpressionKind::Binary(ref inner) => inner.ty,
             TypedExpressionKind::If(ref inner) => inner.ty,
             TypedExpressionKind::Let(ref inner) => inner.ty,
-            TypedExpressionKind::Block(ref expressions) => expressions.last().map_or(Type::Void, |(_, ref kind)| kind.get_type()),
+            TypedExpressionKind::Block(ref expressions) => expressions
+                .last()
+                .map_or(Type::Void, |(_, ref kind)| kind.get_type()),
             TypedExpressionKind::Application(ref inner) => inner.ty,
             TypedExpressionKind::While(_) => Type::Void,
             TypedExpressionKind::Return(_) => Type::Never,

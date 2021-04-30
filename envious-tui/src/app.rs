@@ -11,7 +11,7 @@ pub struct App {
     pub code: String,
     pub generated_code: String,
     pub output: Vec<String>,
-    pub focused_block: FocusedBlock
+    pub focused_block: FocusedBlock,
 }
 
 impl App {
@@ -44,5 +44,11 @@ impl App {
         self.code.insert_str(self.index as usize, "    ");
         self.index += 4;
         self.line_width += 4;
+    }
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
     }
 }

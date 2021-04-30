@@ -3,7 +3,7 @@ use tui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Span, Spans, Text},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
 use unicode_width::UnicodeWidthStr;
@@ -70,9 +70,13 @@ pub fn render_editor_generated_output<B: Backend>(f: &mut Frame<B>, app: &mut Ap
 
     f.render_widget(generated_code, chunks[1]);
 
-    let output: String = app.output.join("\n");
-    let output =
-        Paragraph::new(output).block(Block::default().borders(Borders::ALL).title("Output"));
+    let items = app
+        .output
+        .iter()
+        .map(|output_item| ListItem::new(output_item.as_str()))
+        .collect::<Vec<_>>();
+
+    let output = List::new(items).block(Block::default().borders(Borders::ALL).title("Output"));
     f.render_widget(output, chunks[2]);
 }
 

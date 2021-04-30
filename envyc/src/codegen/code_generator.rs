@@ -209,9 +209,9 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
         if self.body.1.get_type() != Type::Never {
             if self.body.1.get_type() != Type::Void {
                 function_context
-                    .add_return_block(builder.get_insert_block().unwrap(), Some(expression))
+                    .add_return_block(builder.get_insert_block().unwrap(), Some(expression));
             } else {
-                function_context.add_return_block(builder.get_insert_block().unwrap(), None)
+                function_context.add_return_block(builder.get_insert_block().unwrap(), None);
             }
 
             builder.build_unconditional_branch(return_block);
@@ -223,7 +223,7 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
                 convert_basic_type(self.prototype.return_type, context),
                 "return_value",
             );
-            
+
             let phi_nodes = function_context
                 .return_blocks
                 .iter()
@@ -236,6 +236,7 @@ impl<'a, 'ctx> CodeGenerator<'a, 'ctx> for TypedFunction<'a> {
         }
 
         env.remove_top_scope();
+
         if function.verify(true) {
             Ok(())
         } else {

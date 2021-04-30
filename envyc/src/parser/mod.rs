@@ -64,7 +64,7 @@ impl<'a, T: Iterator<Item = Token<'a>>> Parser<'a, T> {
                     });
 
                     return Err(errors);
-                },
+                }
             }
         }
 

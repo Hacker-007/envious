@@ -16,17 +16,15 @@ pub enum Type {
 
 impl PartialEq for Type {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
+        matches!(
+            (self, other),
             (Type::Void, Type::Void)
-            | (Type::Never, Type::Void)
-            | (Type::Void, Type::Never)
-            | (Type::Never, Type::Never)
-            | (Type::Int, Type::Int)
-            | (Type::Float, Type::Float)
-            | (Type::Boolean, Type::Boolean)
-            | (Type::Char, Type::Char) => true,
-            _ => false,
-        }
+                | (Type::Never, Type::Never)
+                | (Type::Int, Type::Int)
+                | (Type::Float, Type::Float)
+                | (Type::Boolean, Type::Boolean)
+                | (Type::Char, Type::Char)
+        )
     }
 }
 

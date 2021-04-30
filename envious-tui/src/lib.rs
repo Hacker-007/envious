@@ -178,12 +178,12 @@ fn compile_code(code: &str) -> Result<String, Vec<String>> {
     let mut interner = Interner::default();
     error_reporter.add("editor", code);
     let tokens =
-        lex("editor", code.as_bytes(), &mut interner).report_result(&error_reporter, false)?;
+        lex("editor", code.as_bytes(), &mut interner).report_result(&error_reporter, true)?;
     let filtered_tokens = filter_tokens(tokens);
-    let program = parse(filtered_tokens).report_result(&error_reporter, false)?;
+    let program = parse(filtered_tokens).report_result(&error_reporter, true)?;
     let mut type_env = Environment::default();
     let mut function_table = FunctionTable::default();
     let typed_program = type_check(program, &mut type_env, &mut function_table)
-        .report_result(&error_reporter, false)?;
-    compile(&typed_program, "editor", &mut interner, None).report_result(&error_reporter, false)
+        .report_result(&error_reporter, true)?;
+    compile(&typed_program, "editor", &mut interner, None).report_result(&error_reporter, true)
 }

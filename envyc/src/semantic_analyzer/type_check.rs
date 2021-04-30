@@ -261,10 +261,18 @@ impl<'a> TypeCheckFunction<'a> for Expression<'a> {
             ExpressionKind::Boolean(value) => Ok((self.0, TypedExpressionKind::Boolean(value))),
             ExpressionKind::Char(value) => Ok((self.0, TypedExpressionKind::Char(value))),
             ExpressionKind::Identifier(inner) => inner.check_span(self.0, env, function_table),
-            ExpressionKind::Unary(inner) => inner.check_span(self.0, env, function_table, current_function),
-            ExpressionKind::Binary(inner) => inner.check_span(self.0, env, function_table, current_function),
-            ExpressionKind::If(inner) => inner.check_span(self.0, env, function_table, current_function),
-            ExpressionKind::Let(inner) => inner.check_span(self.0, env, function_table, current_function),
+            ExpressionKind::Unary(inner) => {
+                inner.check_span(self.0, env, function_table, current_function)
+            }
+            ExpressionKind::Binary(inner) => {
+                inner.check_span(self.0, env, function_table, current_function)
+            }
+            ExpressionKind::If(inner) => {
+                inner.check_span(self.0, env, function_table, current_function)
+            }
+            ExpressionKind::Let(inner) => {
+                inner.check_span(self.0, env, function_table, current_function)
+            }
             ExpressionKind::Block(expressions) => {
                 env.new_scope();
                 match expressions.check(env, function_table, current_function) {
@@ -275,8 +283,12 @@ impl<'a> TypeCheckFunction<'a> for Expression<'a> {
                     Err(errors) => Err(errors.into_iter().next().unwrap()),
                 }
             }
-            ExpressionKind::Application(inner) => inner.check_span(self.0, env, function_table, current_function),
-            ExpressionKind::While(inner) => inner.check_span(self.0, env, function_table, current_function),
+            ExpressionKind::Application(inner) => {
+                inner.check_span(self.0, env, function_table, current_function)
+            }
+            ExpressionKind::While(inner) => {
+                inner.check_span(self.0, env, function_table, current_function)
+            }
             ExpressionKind::Return(None) => Ok((self.0, TypedExpressionKind::Return(None))),
             ExpressionKind::Return(Some(expression)) => {
                 let typed_expression = expression.check(env, function_table, current_function)?;
@@ -289,7 +301,10 @@ impl<'a> TypeCheckFunction<'a> for Expression<'a> {
                         actual_type: expression_type,
                     })
                 } else {
-                    Ok((self.0, TypedExpressionKind::Return(Some(Box::new(typed_expression)))))
+                    Ok((
+                        self.0,
+                        TypedExpressionKind::Return(Some(Box::new(typed_expression))),
+                    ))
                 }
             }
         }
@@ -327,7 +342,9 @@ impl<'a> TypeCheckSpanFunction<'a> for Unary<'a> {
         function_table: &mut FunctionTable,
         current_function: usize,
     ) -> Result<Self::Output, Self::Error> {
-        let typed_expression = self.expression.check(env, function_table, current_function)?;
+        let typed_expression = self
+            .expression
+            .check(env, function_table, current_function)?;
         let expression_type = get_type(&typed_expression.1);
         let operation_ty = match (self.operation, expression_type) {
             (UnaryOperation::Plus, Type::Int) => Some(Type::Int),
@@ -437,7 +454,9 @@ impl<'a> TypeCheckSpanFunction<'a> for If<'a> {
         function_table: &mut FunctionTable,
         current_function: usize,
     ) -> Result<Self::Output, Self::Error> {
-        let typed_condition = self.condition.check(env, function_table, current_function)?;
+        let typed_condition = self
+            .condition
+            .check(env, function_table, current_function)?;
         let condition_type = get_type(&typed_condition.1);
         if condition_type != Type::Boolean {
             return Err(Error::TypeMismatch {
@@ -447,7 +466,9 @@ impl<'a> TypeCheckSpanFunction<'a> for If<'a> {
             });
         }
 
-        let typed_then = self.then_branch.check(env, function_table, current_function)?;
+        let typed_then = self
+            .then_branch
+            .check(env, function_table, current_function)?;
         let then_type = get_type(&typed_then.1);
         if let Some(else_branch) = self.else_branch {
             let typed_else = else_branch.check(env, function_table, current_function)?;
@@ -496,7 +517,9 @@ impl<'a> TypeCheckSpanFunction<'a> for Let<'a> {
         function_table: &mut FunctionTable,
         current_function: usize,
     ) -> Result<Self::Output, Self::Error> {
-        let typed_expression = self.expression.check(env, function_table, current_function)?;
+        let typed_expression = self
+            .expression
+            .check(env, function_table, current_function)?;
         let expression_type = get_type(&typed_expression.1);
         if let Some(given_type) = self.given_type {
             if expression_type != given_type {
@@ -507,7 +530,7 @@ impl<'a> TypeCheckSpanFunction<'a> for Let<'a> {
                     second_type: expression_type,
                 });
             }
-        } else if let Some(previously_defined_type) = env.get(self.name.1.0) {
+        } else if let Some(previously_defined_type) = env.get(self.name.1 .0) {
             if expression_type != previously_defined_type {
                 return Err(Error::ConflictingPreviousType {
                     name_span: self.name.0,
@@ -601,7 +624,9 @@ impl<'a> TypeCheckSpanFunction<'a> for While<'a> {
         function_table: &mut FunctionTable,
         current_function: usize,
     ) -> Result<Self::Output, Self::Error> {
-        let typed_condition = self.condition.check(env, function_table, current_function)?;
+        let typed_condition = self
+            .condition
+            .check(env, function_table, current_function)?;
         let condition_type = get_type(&typed_condition.1);
         if condition_type != Type::Boolean {
             return Err(Error::TypeMismatch {
@@ -611,7 +636,9 @@ impl<'a> TypeCheckSpanFunction<'a> for While<'a> {
             });
         }
 
-        let typed_expression = self.expression.check(env, function_table, current_function)?;
+        let typed_expression = self
+            .expression
+            .check(env, function_table, current_function)?;
         Ok((
             span,
             TypedExpressionKind::While(TypedWhile {

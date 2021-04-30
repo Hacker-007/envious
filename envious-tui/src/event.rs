@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crossterm::event::{KeyCode, KeyEvent, poll, read};
+use crossterm::event::{poll, read, KeyCode, KeyEvent};
 
 pub enum Event<I> {
     Input(I),
@@ -76,5 +76,11 @@ impl Events {
 
     pub fn enable_exit_key(&mut self) {
         self.ignore_exit_key.store(false, Ordering::Relaxed);
+    }
+}
+
+impl Default for Events {
+    fn default() -> Self {
+        Self::new()
     }
 }

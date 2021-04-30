@@ -14,7 +14,8 @@ impl<'a> PrefixParselet<'a> for ParenthesisParselet {
         token: Token<'a>,
     ) -> Result<Expression<'a>, Error<'a>> {
         let expression = parser.parse_expression(0, token.0)?;
-        let (right_parenthesis_span, _) = parser.expect(TokenKind::RightParenthesis, expression.0)?;
+        let (right_parenthesis_span, _) =
+            parser.expect(TokenKind::RightParenthesis, expression.0)?;
         Ok((token.0.combine(right_parenthesis_span), expression.1))
     }
 }

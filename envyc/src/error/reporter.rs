@@ -119,7 +119,7 @@ impl<'a> ErrorReporter<'a> {
         let color_choice = if color {
             ColorChoice::Always
         } else {
-            ColorChoice::Never  
+            ColorChoice::Never
         };
 
         let buffer_writer = BufferWriter::stderr(color_choice);
@@ -544,7 +544,11 @@ pub trait ReporterResult {
     ///
     /// # Arguments
     /// * `error_reporter` - The `ErrorReporter` reference to use to report errors.
-    fn report_result(self, error_reporter: &ErrorReporter, color: bool) -> Result<Self::Output, Self::Error>;
+    fn report_result(
+        self,
+        error_reporter: &ErrorReporter,
+        color: bool,
+    ) -> Result<Self::Output, Self::Error>;
 }
 
 impl<'a> Reporter for Vec<Error<'a>> {
@@ -576,8 +580,13 @@ impl<'a> ReporterResult for Vec<Error<'a>> {
         !self.is_empty()
     }
 
-    fn report_result(self, error_reporter: &ErrorReporter, color: bool) -> Result<Self::Output, Self::Error> {
-        let errors = self.iter()
+    fn report_result(
+        self,
+        error_reporter: &ErrorReporter,
+        color: bool,
+    ) -> Result<Self::Output, Self::Error> {
+        let errors = self
+            .iter()
             .map(|error| String::from_utf8(error_reporter.report(error, color)).unwrap())
             .collect::<Vec<_>>();
 
@@ -615,7 +624,11 @@ impl<'a> ReporterResult for Option<Error<'a>> {
         self.is_some()
     }
 
-    fn report_result(self, error_reporter: &ErrorReporter, color: bool) -> Result<Self::Output, Self::Error> {
+    fn report_result(
+        self,
+        error_reporter: &ErrorReporter,
+        color: bool,
+    ) -> Result<Self::Output, Self::Error> {
         if let Some(ref error) = self {
             let bytes = error_reporter.report(error, color);
             Err(String::from_utf8(bytes).unwrap())
@@ -652,7 +665,11 @@ impl<'a, T> ReporterResult for Result<T, Error<'a>> {
         self.is_err()
     }
 
-    fn report_result(self, error_reporter: &ErrorReporter, color: bool) -> Result<Self::Output, Self::Error> {
+    fn report_result(
+        self,
+        error_reporter: &ErrorReporter,
+        color: bool,
+    ) -> Result<Self::Output, Self::Error> {
         match self {
             Ok(val) => Ok(val),
             Err(error) => {
@@ -689,7 +706,11 @@ impl<'a, T> ReporterResult for Result<T, Vec<Error<'a>>> {
         matches!(self, Err(errors) if !errors.is_empty())
     }
 
-    fn report_result(self, error_reporter: &ErrorReporter, color: bool) -> Result<Self::Output, Self::Error> {
+    fn report_result(
+        self,
+        error_reporter: &ErrorReporter,
+        color: bool,
+    ) -> Result<Self::Output, Self::Error> {
         match self {
             Ok(val) => Ok(val),
             Err(errors) if !errors.is_empty() => {
