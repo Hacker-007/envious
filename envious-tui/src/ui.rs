@@ -1,3 +1,4 @@
+use ansi4tui::bytes_to_text;
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -73,7 +74,7 @@ pub fn render_editor_generated_output<B: Backend>(f: &mut Frame<B>, app: &mut Ap
     let items = app
         .output
         .iter()
-        .map(|output_item| ListItem::new(output_item.as_str()))
+        .map(|output_item| ListItem::new(bytes_to_text(output_item)))
         .collect::<Vec<_>>();
 
     let output = List::new(items).block(Block::default().borders(Borders::ALL).title("Output"));

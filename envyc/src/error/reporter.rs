@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    io::{self, Write},
-};
+use std::{collections::HashMap, io::{self, Write}};
 
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
@@ -28,8 +25,8 @@ impl<'a> ErrorReporter<'a> {
         let mut files = SimpleFiles::new();
         let mut file_ids = HashMap::new();
         for (name, source) in input_files {
-            let id = files.add(name, source);
-            file_ids.insert(name, id);
+            let id = files.add(name.as_ref(), source.as_ref());
+            file_ids.insert(name.as_ref(), id);
         }
 
         Self { files, file_ids }

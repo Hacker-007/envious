@@ -1,5 +1,7 @@
-use std::{error::Error, fs, path::PathBuf, process::Command, time::Instant};
+use std::{error::Error, path::PathBuf, process, time::Instant};
 
+use clap::{App, AppSettings, Arg, SubCommand};
+use command::Command;
 use envious_tui::run_tui;
 use envyc::{
     compile,
@@ -12,93 +14,98 @@ use envyc::{
     semantic_analyzer::types::Type,
     type_check, Config,
 };
-use options::Options;
 
-mod options;
-use structopt::StructOpt;
+use crate::{
+    command::compile_command,
+    utils::{error, get_stem, path_to_str, replace_last},
+};
+
+pub mod command;
+pub mod utils;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
-    let options: Options = Options::from_args();
+    let matches = App::new("envious")
+        .version("0.0.1")
+        .author("Revanth Pothukuchi <revanthpothukuchi123@gmail.com>")
+        .about("The CLI for the Envious Programming Language")
+        .arg(
+            Arg::with_name("tui")
+                .short("t")
+                .long("tui")
+                .help("Starts the terminal editor"),
+        )
+        .subcommand(
+            SubCommand::with_name("compile")
+                .about("Compiles the files without linking them")
+                .arg(
+                    Arg::with_name("files")
+                        .short("f")
+                        .long("files")
+                        .min_values(1)
+                        .value_delimiter(";")
+                        .required(true)
+                        .help("The files to compile"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("build")
+                .about("Compiles the files while linking them")
+                .arg(
+                    Arg::with_name("files")
+                        .short("f")
+                        .long("files")
+                        .min_values(1)
+                        .value_delimiter(";")
+                        .required(true)
+                        .help("The files to compile and link"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("run")
+                .about("Run the main file after compiling and linking")
+                .arg(
+                    Arg::with_name("files")
+                        .short("f")
+                        .long("files")
+                        .min_values(1)
+                        .value_delimiter(";")
+                        .required(true)
+                        .help("The files to run after compiling and linking"),
+                ),
+        )
+        .settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::ColorAlways])
+        .get_matches();
 
-    if options.tui {
-        return run_tui();
-    }
-
-    if options.files.is_empty() {
-        println!("An input file must be provided.");
-        return Ok(());
-    }
-
-    let mut error_reporter = ErrorReporter::new(vec![]);
-    let mut interner = Interner::default();
-    let mut sources = vec![];
-    for file in &options.files {
-        if !file.exists() {
-            println!(
-                "{} could not found or access was denied.",
-                file.to_str().unwrap()
-            );
-            return Ok(());
+    let command = Command::from(matches);
+    match command {
+        Command::Tui => run_tui()?,
+        Command::Compile { files } => {
+            compile_command(files)?;
         }
-
-        let source = fs::read_to_string(&file)?;
-        sources.push(source);
-    }
-
-    let mut main_file = None;
-    for (file, source) in options.files.iter().zip(sources.iter()) {
-        let module_name = file.file_stem().unwrap().to_str().unwrap();
-        let file_path = file.as_os_str().to_str().unwrap();
-        error_reporter.add(&file_path, source);
-        let output_path = file.parent().unwrap().join(format!("{}.o", module_name));
-        let output_file_path = output_path.as_os_str().to_str().unwrap();
-        let bytes = source.as_bytes();
-        let compilation_start = Instant::now();
-        let result = compile_code(
-            &error_reporter,
-            &mut interner,
-            &module_name,
-            &file_path,
-            output_file_path,
-            bytes,
-            options.debug,
-        );
-
-        let errored = if let Some(found_main) = result {
-            match main_file {
-                Some(_) if found_main => {
-                    return Err(Box::<dyn Error + Send + Sync>::from(
-                        "Found multiple main methods.".to_string(),
-                    ))
-                }
-                None if found_main => main_file = Some(file),
-                _ => {}
+        Command::Build { files } => {
+            let (files, main_file) = compile_command(files)?;
+            if let Some(ref main_file) = main_file {
+                build_static_files(&files, main_file)?;
+            } else {
+                return Err(error("No main method could be found."));
             }
-
-            false
-        } else {
-            true
-        };
-
-        if errored {
-            println!("Failed to compile file `{}`.", file_path);
-            return Ok(());
-        } else {
-            println!(
-                "Finished full compilation process for file `{}` after {} seconds.",
-                file_path,
-                compilation_start.elapsed().as_secs_f64()
-            );
         }
+        Command::Run { files } => {
+            let (files, main_file) = compile_command(files)?;
+            if let Some(ref main_file) = main_file {
+                build_static_files(&files, main_file)?;
+                run(path_to_str(&replace_last(
+                    main_file,
+                    get_stem(main_file)?,
+                )?)?)?;
+            } else {
+                return Err(error("No main method could be found."));
+            }
+        }
+        Command::Unknown => return Err(error("Unrecognized command")),
     }
 
-    if let Some(main_file) = main_file {
-        build_static_files(&options.files, main_file)
-    } else {
-        Err(Box::<dyn Error + Send + Sync>::from(
-            "Could not find the main method.".to_string(),
-        ))
-    }
+    Ok(())
 }
 
 fn compile_code(
@@ -108,7 +115,6 @@ fn compile_code(
     file_path: &str,
     output_file_path: &str,
     bytes: &[u8],
-    debug: bool,
 ) -> Option<bool> {
     let tokens = time("Lexing", &error_reporter, || {
         lex(file_path, bytes, interner)
@@ -123,7 +129,7 @@ fn compile_code(
         type_check(program, &mut type_env, &mut function_table)
     })?;
 
-    let output = time("Compiling", &error_reporter, || {
+    time("Compiling", &error_reporter, || {
         let config = Config {
             writing_to_file: true,
             output_file_path,
@@ -131,10 +137,6 @@ fn compile_code(
 
         compile(&typed_program, module_name, interner, Some(config))
     })?;
-
-    if debug {
-        println!("{}", output);
-    }
 
     let contains_main = typed_program.functions.iter().any(|function| {
         function.prototype.name == interner.insert("main".to_string())
@@ -161,40 +163,35 @@ fn time<O: Reporter>(
 }
 
 fn build_static_files(files: &[PathBuf], main_file_path: &PathBuf) -> Result<(), Box<dyn Error>> {
-    let mut command = Command::new("g++");
+    let mut command = process::Command::new("g++");
     for file in files {
-        command.arg(
-            file.parent()
-                .unwrap()
-                .join(format!("{}.o", file.file_stem().unwrap().to_str().unwrap())),
-        );
+        let file_stem = get_stem(file)?;
+        command.arg(replace_last(file, format!("{}.o", file_stem))?);
     }
 
-    let executable_path = main_file_path.parent().unwrap().join(format!(
-        "{}",
-        main_file_path.file_stem().unwrap().to_str().unwrap()
-    ));
+    let executable_path = replace_last(main_file_path, format!("{}", get_stem(main_file_path)?))?;
     let output = command
         .arg("test/io.o")
         .arg("-o")
         .arg(&executable_path)
-        .output()
-        .expect("Failed to link files");
+        .output()?;
 
     if !output.status.success() {
-        panic!("Failed to link files");
+        return Err(error("Failed to link files"));
     }
 
-    let output = Command::new(executable_path)
-        .output()
-        .expect("Failed to run executable");
+    Ok(())
+}
+
+fn run(executable_path: &str) -> Result<(), Box<dyn Error>> {
+    let output = process::Command::new(executable_path).output()?;
 
     if !output.stdout.is_empty() {
-        print!("{}", String::from_utf8(output.stdout).unwrap());
+        print!("{}", String::from_utf8(output.stdout)?);
     }
 
     if !output.stderr.is_empty() {
-        print!("{}", String::from_utf8(output.stderr).unwrap());
+        print!("{}", String::from_utf8(output.stderr)?);
     }
 
     Ok(())
