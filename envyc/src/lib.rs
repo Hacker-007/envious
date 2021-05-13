@@ -34,7 +34,7 @@ pub fn lex<'a>(
     Lexer::new(file_path, bytes).get_tokens(interner)
 }
 
-pub fn filter_tokens<'a>(tokens: Vec<Token<'a>>) -> Peekable<impl Iterator<Item = Token<'a>>> {
+pub fn filter_tokens(tokens: Vec<Token>) -> Peekable<impl Iterator<Item = Token>> {
     tokens
         .into_iter()
         .filter(|token| !matches!(token.1, TokenKind::Whitespace(_)))
@@ -71,7 +71,8 @@ pub fn compile<'a>(
     let builder = context.create_builder();
 
     let mut value_env = Environment::default();
-    program.code_gen(&context, &module, &builder, interner, &mut value_env)?;
+    CodeGenerator::new(&context, &module, &builder, interner, &mut value_env)
+        .generate_program(program)?;
 
     let pass_manager_builder = PassManagerBuilder::create();
     pass_manager_builder.set_optimization_level(OptimizationLevel::Default);

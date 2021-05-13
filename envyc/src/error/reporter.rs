@@ -1,4 +1,7 @@
-use std::{collections::HashMap, io::{self, Write}};
+use std::{
+    collections::HashMap,
+    io::{self, Write},
+};
 
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},

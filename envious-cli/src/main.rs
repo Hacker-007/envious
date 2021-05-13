@@ -1,4 +1,9 @@
-use std::{error::Error, path::PathBuf, process, time::Instant};
+use std::{
+    error::Error,
+    path::{Path, PathBuf},
+    process,
+    time::Instant,
+};
 
 use clap::{App, AppSettings, Arg, SubCommand};
 use command::Command;
@@ -162,14 +167,14 @@ fn time<O: Reporter>(
     value.report(error_reporter, true)
 }
 
-fn build_static_files(files: &[PathBuf], main_file_path: &PathBuf) -> Result<(), Box<dyn Error>> {
+fn build_static_files(files: &[PathBuf], main_file_path: &Path) -> Result<(), Box<dyn Error>> {
     let mut command = process::Command::new("g++");
     for file in files {
         let file_stem = get_stem(file)?;
         command.arg(replace_last(file, format!("{}.o", file_stem))?);
     }
 
-    let executable_path = replace_last(main_file_path, format!("{}", get_stem(main_file_path)?))?;
+    let executable_path = replace_last(main_file_path, get_stem(main_file_path)?.to_string())?;
     let output = command
         .arg("test/io.o")
         .arg("-o")
