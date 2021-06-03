@@ -105,3 +105,12 @@ function(parameters)
 ```
 
 In this case, `function` refers to the name of the function and `parameters` refers to the comma separated paramers that are passed to the function.
+
+**TUI and CLI**
+
+In addition to the compiler, there are two seperate modules, namely the TUI (terminal user interface) and the CLI (command line interface)
+
+The TUI allows the user to quickly prototype code in a REPL like environment and see colored error messages and the generated code.
+The behavior of the TUI should change soon to show the output of the code as opposed to the generated code.
+
+The CLI provides an interface for the user to interact with the compiler. It provides options to compile, build, and run any given files.
