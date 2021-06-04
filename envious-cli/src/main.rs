@@ -176,7 +176,7 @@ fn build_static_files(files: &[PathBuf], main_file_path: &Path) -> Result<(), Bo
     }
 
     let executable_path = replace_last(main_file_path, get_stem(main_file_path)?.to_string())?;
-    let std_path = home_dir().ok_or("Could not find home directory.")?.join("envious/std/std.o");
+    let std_path = home_dir().ok_or("Could not find home directory.")?.join(".envious/std/std.o");
     let output = command
         .arg(std_path)
         .arg("-o")
