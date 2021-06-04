@@ -19,6 +19,7 @@ use envyc::{
     semantic_analyzer::types::Type,
     type_check, Config,
 };
+use home::home_dir;
 
 use crate::{
     command::compile_command,
@@ -175,8 +176,9 @@ fn build_static_files(files: &[PathBuf], main_file_path: &Path) -> Result<(), Bo
     }
 
     let executable_path = replace_last(main_file_path, get_stem(main_file_path)?.to_string())?;
+    let std_path = home_dir().ok_or("Could not find home directory.")?.join("envious/std/std.o");
     let output = command
-        .arg("test/io.o")
+        .arg(std_path)
         .arg("-o")
         .arg(&executable_path)
         .output()?;
