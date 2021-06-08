@@ -114,3 +114,25 @@ The TUI allows the user to quickly prototype code in a REPL like environment and
 The behavior of the TUI should change soon to show the output of the code as opposed to the generated code.
 
 The CLI provides an interface for the user to interact with the compiler. It provides options to compile, build, and run any given files.
+
+**Quick Start**
+
+The easiest way to play around with Envy is via the TUI. In order to get it running locally, you'll need to install the dependencies. The following directions are currently OS X only:
+
+1. Install [homebrew](https://brew.sh/)
+2. Install Rust: `$ brew install rust`
+3. Install cmake: `$ brew install cmake`
+4. Install LLVM v10.0.0 from the [LLVM Download Page](https://releases.llvm.org/) and unzip it into your home directory.
+5. Install the `llvm-sys` package. At the time of writing, the current required version is 10.0.0:
+```bash
+cd ~ && mkdir -p llvm-10.0.0.src/build
+cd llvm-10.0.0.src/build
+cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/llvm-10.0.0
+cmake --build . --target install # Note that this may take in the neighborhood of 90 minutes.
+```
+6. Build envious: `$ cd path_to_envious_root && LLVM_SYS_100_PREFIX=$HOME/llvm-10.0.0 cargo build`
+7. Now enter the TUI: `$ cd path_to_envious_root/target/debug && ./envious -t`
+8. If everything worked, you should see something like the following:
+
+<img width="2174" alt="Screen Shot 2021-06-08 at 4 11 14 PM" src="https://user-images.githubusercontent.com/702327/121269166-3112a880-c874-11eb-980f-ceb052be17e8.png">
+
