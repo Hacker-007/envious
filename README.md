@@ -115,7 +115,7 @@ The behavior of the TUI should change soon to show the output of the code as opp
 
 The CLI provides an interface for the user to interact with the compiler. It provides options to compile, build, and run any given files.
 
-** Quick Start **
+**Quick Start**
 The easiest way to play around with Envy is via the TUI. In order to get it running locally, you'll need to install the dependencies. The following directions are currently OS X only:
 
 1. Install [homebrew](https://brew.sh/)
@@ -132,4 +132,6 @@ cmake --build . --target install # Note that this may take in the neighborhood o
 6. Build envious: `$ cd path_to_envious_root && LLVM_SYS_100_PREFIX=$HOME/llvm-10.0.0 cargo build
 7. Now enter the TUI: `$ cd path_to_envious_root/target/debug && ./envious -t`
 8. If everything worked, you should see something like the following:
+
+<img width="2174" alt="Screen Shot 2021-06-08 at 4 11 14 PM" src="https://user-images.githubusercontent.com/702327/121269166-3112a880-c874-11eb-980f-ceb052be17e8.png">
 
