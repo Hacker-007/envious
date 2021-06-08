@@ -116,6 +116,7 @@ The behavior of the TUI should change soon to show the output of the code as opp
 The CLI provides an interface for the user to interact with the compiler. It provides options to compile, build, and run any given files.
 
 **Quick Start**
+
 The easiest way to play around with Envy is via the TUI. In order to get it running locally, you'll need to install the dependencies. The following directions are currently OS X only:
 
 1. Install [homebrew](https://brew.sh/)
