@@ -129,7 +129,7 @@ cd llvm-10.0.0.src/build
 cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/llvm-10.0.0
 cmake --build . --target install # Note that this may take in the neighborhood of 90 minutes.
 ```
-6. Build envious: `$ cd path_to_envious_root && LLVM_SYS_100_PREFIX=$HOME/llvm-10.0.0 cargo build
+6. Build envious: `$ cd path_to_envious_root && LLVM_SYS_100_PREFIX=$HOME/llvm-10.0.0 cargo build`
 7. Now enter the TUI: `$ cd path_to_envious_root/target/debug && ./envious -t`
 8. If everything worked, you should see something like the following:
 
