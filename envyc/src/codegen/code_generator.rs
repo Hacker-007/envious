@@ -152,8 +152,8 @@ impl<'a, 'b, 'c, 'ctx> CodeGenerator<'a, 'b, 'ctx> {
         let expression =
             self.compile_expression(&defined_function.body, function, &mut function_context)?;
 
-        if defined_function.body.1.get_type() != Type::Never {
-            if defined_function.body.1.get_type() != Type::Void {
+        if defined_function.body.1.get_runtime_type() != Type::Never {
+            if defined_function.body.1.get_runtime_type() != Type::Void {
                 function_context
                     .add_return_block(self.builder.get_insert_block().unwrap(), Some(expression));
             } else {
@@ -421,7 +421,7 @@ impl<'a, 'b, 'c, 'ctx> CodeGenerator<'a, 'b, 'ctx> {
         let then_branch =
             self.compile_expression(&typed_if.then_branch, current_function, function_context)?;
 
-        if typed_if.then_branch.1.get_type() != Type::Never {
+        if typed_if.then_branch.1.get_runtime_type() != Type::Never {
             self.builder.build_unconditional_branch(end_block);
         }
 
@@ -430,14 +430,14 @@ impl<'a, 'b, 'c, 'ctx> CodeGenerator<'a, 'b, 'ctx> {
             let else_branch_gen =
                 self.compile_expression(else_branch, current_function, function_context)?;
 
-            if else_branch.1.get_type() != Type::Never {
+            if else_branch.1.get_runtime_type() != Type::Never {
                 self.builder.build_unconditional_branch(end_block);
             }
 
             self.builder.position_at_end(end_block);
-            if typed_if.then_branch.1.get_type() == Type::Never {
+            if typed_if.then_branch.1.get_runtime_type() == Type::Never {
                 Ok(else_branch_gen)
-            } else if else_branch.1.get_type() == Type::Never {
+            } else if else_branch.1.get_runtime_type() == Type::Never {
                 Ok(then_branch)
             } else {
                 let phi = self.builder.build_phi(then_branch.get_type(), "ifphi");
@@ -530,7 +530,7 @@ impl<'a, 'b, 'c, 'ctx> CodeGenerator<'a, 'b, 'ctx> {
         self.builder.position_at_end(loop_block);
         self.compile_expression(&typed_while.expression, current_function, function_context)?;
 
-        if typed_while.expression.1.get_type() != Type::Never {
+        if typed_while.expression.1.get_runtime_type() != Type::Never {
             self.builder
                 .build_unconditional_branch(condition_check_block);
         }

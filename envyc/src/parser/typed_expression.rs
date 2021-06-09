@@ -32,7 +32,7 @@ pub enum TypedExpressionKind<'a> {
 }
 
 impl<'a> TypedExpressionKind<'a> {
-    pub fn get_type(&self) -> Type {
+    pub fn get_runtime_type(&self) -> Type {
         match self {
             TypedExpressionKind::Int(_) => Type::Int,
             TypedExpressionKind::Float(_) => Type::Float,
@@ -45,7 +45,7 @@ impl<'a> TypedExpressionKind<'a> {
             TypedExpressionKind::Let(ref inner) => inner.ty,
             TypedExpressionKind::Block(ref expressions) => expressions
                 .last()
-                .map_or(Type::Void, |(_, ref kind)| kind.get_type()),
+                .map_or(Type::Void, |(_, ref kind)| kind.get_runtime_type()),
             TypedExpressionKind::Application(ref inner) => inner.ty,
             TypedExpressionKind::While(_) => Type::Void,
             TypedExpressionKind::Return(_) => Type::Never,
