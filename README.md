@@ -28,6 +28,19 @@ Currently, there are 4 different parts of the project that have been partially c
 - External function definitions
 - Static type checking
 
+**Types**
+
+Seeing as to how Envious is a statically typed language, it is important to discuss the various types in the language.
+
+Currently, there are 5 types:
+- Int
+- Float
+- Bool
+- Char
+- Void
+
+In the future, more types will be included, however, the lack of a garbage collector or memory management makes it difficult to implement these types at the moment.
+
 **The different types of expressions**
 
 Envious is an expression based language. Therefore, most of the statements written are expressions. Here is a detailed description of each expression.
@@ -130,9 +143,26 @@ cd llvm-10.0.0.src/build
 cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/llvm-10.0.0
 cmake --build . --target install # Note that this may take in the neighborhood of 90 minutes.
 ```
-6. Build envious: `$ cd path_to_envious_root && LLVM_SYS_100_PREFIX=$HOME/llvm-10.0.0 cargo build`
-7. Now enter the TUI: `$ cd path_to_envious_root/target/debug && ./envious -t`
+6. Build envious: `$ cd path_to_envious_root && LLVM_SYS_100_PREFIX=$HOME/llvm-10.0.0 cargo build --release`
+7. Now enter the TUI: `$ cd path_to_envious_root/target/release && ./envious -t`
 8. If everything worked, you should see something like the following:
 
 <img width="2174" alt="Screen Shot 2021-06-08 at 4 11 14 PM" src="https://user-images.githubusercontent.com/702327/121269166-3112a880-c874-11eb-980f-ceb052be17e8.png">
 
+The following directions are for Linux and WSL users:
+
+1. Install Rust: `$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+2. Install LLVM 10: `$ sudo apt-get install llvm-10*`
+3. Build envious: `$ cd path_to_envious_root && LLVM_SYS_100_PREFIX=$HOME/llvm-10.0.0 cargo build --release`
+4. Now enter the TUI: `$ cd path_to_envious_root/target/release && ./envious -t`
+
+The following directions are for Windows users:
+
+1. Install Chocolatey:
+    - First open PowerShell in administrative mode
+    - Run `$ Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))`
+2. Install LLVM 10: `$ choco install llvm --version=10.0.0`
+3. Add LLVM 10 as LLVM_SYS_100_PREFIX to Path
+4. Install Rust: Go to `https://www.rust-lang.org/tools/install` and follow the instructions to install Rust for Windows
+5. Build envious: `$ cd path_to_envious_root && cargo build --release`
+6. Now enter the TUI: `$ cd path_to_envious_root/target/release && ./envious -t`
