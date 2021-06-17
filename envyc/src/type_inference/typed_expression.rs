@@ -1,6 +1,9 @@
+use std::rc::Rc;
+
 use crate::{
     error::Span,
     parser::expression::{BinaryOperation, UnaryOperation},
+    type_inference::monotype::Monotype,
 };
 
 use super::monotype::MonotypeRef;
@@ -16,10 +19,10 @@ pub type TypedExpression<'a> = (Span<'a>, TypedExpressionKind<'a>);
 /// `Interner`.
 #[derive(Debug)]
 pub enum TypedExpressionKind<'a> {
-    Int(i64),
-    Float(f64),
-    Boolean(bool),
-    Char(char),
+    Int(MonotypeRef, i64),
+    Float(MonotypeRef, f64),
+    Boolean(MonotypeRef, bool),
+    Char(MonotypeRef, char),
     // The actual value for the `Identifier` are
     // stored in the `Interner` to reduce redundency in values. Instead,
     // the id's are stored in the variant.
@@ -32,6 +35,55 @@ pub enum TypedExpressionKind<'a> {
     Application(TypedApplication<'a>),
     While(TypedWhile<'a>),
     Return(Option<Box<TypedExpression<'a>>>),
+}
+
+impl<'a> TypedExpressionKind<'a> {
+    pub fn get_type(&self) -> MonotypeRef {
+        match self {
+            TypedExpressionKind::Int(ty, _) => ty.clone(),
+            TypedExpressionKind::Float(ty, _) => ty.clone(),
+            TypedExpressionKind::Boolean(ty, _) => ty.clone(),
+            TypedExpressionKind::Char(ty, _) => ty.clone(),
+            TypedExpressionKind::Identifier(TypedIdentifier { id: _, ty }) => ty.clone(),
+            TypedExpressionKind::Unary(TypedUnary {
+                operation: _,
+                expression: _,
+                ty,
+            }) => ty.clone(),
+            TypedExpressionKind::Binary(TypedBinary {
+                operation: _,
+                left: _,
+                right: _,
+                ty,
+            }) => ty.clone(),
+            TypedExpressionKind::If(TypedIf {
+                condition: _,
+                then_branch: _,
+                else_branch: _,
+                ty,
+            }) => ty.clone(),
+            TypedExpressionKind::Let(TypedLet {
+                name: _,
+                given_type: _,
+                expression: _,
+                ty,
+            }) => ty.clone(),
+            TypedExpressionKind::Block(expressions) => expressions
+                .last()
+                .map(|expression| expression.1.get_type())
+                .unwrap_or_else(|| Rc::new(Monotype::Void)),
+            TypedExpressionKind::Application(TypedApplication {
+                function_name: _,
+                parameters: _,
+                ty,
+            }) => ty.clone(),
+            TypedExpressionKind::While(_) => Rc::new(Monotype::Void),
+            TypedExpressionKind::Return(value) => value.as_ref().map_or_else(
+                || Rc::new(Monotype::Void),
+                |expression| expression.1.get_type(),
+            ),
+        }
+    }
 }
 
 #[derive(Debug)]
