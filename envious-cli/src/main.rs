@@ -17,7 +17,9 @@ use envyc::{
     interner::Interner,
     lex, parse,
     semantic_analyzer::types::Type,
-    type_check, Config,
+    type_check,
+    type_inference::type_inferer::TypeInferer,
+    Config,
 };
 use home::home_dir;
 
@@ -128,6 +130,20 @@ fn compile_code(
 
     let filtered_tokens = filter_tokens(tokens);
     let program = time("Parsing", &error_reporter, || parse(filtered_tokens))?;
+
+    if let Some(function) = program.functions.get(1) {
+        let mut inferer = TypeInferer::new();
+        let typed_expression = inferer.annotate_expression(&function.body);
+        println!("{:#?}", &typed_expression);
+        let constraints = inferer.get_constraints(&typed_expression);
+        println!("{:#?}", &constraints);
+        let substitution = inferer.unify(&constraints);
+        println!("{:#?}", &substitution);
+        println!(
+            "{:#?}",
+            substitution.apply_type(typed_expression.1.get_type())
+        );
+    }
 
     let mut type_env = Environment::default();
     let mut function_table = FunctionTable::default();

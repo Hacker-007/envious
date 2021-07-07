@@ -1,7 +1,10 @@
 use std::{collections::HashSet, rc::Rc};
 
 use crate::{
-    parser::expression::{Application, Binary, Expression, ExpressionKind, If, Let, Unary, While},
+    parser::expression::{
+        Application, Binary, BinaryOperation, Expression, ExpressionKind, If, Let, Unary,
+        UnaryOperation, While,
+    },
     type_inference::typed_expression::{
         TypedApplication, TypedBinary, TypedIdentifier, TypedIf, TypedLet, TypedUnary, TypedWhile,
     },
@@ -11,6 +14,7 @@ use super::{
     constraints::Constraint,
     context::Context,
     monotype::{Monotype, MonotypeRef},
+    substitution::Substitution,
     typed_expression::{TypedExpression, TypedExpressionKind},
 };
 
@@ -184,31 +188,69 @@ impl<'a> TypeInferer {
             }
             TypedExpressionKind::Identifier(_) => {}
             TypedExpressionKind::Unary(TypedUnary {
-                operation: _,
+                operation,
                 expression,
                 ty,
             }) => {
                 let expression_constraints = self.get_constraints(expression);
-                set.insert(Constraint::Equal(ty.clone(), Rc::new(Monotype::Int)));
-                set.insert(Constraint::Equal(
-                    expression.1.get_type(),
-                    Rc::new(Monotype::Int),
-                ));
+                match operation {
+                    UnaryOperation::Plus | UnaryOperation::Minus => {
+                        set.insert(Constraint::Equal(ty.clone(), Rc::new(Monotype::Int)));
+                        set.insert(Constraint::Equal(
+                            expression.1.get_type(),
+                            Rc::new(Monotype::Int),
+                        ));
+                    }
+                    UnaryOperation::Not => {
+                        set.insert(Constraint::Equal(ty.clone(), Rc::new(Monotype::Boolean)));
+                        set.insert(Constraint::Equal(
+                            expression.1.get_type(),
+                            Rc::new(Monotype::Boolean),
+                        ));
+                    }
+                }
+
                 set.extend(expression_constraints.into_iter());
             }
             TypedExpressionKind::Binary(TypedBinary {
-                operation: _,
+                operation,
                 left,
                 right,
                 ty,
             }) => {
                 let left_constraints = self.get_constraints(left);
                 let right_constraints = self.get_constraints(right);
-                set.insert(Constraint::Equal(ty.clone(), Rc::new(Monotype::Int)));
-                set.insert(Constraint::Equal(
-                    expression.1.get_type(),
-                    Rc::new(Monotype::Int),
-                ));
+                match operation {
+                    BinaryOperation::Plus
+                    | BinaryOperation::Minus
+                    | BinaryOperation::Multiply
+                    | BinaryOperation::Divide => {
+                        set.insert(Constraint::Equal(ty.clone(), Rc::new(Monotype::Int)));
+                        set.insert(Constraint::Equal(left.1.get_type(), Rc::new(Monotype::Int)));
+                        set.insert(Constraint::Equal(
+                            right.1.get_type(),
+                            Rc::new(Monotype::Int),
+                        ));
+                    }
+                    BinaryOperation::Equals
+                    | BinaryOperation::LessThan
+                    | BinaryOperation::GreaterThan
+                    | BinaryOperation::LessThanEquals
+                    | BinaryOperation::GreaterThanEquals => {
+                        set.insert(Constraint::Equal(ty.clone(), Rc::new(Monotype::Boolean)));
+                    }
+                    BinaryOperation::Or | BinaryOperation::And => {
+                        set.insert(Constraint::Equal(ty.clone(), Rc::new(Monotype::Boolean)));
+                        set.insert(Constraint::Equal(
+                            left.1.get_type(),
+                            Rc::new(Monotype::Boolean),
+                        ));
+                        set.insert(Constraint::Equal(
+                            right.1.get_type(),
+                            Rc::new(Monotype::Boolean),
+                        ));
+                    }
+                }
                 set.extend(left_constraints);
                 set.extend(right_constraints);
             }
@@ -299,6 +341,86 @@ impl<'a> TypeInferer {
         }
 
         set
+    }
+
+    pub fn unify(&self, constraints: &HashSet<Constraint>) -> Substitution {
+        let mut iter = constraints.iter();
+        match iter.next() {
+            None => Substitution::new(),
+            Some(constraint) => {
+                let substitution_head = self.unify_one(constraint);
+                let substituted_tail = substitution_head.apply_constraints(iter);
+                let substitution_tail = self.unify(&substituted_tail);
+                substitution_head.compose(substitution_tail)
+            }
+        }
+    }
+
+    fn unify_one(&self, constraint: &Constraint) -> Substitution {
+        match constraint {
+            Constraint::Equal(left, right) => match (&**left, &**right) {
+                (Monotype::Int, Monotype::Int)
+                | (Monotype::Float, Monotype::Float)
+                | (Monotype::Boolean, Monotype::Boolean)
+                | (Monotype::Char, Monotype::Char)
+                | (Monotype::Void, Monotype::Void) => Substitution::new(),
+                (
+                    Monotype::Function {
+                        parameters: first_parameters,
+                        ret: first_ret,
+                    },
+                    Monotype::Function {
+                        parameters: second_parameters,
+                        ret: second_ret,
+                    },
+                ) if first_parameters.len() == second_parameters.len() => {
+                    let mut set = HashSet::new();
+                    first_parameters.iter().zip(second_parameters).for_each(
+                        |(first_parameter, second_parameter)| {
+                            set.insert(Constraint::Equal(
+                                first_parameter.clone(),
+                                second_parameter.clone(),
+                            ));
+                        },
+                    );
+                    set.insert(Constraint::Equal(first_ret.clone(), second_ret.clone()));
+                    self.unify(&set)
+                }
+                (Monotype::Existential(id), _) => self.unify_var(*id, right.clone()),
+                (_, Monotype::Existential(id)) => self.unify_var(*id, left.clone()),
+                _ => todo!("Unification error occurred!"),
+            },
+        }
+    }
+
+    fn unify_var(&self, id: usize, ty: MonotypeRef) -> Substitution {
+        match &*ty {
+            &Monotype::Existential(ty_id) if id == ty_id => Substitution::new(),
+            Monotype::Existential(_) => {
+                let mut substitution = Substitution::new();
+                substitution.insert(id, ty);
+                substitution
+            }
+            _ if self.occurs(id, ty.clone()) => todo!("Occurs check failed!"),
+            _ => {
+                let mut substitution = Substitution::new();
+                substitution.insert(id, ty);
+                substitution
+            }
+        }
+    }
+
+    fn occurs(&self, id: usize, ty: MonotypeRef) -> bool {
+        match &*ty {
+            Monotype::Function { parameters, ret } => {
+                parameters
+                    .iter()
+                    .any(|parameter| self.occurs(id, parameter.clone()))
+                    || self.occurs(id, ret.clone())
+            }
+            &Monotype::Existential(ty_id) => id == ty_id,
+            _ => false,
+        }
     }
 
     fn get_or_existential(&mut self, id: usize) -> MonotypeRef {

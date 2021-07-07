@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, rc::Rc};
+use std::{collections::{HashMap, HashSet, hash_set::Iter}, rc::Rc};
 
 use super::{constraints::Constraint, monotype::{Monotype, MonotypeRef}};
 
@@ -14,8 +14,12 @@ impl Substitution {
         }
     }
 
-    pub fn apply_constraints(&self, constraints: HashSet<Constraint>) -> HashSet<Constraint> {
-        constraints.iter()
+    pub fn insert(&mut self, id: usize, ty: MonotypeRef) {
+        self.solutions.insert(id, ty);
+    }
+
+    pub fn apply_constraints(&self, constraints: Iter<Constraint>) -> HashSet<Constraint> {
+        constraints
                 .map(|constraint| self.apply_constraint(constraint))
                 .collect()
     }
@@ -36,7 +40,7 @@ impl Substitution {
         }
     }
 
-    fn apply_type(&self, ty: MonotypeRef) -> MonotypeRef {
+    pub fn apply_type(&self, ty: MonotypeRef) -> MonotypeRef {
         self.solutions.iter()
             .fold(ty, |result, (id, solution_ty)| {
                 self.substitute(result, *id, solution_ty.clone())
