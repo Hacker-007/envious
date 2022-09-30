@@ -1,40 +1,52 @@
+mod assert;
 mod compiler;
-mod lexical_analysis;
 mod error;
+mod lexical_analysis;
 mod location;
 
 #[cfg(test)]
 mod tests {
+    use crate::assert::lexer_asserter::LexerAsserter;
     use crate::compiler::compile_unit::CompileUnit;
-	use crate::lexical_analysis::{Lexer, token::TokenKind};
-	use crate::error::CompilerError;
-	use crate::location::Location;
-	use std::mem::discriminant;
+    use crate::error::CompilerErrorKind;
+    use crate::lexical_analysis::token::TokenKind;
 
-	#[test]
-	fn lex_whitespace_successful() {
-		let compile_unit = CompileUnit::new("Test", b"   \t \n    \r    \n");
-		let lexer = Lexer::new(&compile_unit);
-        let result = lexer.into_iter().collect::<Result<Vec<_>, _>>();
+    #[test]
+    fn lex_whitespace_successful() {
+        let compile_unit = CompileUnit::new("Test", b"  \t \n  \r");
+        let mut asserter = LexerAsserter::new(&compile_unit);
+        asserter.assert_token(TokenKind::Whitespace(' '));
+        asserter.assert_token(TokenKind::Whitespace(' '));
+        asserter.assert_token(TokenKind::Whitespace('\t'));
+        asserter.assert_token(TokenKind::Whitespace(' '));
+        asserter.assert_token(TokenKind::Whitespace('\n'));
+        asserter.assert_token(TokenKind::Whitespace(' '));
+        asserter.assert_token(TokenKind::Whitespace(' '));
+        asserter.assert_token(TokenKind::Whitespace('\r'));
+    }
 
-		assert!(result.is_ok());
-		let tokens = result.unwrap();
-		for token in &tokens {
-			assert_eq!(discriminant(&token.kind), discriminant(&TokenKind::Whitespace(' ')));
-		}
-	}
+    #[test]
+    fn lex_unknown_char_fails() {
+        let compile_unit = CompileUnit::new("Test", b"^");
+        let mut asserter = LexerAsserter::new(&compile_unit);
+        asserter.assert_error(CompilerErrorKind::UnrecognizedCharacter);
+    }
 
-	#[test]
-	fn lex_unknown_char_fails() {
-		let compile_unit = CompileUnit::new("Test", b"^");
-		let lexer = Lexer::new(&compile_unit);
-        let result = lexer.into_iter().collect::<Result<Vec<_>, _>>();
+    #[test]
+    fn lex_simple_number_expression() {
+        let compile_unit = CompileUnit::new("Test", b"1 + 3 * 4");
+        let mut asserter = LexerAsserter::new(&compile_unit);
+        asserter.assert_token(TokenKind::Integer(1));
+        asserter.assert_token(TokenKind::Whitespace(' '));
+        asserter.assert_token(TokenKind::Plus);
+        asserter.assert_token(TokenKind::Whitespace(' '));
+        asserter.assert_token(TokenKind::Integer(3));
+        asserter.assert_token(TokenKind::Whitespace(' '));
+        asserter.assert_token(TokenKind::Star);
+        asserter.assert_token(TokenKind::Whitespace(' '));
+        asserter.assert_token(TokenKind::Integer(4));
+    }
 
-		assert!(result.is_err());
-		let error = result.unwrap_err();
-		assert_eq!(discriminant(&error), discriminant(&CompilerError::UnrecognizedCharacter(Location::new(0, 1))))
-	}
-	
     #[test]
     fn compile_compile_unit_successfully() {
         let compile_unit = CompileUnit::new("Test", b" ");

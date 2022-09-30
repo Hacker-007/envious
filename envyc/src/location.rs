@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub(crate) struct Location {
     pub(crate) start_index: usize,
     pub(crate) end_index: usize,
