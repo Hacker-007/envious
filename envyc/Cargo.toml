@@ -5,6 +5,3 @@ authors = ["Revanth Pothukuchi <revanthpothukuchi123@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-bimap = "0.6.0"
-codespan-reporting = "0.11.0"
-inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm10-0"] }
