@@ -13,9 +13,9 @@ pub(crate) struct LexerAsserter<'file, 'unit> {
 }
 
 impl<'file, 'unit> LexerAsserter<'file, 'unit> {
-    pub fn new(compile_unit: &'unit CompileUnit<'file>) -> Self {
+    pub fn new(compile_unit: &'unit CompileUnit<'file>, ignore_whitespace: bool) -> Self {
         Self {
-            lexer: Lexer::new(compile_unit),
+            lexer: Lexer::new(compile_unit, ignore_whitespace),
         }
     }
 

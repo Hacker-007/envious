@@ -22,7 +22,7 @@ impl<'file> CompileUnit<'file> {
     }
 
     fn perform_lexical_analysis(&self) -> Result<Vec<Token>, CompilerError> {
-        let lexer = Lexer::new(self);
+        let lexer = Lexer::new(self, true);
         lexer.into_iter().collect::<Result<Vec<_>, _>>()
     }
 }

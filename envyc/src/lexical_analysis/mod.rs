@@ -8,6 +8,7 @@ use crate::location::Location;
 pub(crate) struct Lexer<'file, 'unit> {
     compile_unit: &'unit CompileUnit<'file>,
     index: usize,
+    ignore_whitespace: bool,
 }
 
 fn form_token(kind: TokenKind, start: usize, length: usize) -> Result<Token, CompilerError> {
@@ -15,14 +16,25 @@ fn form_token(kind: TokenKind, start: usize, length: usize) -> Result<Token, Com
 }
 
 impl<'file, 'unit> Lexer<'file, 'unit> {
-    pub fn new(compile_unit: &'unit CompileUnit<'file>) -> Self {
+    pub fn new(compile_unit: &'unit CompileUnit<'file>, ignore_whitespace: bool) -> Self {
         Self {
             compile_unit,
             index: 0,
+            ignore_whitespace,
         }
     }
 
     fn next_token(&mut self) -> Result<Token, CompilerError> {
+        if self.ignore_whitespace {
+            while let Some(byte) = self.peek() {
+                if byte.is_ascii_whitespace() {
+                    self.next();
+                } else {
+                    break;
+                }
+            }
+        }
+
         if let Some((start_index, byte)) = self.next() {
             match byte {
                 whitespace if whitespace.is_ascii_whitespace() => {

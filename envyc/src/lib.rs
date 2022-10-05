@@ -14,7 +14,7 @@ mod tests {
     #[test]
     fn lex_whitespace_successful() {
         let compile_unit = CompileUnit::new("Test", b"  \t \n  \r");
-        let mut asserter = LexerAsserter::new(&compile_unit);
+        let mut asserter = LexerAsserter::new(&compile_unit, false);
         asserter.assert_token(TokenKind::Whitespace(' '));
         asserter.assert_token(TokenKind::Whitespace(' '));
         asserter.assert_token(TokenKind::Whitespace('\t'));
@@ -28,22 +28,18 @@ mod tests {
     #[test]
     fn lex_unknown_char_fails() {
         let compile_unit = CompileUnit::new("Test", b"^");
-        let mut asserter = LexerAsserter::new(&compile_unit);
+        let mut asserter = LexerAsserter::new(&compile_unit, true);
         asserter.assert_error(CompilerErrorKind::UnrecognizedCharacter);
     }
 
     #[test]
     fn lex_simple_number_expression() {
         let compile_unit = CompileUnit::new("Test", b"1 + 3 * 4");
-        let mut asserter = LexerAsserter::new(&compile_unit);
+        let mut asserter = LexerAsserter::new(&compile_unit, true);
         asserter.assert_token(TokenKind::Integer(1));
-        asserter.assert_token(TokenKind::Whitespace(' '));
         asserter.assert_token(TokenKind::Plus);
-        asserter.assert_token(TokenKind::Whitespace(' '));
         asserter.assert_token(TokenKind::Integer(3));
-        asserter.assert_token(TokenKind::Whitespace(' '));
         asserter.assert_token(TokenKind::Star);
-        asserter.assert_token(TokenKind::Whitespace(' '));
         asserter.assert_token(TokenKind::Integer(4));
     }
 
