@@ -1,11 +1,13 @@
 pub(crate) mod token;
 
+use crate::compiler::compile_session::CompileSession;
 use crate::compiler::compile_unit::CompileUnit;
 use crate::error::{CompilerError, CompilerErrorKind};
 use crate::lexical_analysis::token::{Token, TokenKind};
 use crate::location::Location;
 
-pub(crate) struct Lexer<'file, 'unit> {
+pub(crate) struct Lexer<'session, 'file, 'unit> {
+    compile_session: &'session mut CompileSession,
     compile_unit: &'unit CompileUnit<'file>,
     index: usize,
     ignore_whitespace: bool,
@@ -15,9 +17,14 @@ fn form_token(kind: TokenKind, start: usize, length: usize) -> Result<Token, Com
     Ok(Token::new(kind, Location::new(start, start + length)))
 }
 
-impl<'file, 'unit> Lexer<'file, 'unit> {
-    pub fn new(compile_unit: &'unit CompileUnit<'file>, ignore_whitespace: bool) -> Self {
+impl<'session, 'file, 'unit> Lexer<'session, 'file, 'unit> {
+    pub fn new(
+        compile_session: &'session mut CompileSession,
+        compile_unit: &'unit CompileUnit<'file>,
+        ignore_whitespace: bool,
+    ) -> Self {
         Self {
+            compile_session,
             compile_unit,
             index: 0,
             ignore_whitespace,
@@ -104,7 +111,7 @@ impl<'file, 'unit> Lexer<'file, 'unit> {
     }
 }
 
-impl<'file, 'unit> Iterator for Lexer<'file, 'unit> {
+impl<'session, 'file, 'unit> Iterator for Lexer<'session, 'file, 'unit> {
     type Item = Result<Token, CompilerError>;
 
     fn next(&mut self) -> Option<Self::Item> {

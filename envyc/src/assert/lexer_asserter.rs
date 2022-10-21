@@ -1,3 +1,4 @@
+use crate::compiler::compile_session::CompileSession;
 use crate::compiler::compile_unit::CompileUnit;
 use crate::error::CompilerError;
 use crate::{
@@ -8,14 +9,18 @@ use crate::{
     },
 };
 
-pub(crate) struct LexerAsserter<'file, 'unit> {
-    lexer: Lexer<'file, 'unit>,
+pub(crate) struct LexerAsserter<'session, 'file, 'unit> {
+    lexer: Lexer<'session, 'file, 'unit>,
 }
 
-impl<'file, 'unit> LexerAsserter<'file, 'unit> {
-    pub fn new(compile_unit: &'unit CompileUnit<'file>, ignore_whitespace: bool) -> Self {
+impl<'session, 'file, 'unit> LexerAsserter<'session, 'file, 'unit> {
+    pub fn new(
+        compile_session: &'session mut CompileSession,
+        compile_unit: &'unit CompileUnit<'file>,
+        ignore_whitespace: bool,
+    ) -> Self {
         Self {
-            lexer: Lexer::new(compile_unit, ignore_whitespace),
+            lexer: Lexer::new(compile_session, compile_unit, ignore_whitespace),
         }
     }
 
