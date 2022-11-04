@@ -1,5 +1,6 @@
 [workspace]
 
 members = [
-    "envyc-source",
+    "envyc_unit",
+	"envyc_error"
 ]

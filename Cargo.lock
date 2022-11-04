@@ -3,5 +3,12 @@
 version = 3
 
 [[package]]
-name = "envyc-source"
+name = "envyc_error"
+version = "0.1.0"
+dependencies = [
+ "envyc_unit",
+]
+
+[[package]]
+name = "envyc_unit"
 version = "0.1.0"

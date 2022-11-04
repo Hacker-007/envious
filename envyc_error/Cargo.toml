@@ -1,0 +1,7 @@
+[package]
+name = "envyc_error"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+envyc_unit = { path = "../envyc_unit" }
