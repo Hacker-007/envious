@@ -1,0 +1,8 @@
+[package]
+name = "envyc_driver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+envyc_context = { path = "../envyc_context" }
+envyc_lexer = { path = "../envyc_lexer" }

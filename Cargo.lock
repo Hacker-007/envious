@@ -3,12 +3,35 @@
 version = 3
 
 [[package]]
-name = "envyc_error"
+name = "envyc_context"
 version = "0.1.0"
 dependencies = [
- "envyc_unit",
+ "envyc_source",
 ]
 
 [[package]]
-name = "envyc_unit"
+name = "envyc_driver"
+version = "0.1.0"
+dependencies = [
+ "envyc_context",
+ "envyc_lexer",
+]
+
+[[package]]
+name = "envyc_error"
+version = "0.1.0"
+dependencies = [
+ "envyc_source",
+]
+
+[[package]]
+name = "envyc_lexer"
+version = "0.1.0"
+dependencies = [
+ "envyc_context",
+ "envyc_source",
+]
+
+[[package]]
+name = "envyc_source"
 version = "0.1.0"

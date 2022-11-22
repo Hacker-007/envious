@@ -1,168 +1,126 @@
 **Envious Programming Language**
 
-A new programming language that focuses on simplicity without compromising on speed. This language is meant to be born from the desires of the community. In a sense, it is a language that will hopefully address the issues that developers have with other programming languages.
+A new programming language that focuses on simplicity without compromising on speed. This language is meant to be born from the desires of the community. In a sense, it is a language that will hopefully address the issues that developers have by having developers contribute ideas about the language and its features.
 
-> Perhaps more importantly, this project is a way for me to learn more about compilers and VMs.
+> This project is also a way for me to learn more about compilers and VMs.
 
-**Details about EnvyLang**
+**Details About EnvyLang**
 
 Envy is heavily influenced by Math. A lot of the symbols used comes directly from mathametical theory.
 In that right, Envy is easy to understand. Envy targets the LLVM or Low-Level Virtual Machine.
 
-Also, note that this language is under active development and that there will be many changes in the future.
+**Brief Introduction To Envious Syntax**
 
-**Current status of the language**
+Envious has a fairly standard syntax with a couple of changes.
 
-Currently, there are 4 different parts of the project that have been partially completed.
-- Lexer
-- Parser
-- Type checker
-- Code generator
+Here is the famous hello world program in Envy.
 
-**Implemented Features**
-
-- Variable with mutabality
-- If and else expressions
-- While loops
-- Functions
-- External function definitions
-- Static type checking
-
-**Types**
-
-Seeing as to how Envious is a statically typed language, it is important to discuss the various types in the language.
-
-Currently, there are 5 types:
-- Int
-- Float
-- Bool
-- Char
-- Void
-
-In the future, more types will be included, however, the lack of a garbage collector or memory management makes it difficult to implement these types at the moment.
-
-**The different types of expressions**
-
-Envious is an expression based language. Therefore, most of the statements written are expressions. Here is a detailed description of each expression.
-
-**Define expression**
-
-The define expression creates a new function that is very similar to math.
-
-The syntax of the define expression is as follows:
 ```
-define add(x: Int, y: Int) :: Int = x + y 
+print('Hello, World!')
 ```
 
-Some notable parts of the function is the inclusion of the `define` keyword, the function name, a comma-separated list of parameters that have the name of the parameter followed by the type, the return type of the function, and the body which consistes of a single expression.
+> Here, we can see that, just like in Math, functions are applied with the parameters surrounded by parenthesis.
 
-In other programming languages, this is better known as a `function`.
+> Additionally, one data type can be seen: the string type.
 
-**Let expression**
+**What Are The Different Types In Envious?**
 
-The let expression allows the declaration of a new variable or the mutation of a previously defined variable. For example, the variable `x` can be defined using the following expression:
+In Envious, there are 6 different types:
 
-```rust
-let x = 123
+-   int
+-   float
+-   boolean
+-   string
+-   void
+-   any
+
+Void and Any are actually special types in that they can not be directly given as values. This may be changed in the future though.
+
+**What Can I Do With Envy?**
+
+> An interesting thing about the Envious Programming Language is that everything is considered an expression.
+> That means that most of these things return a value. Of course, there are exceptions to this rule!
+
+One of the most common requirements in programs are variables.
+Variables let us define and maintain state. To define a variable in Envy, the following syntax can be used:
+
 ```
-> This will define a new variable `x` that is defined within its scope (typically the surrounding function)
-
-A let expression does not return any value, unlike Java.
-
-**If expression**
-
-The if expressions allows certain expressions be run based on a condition. For example, the message printed out to the console can be
-changed based on whether it is sunny or not.
-
-```rust
-let isSunny = true
-if isSunny then
-    print('Y')
-else
-    print('N')
-```
-
-There are three different parts to an if expression: the condition, the then expession, and the optional else expression.
-The condition must be a boolean expression and follows the if keyword. The then expression describes the expression to execute if the condition is true and must be preceded by the then keyword. Lastly, in the event that an expression must be run if the condition is false, the else expression can be used.
-
-The if expression returns the value of the branch that was chosen. This implies that the two branches must result in the same type.
-
-**While expression**
-
-The while expression allows for a certain expression to be repeated based on a given condition. Although the word expression is used, a while expression does not return any value.
-
-Currently, the while expression is the only looping mechanism implemented.
-
-The syntax for the while expression is as follows:
-
-```rust
-let condition = true
-while condition
-    expression
+let x := 1
 ```
 
-**Block expression**
+> Here, the int 1 is bound to the name 'x'. Therefore, any further references to this name is equivalent to using this value. There are exceptions that we will see later though.
 
-The block expression allows multiple expressions to be run. This is most useful when combined with other expressions. The block expression returns the value of the last expression in the block.
+This expression is known as the **Let Expression**.
 
-A block expression can be constructed by surrounding a group of expressions with a pair of curly braces.
+Another common requirement is the ability to compare different values. This can be done through traditional mathematical symbols: <, <=, >, >=, =, and !=.
 
-**Application expression**
+This is known as the **Equality Expression**.
 
-Lastly, an application expression represents an application of a function with its parameters. This expression returns the value of the function and thus, has the same type as the return value of the function.
+An example can be seen below:
 
-A function can be applied as follows:
-
-```rust
-function(parameters)
+```
+1 < 1 = true
 ```
 
-In this case, `function` refers to the name of the function and `parameters` refers to the comma separated paramers that are passed to the function.
+> Here, the less than operator is used to check if 1 is less than 1. This is false. Then, the equality operator is used to check if false is equal to true. This is also false. Thus, the overall result of the above expression is false.
 
-**TUI and CLI**
+What if you wanted to perform some action if and only if some condition is true? Well, you can use an **If Expression**.
 
-In addition to the compiler, there are two seperate modules, namely the TUI (terminal user interface) and the CLI (command line interface)
+An If Expression can be created using the keyword 'if'.
 
-The TUI allows the user to quickly prototype code in a REPL like environment and see colored error messages and the generated code.
-The behavior of the TUI should change soon to show the output of the code as opposed to the generated code.
+Here is an example:
 
-The CLI provides an interface for the user to interact with the compiler. It provides options to compile, build, and run any given files.
-
-**Quick Start**
-
-The easiest way to play around with Envy is via the TUI. In order to get it running locally, you'll need to install the dependencies. The following directions are currently OS X only:
-
-1. Install [homebrew](https://brew.sh/)
-2. Install Rust: `$ brew install rust`
-3. Install cmake: `$ brew install cmake`
-4. Install LLVM v10.0.0 from the [LLVM Download Page](https://releases.llvm.org/) and unzip it into your home directory.
-5. Install the `llvm-sys` package. At the time of writing, the current required version is 10.0.0:
-```bash
-cd ~ && mkdir -p llvm-10.0.0.src/build
-cd llvm-10.0.0.src/build
-cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/llvm-10.0.0
-cmake --build . --target install # Note that this may take in the neighborhood of 90 minutes.
 ```
-6. Build envious: `$ cd path_to_envious_root && LLVM_SYS_100_PREFIX=$HOME/llvm-10.0.0 cargo build --release`
-7. Now enter the TUI: `$ cd path_to_envious_root/target/release && ./envious -t`
-8. If everything worked, you should see something like the following:
+if 1 = 1 print('1 Is Equal To 1!')
+```
 
-<img width="2174" alt="Screen Shot 2021-06-08 at 4 11 14 PM" src="https://user-images.githubusercontent.com/702327/121269166-3112a880-c874-11eb-980f-ceb052be17e8.png">
+The if expression has two parts: the condition and the action.
 
-The following directions are for Linux and WSL users:
+In the example above, the condition can be seen as 1 = 1. The action can be thought up as the code to run if the condition is true.
 
-1. Install Rust: `$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
-2. Install LLVM 10: `$ sudo apt-get install llvm-10*`
-3. Build envious: `$ cd path_to_envious_root && LLVM_SYS_100_PREFIX=$HOME/llvm-10.0.0 cargo build --release`
-4. Now enter the TUI: `$ cd path_to_envious_root/target/release && ./envious -t`
+The only restriction is that the condition must result in a boolean value.
 
-The following directions are for Windows users:
+What if you want to run an expression when the condition is false? Use the else part of the If Expression.
 
-1. Install Chocolatey:
-    - First open PowerShell in administrative mode
-    - Run `$ Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))`
-2. Install LLVM 10: `$ choco install llvm --version=10.0.0`
-3. Add LLVM 10 as LLVM_SYS_100_PREFIX to Path
-4. Install Rust: Go to `https://www.rust-lang.org/tools/install` and follow the instructions to install Rust for Windows
-5. Build envious: `$ cd path_to_envious_root && cargo build --release`
-6. Now enter the TUI: `$ cd path_to_envious_root/target/release && ./envious -t`
+Here is an example:
+
+```
+if 1 = 2 print('1 Is Equal To 2!') else print('1 Is Not Equal To 2!')
+```
+
+Sometimes, you want to run more than one line of code. In these cases, you can use the **Block Expression**.
+
+A Block Expression is just a bunch of expressions surrounded by a pair of curly braces.
+
+Here is an example:
+
+```
+{
+    print('This Is A Block Expression.')
+    print('This Might Not Have Been As Exciting As You May Have Initially Thought.')
+}
+```
+
+> Did you notice that we used an expression without even knowing about it? The **Function Call** expression.
+
+The print function that we used to print messages earlier was actually an expression.
+
+A common question is how does one create their one functions? Well, this is where the **Define Expression** comes in handy.
+
+The Define Expression allows us to create functions with parameters and return values from those functions.
+
+Here is an example:
+
+```
+define f(x: Int) :: Int = x * 2
+```
+
+The define expression has multiple parts:
+
+1. The name of the function. In this case, the name is f
+2. The parameters. The parameters are enclosed in parenthesis and have the following format, name: type
+3. The return type. This is optional. If the return value is omitted, then the return type is inferred.
+4. Finally, the expression. This is the code to execute when the function is called. Because this is an expression,
+   any previous expressions that you learned about work here. For example, a block expression can be used to have
+   multiple lines of code. Within the block expression, another define expression may be created to have a function
+   within a function. The possibilities are endless.

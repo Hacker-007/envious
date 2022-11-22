@@ -1,22 +1,25 @@
-use envyc_unit::span::Span;
+use envyc_source::snippet::Snippet;
 
 pub type DiagnosticMessage = String;
 
+#[derive(Debug)]
 pub enum Level {
     Error,
     Warning,
 }
 
+#[derive(Debug)]
 pub struct Diagnostic {
     level: Level,
     diagnostic_id: usize,
     message: Vec<DiagnosticMessage>,
-    span: Span,
+    snippet: Snippet,
     children: Vec<SubDiagnostic>,
 }
 
+#[derive(Debug)]
 pub struct SubDiagnostic {
     level: Level,
     message: Vec<DiagnosticMessage>,
-    span: Span,
+    snippet: Snippet,
 }
