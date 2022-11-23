@@ -8,4 +8,5 @@ pub struct Token {
 
 #[derive(Debug)]
 pub enum TokenKind {
+    Int(i64),
 }

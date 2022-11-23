@@ -14,3 +14,9 @@ pub struct Source {
     source_meta: SourceMeta,
     text: String,
 }
+
+impl Source {
+    pub fn get_char(&self, idx: usize) -> Option<char> {
+        self.text.chars().nth(idx)
+    }
+}
