@@ -20,9 +20,6 @@ impl Snippet {
     }
 
     pub fn with_low(self, low: SourcePos) -> Self {
-        Self {
-            low,
-            ..self
-        }
+        Self { low, ..self }
     }
 }

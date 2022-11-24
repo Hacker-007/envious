@@ -8,10 +8,7 @@ pub struct Token {
 
 impl Token {
     pub fn new(snippet: Snippet, kind: TokenKind) -> Self {
-        Self {
-            snippet,
-            kind,
-        }
+        Self { snippet, kind }
     }
 }
 
@@ -20,6 +17,28 @@ pub enum TokenKind {
     Int,
     Boolean(bool),
     Identifer,
+
+    LeftParenthesis,
+    RightParenthesis,
+    LeftCurlyBrace,
+    RightCurlyBrace,
+    LeftAngleBracket,
+    RightAngleBracket,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    PercentSign,
+    EqualSign,
+    ColonEqualSign,
+    ExclamationEqualSign,
+    LessThanEqualSign,
+    GreaterThanEqualSign,
+    Comma,
+    Colon,
+    SemiColon,
+    ColonColon,
+
     Not,
     Or,
     And,

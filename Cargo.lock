@@ -6,6 +6,7 @@ version = 3
 name = "envyc_context"
 version = "0.1.0"
 dependencies = [
+ "envyc_error",
  "envyc_source",
 ]
 
@@ -29,6 +30,7 @@ name = "envyc_lexer"
 version = "0.1.0"
 dependencies = [
  "envyc_context",
+ "envyc_error",
  "envyc_source",
 ]
 
