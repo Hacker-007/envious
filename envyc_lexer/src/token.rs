@@ -6,7 +6,28 @@ pub struct Token {
     kind: TokenKind,
 }
 
+impl Token {
+    pub fn new(snippet: Snippet, kind: TokenKind) -> Self {
+        Self {
+            snippet,
+            kind,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum TokenKind {
-    Int(i64),
+    Int,
+    Boolean(bool),
+    Identifer,
+    Not,
+    Or,
+    And,
+    Let,
+    If,
+    Then,
+    Else,
+    While,
+    Define,
+    Return,
 }
