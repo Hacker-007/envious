@@ -1,4 +1,5 @@
 pub mod context;
+pub mod interner;
 
 #[cfg(test)]
 mod tests {

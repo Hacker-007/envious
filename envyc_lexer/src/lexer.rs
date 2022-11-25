@@ -28,7 +28,7 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
     pub fn next_token(&mut self) -> Option<Token> {
         self.continue_while(|ch| ch.is_whitespace());
         match self.next()? {
-            digit if digit.is_digit(10) => Some(self.tokenize_number(self.pos - 1)),
+            digit if digit.is_digit(10) => self.tokenize_number(self.pos - 1),
             letter if letter.is_alphabetic() => Some(self.tokenize_word(self.pos - 1)),
             '(' => Some(self.single_character_token(TokenKind::LeftParenthesis)),
             ')' => Some(self.single_character_token(TokenKind::RightParenthesis)),
@@ -45,7 +45,7 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
                 TokenKind::RightAngleBracket,
             ),
             '+' | '-' if matches!(self.peek(), Some(digit) if digit.is_digit(10)) => {
-                Some(self.tokenize_number(self.pos - 1))
+                self.tokenize_number(self.pos - 1)
             }
             '+' => Some(self.single_character_token(TokenKind::Plus)),
             '-' => Some(self.single_character_token(TokenKind::Minus)),
@@ -70,9 +70,19 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
         }
     }
 
-    pub fn tokenize_number(&mut self, start: usize) -> Token {
+    pub fn tokenize_number(&mut self, start: usize) -> Option<Token> {
         let digits_snippet = self.continue_while(|ch| ch.is_digit(10));
-        Token::new(digits_snippet.with_low(SourcePos(start)), TokenKind::Int)
+        let word = self
+            .source
+            .get_range(digits_snippet.low, digits_snippet.high);
+        if let Ok(value) = word.parse() {
+            Some(Token::new(
+                digits_snippet.with_low(SourcePos(start)),
+                TokenKind::Int(value),
+            ))
+        } else {
+            None
+        }
     }
 
     pub fn tokenize_word(&mut self, start: usize) -> Token {
@@ -94,8 +104,8 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
             "define" => TokenKind::Define,
             "return" => TokenKind::Return,
             _ => {
-                println!("Intern identifiers into a constant pool in the context!");
-                TokenKind::Identifer
+                let id = self.compilation_ctx.intern_value(word.to_string());
+                TokenKind::Identifer(id)
             }
         };
 

@@ -1,3 +1,4 @@
+use envyc_context::interner::InternId;
 use envyc_source::snippet::Snippet;
 
 #[derive(Debug)]
@@ -14,9 +15,9 @@ impl Token {
 
 #[derive(Debug)]
 pub enum TokenKind {
-    Int,
+    Int(i64),
     Boolean(bool),
-    Identifer,
+    Identifer(InternId),
 
     LeftParenthesis,
     RightParenthesis,
