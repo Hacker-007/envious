@@ -1,24 +1,24 @@
 use std::{
-    cell::RefCell,
     collections::hash_map::{self, HashMap},
+    sync::RwLock,
 };
 
-use envyc_error::error::Diagnostic;
+use envyc_error::{error::Diagnostic, error_handler::ErrorHandler};
 use envyc_source::source::{Source, SourceId};
 
-use crate::interner::{InternId, Interner};
+use crate::{shared_resources::SharedResources, symbol::Symbol};
 
 #[derive(Debug)]
-pub struct CompilationContext {
+pub struct CompilationContext<'shared, E: ErrorHandler> {
     source_map: HashMap<SourceId, Source>,
-    interner: RefCell<Interner>,
+    shared_resources: &'shared RwLock<SharedResources<E>>,
 }
 
-impl CompilationContext {
-    pub fn new(interner: RefCell<Interner>) -> Self {
+impl<'shared, E: ErrorHandler> CompilationContext<'shared, E> {
+    pub fn new(shared_resources: &'shared RwLock<SharedResources<E>>) -> Self {
         Self {
             source_map: HashMap::new(),
-            interner,
+            shared_resources,
         }
     }
 
@@ -26,16 +26,13 @@ impl CompilationContext {
         self.source_map.iter()
     }
 
-    pub fn intern_value(&self, value: String) -> InternId {
-        self.interner.borrow_mut().insert_value(value)
-    }
-
-    pub fn get_interned_value(&self, id: InternId) -> Option<String> {
-        self.interner.borrow().get_value(id)
+    pub fn intern_symbol(&self, id: &str) -> Symbol {
+        let mut write_guard = self.shared_resources.write().unwrap();
+        write_guard.interner.add(id)
     }
 
     pub fn emit_diagnostic(&self, diagnostic: Diagnostic) {
-        println!("{:#?}", diagnostic);
-        todo!("Emit the diagnostic to dedicated error handler rather than to STDOUT directly!")
+        let mut write_guard = self.shared_resources.write().unwrap();
+        write_guard.error_handler.handle_diagnostic(diagnostic);
     }
 }

@@ -1,6 +1,3 @@
-pub mod error;
-pub mod error_handler;
-
 #[cfg(test)]
 mod tests {
     #[test]

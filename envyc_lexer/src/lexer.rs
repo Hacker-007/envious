@@ -1,5 +1,5 @@
 use envyc_context::context::CompilationContext;
-use envyc_error::error::{Diagnostic, Level};
+use envyc_error::{error::{Diagnostic, Level}, error_handler::ErrorHandler};
 use envyc_source::{
     snippet::{Snippet, SourcePos},
     source::{Source, SourceIter},
@@ -8,15 +8,15 @@ use envyc_source::{
 use crate::token::{Token, TokenKind};
 
 #[derive(Debug)]
-pub struct LexicalAnalyzer<'ctx, 'source> {
-    compilation_ctx: &'ctx CompilationContext,
+pub struct LexicalAnalyzer<'ctx, 'shared, 'source, E: ErrorHandler> {
+    compilation_ctx: &'ctx CompilationContext<'shared, E>,
     source: &'source Source,
     source_iter: SourceIter<'source>,
     pos: usize,
 }
 
-impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
-    pub fn new(compilation_ctx: &'ctx CompilationContext, source: &'source Source) -> Self {
+impl<'ctx, 'shared, 'source, E: ErrorHandler> LexicalAnalyzer<'ctx, 'shared, 'source, E> {
+    pub fn new(compilation_ctx: &'ctx CompilationContext<'shared, E>, source: &'source Source) -> Self {
         Self {
             compilation_ctx,
             source,
@@ -28,7 +28,7 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
     pub fn next_token(&mut self) -> Option<Token> {
         self.continue_while(|ch| ch.is_whitespace());
         match self.next()? {
-            digit if digit.is_digit(10) => self.tokenize_number(self.pos - 1),
+            digit if digit.is_digit(10) => Some(self.tokenize_number(self.pos - 1)),
             letter if letter.is_alphabetic() => Some(self.tokenize_word(self.pos - 1)),
             '(' => Some(self.single_character_token(TokenKind::LeftParenthesis)),
             ')' => Some(self.single_character_token(TokenKind::RightParenthesis)),
@@ -36,16 +36,16 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
             '}' => Some(self.single_character_token(TokenKind::RightCurlyBrace)),
             '<' => self.optionally_continue(
                 |ch| ch == '=',
-                || TokenKind::LessThanEqualSign,
+                TokenKind::LessThanEqualSign,
                 TokenKind::LeftAngleBracket,
             ),
             '>' => self.optionally_continue(
                 |ch| ch == '=',
-                || TokenKind::GreaterThanEqualSign,
+                TokenKind::GreaterThanEqualSign,
                 TokenKind::RightAngleBracket,
             ),
             '+' | '-' if matches!(self.peek(), Some(digit) if digit.is_digit(10)) => {
-                self.tokenize_number(self.pos - 1)
+                Some(self.tokenize_number(self.pos - 1))
             }
             '+' => Some(self.single_character_token(TokenKind::Plus)),
             '-' => Some(self.single_character_token(TokenKind::Minus)),
@@ -55,14 +55,14 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
             '=' => Some(self.single_character_token(TokenKind::EqualSign)),
             ',' => Some(self.single_character_token(TokenKind::Comma)),
             ':' => {
-                self.optionally_continue(|ch| ch == ':', || TokenKind::ColonColon, TokenKind::Colon)
+                self.optionally_continue(|ch| ch == ':', TokenKind::ColonColon, TokenKind::Colon)
             }
             ';' => Some(self.single_character_token(TokenKind::SemiColon)),
             _ => {
                 self.compilation_ctx.emit_diagnostic(Diagnostic::new(
                     Level::Error,
                     vec!["unrecognized character"],
-                    self.snippet_from_start(self.pos - 1),
+                    self.generate_snippet(self.pos - 1),
                 ));
 
                 None
@@ -70,19 +70,20 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
         }
     }
 
-    pub fn tokenize_number(&mut self, start: usize) -> Option<Token> {
+    pub fn tokenize_number(&mut self, start: usize) -> Token {
         let digits_snippet = self.continue_while(|ch| ch.is_digit(10));
         let word = self
             .source
             .get_range(digits_snippet.low, digits_snippet.high);
-        if let Ok(value) = word.parse() {
-            Some(Token::new(
-                digits_snippet.with_low(SourcePos(start)),
-                TokenKind::Int(value),
-            ))
-        } else {
-            None
-        }
+        let value = match word.parse() {
+            Ok(value) => value,
+            Err(_) => 0,
+        };
+
+        Token::new(
+            digits_snippet.with_low(SourcePos(start)),
+            TokenKind::Int(value),
+        )
     }
 
     pub fn tokenize_word(&mut self, start: usize) -> Token {
@@ -104,8 +105,8 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
             "define" => TokenKind::Define,
             "return" => TokenKind::Return,
             _ => {
-                let id = self.compilation_ctx.intern_value(word.to_string());
-                TokenKind::Identifer(id)
+                let symbol = self.compilation_ctx.intern_symbol(word);
+                TokenKind::Identifer(symbol)
             }
         };
 
@@ -123,33 +124,30 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
             }
         }
 
-        self.snippet_from_start(start)
+        self.generate_snippet(start)
     }
 
-    pub fn optionally_continue<P: Fn(char) -> bool, G: Fn() -> TokenKind>(
+    pub fn optionally_continue<P: Fn(char) -> bool>(
         &mut self,
         predicate: P,
-        token_generator: G,
-        default: TokenKind,
+        consumed_kind: TokenKind,
+        default_kind: TokenKind,
     ) -> Option<Token> {
         let start = self.pos - 1;
         match self.peek()? {
             ch if predicate(ch) => {
                 self.next();
-                return Some(Token::new(
-                    self.snippet_from_start(start),
-                    token_generator(),
-                ));
+                return Some(Token::new(self.generate_snippet(start), consumed_kind));
             }
-            _ => Some(Token::new(self.snippet_from_start(start), default)),
+            _ => Some(Token::new(self.generate_snippet(start), default_kind)),
         }
     }
 
     pub fn single_character_token(&self, kind: TokenKind) -> Token {
-        Token::new(self.snippet_from_start(self.pos - 1), kind)
+        Token::new(self.generate_snippet(self.pos - 1), kind)
     }
 
-    pub fn snippet_from_start(&self, start: usize) -> Snippet {
+    pub fn generate_snippet(&self, start: usize) -> Snippet {
         Snippet::new(self.source.id, SourcePos(start), SourcePos(self.pos - 1))
     }
 
@@ -163,7 +161,7 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
     }
 }
 
-impl<'ctx, 'source> Iterator for LexicalAnalyzer<'ctx, 'source> {
+impl<'ctx, 'shared, 'source, E: ErrorHandler> Iterator for LexicalAnalyzer<'ctx, 'shared, 'source, E> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {

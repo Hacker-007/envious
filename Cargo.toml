@@ -4,6 +4,7 @@ members = [
     "envyc_driver",
     "envyc_context",
     "envyc_lexer",
+    "envyc_parser",
     "envyc_source",
 	"envyc_error",
 ]

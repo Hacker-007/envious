@@ -1,7 +1,8 @@
 use envyc_context::context::CompilationContext;
+use envyc_error::error_handler::ErrorHandler;
 use envyc_lexer::lexer::LexicalAnalyzer;
 
-pub fn parse<'ctx>(compilation_ctx: &'ctx CompilationContext) {
+pub fn parse<'ctx, E: ErrorHandler>(compilation_ctx: &'ctx CompilationContext<E>) {
     for (_, source) in compilation_ctx.get_sources() {
         // Generate a lexical analyzer which uses an iterator
         // over the source text to lazily generate tokens as needed

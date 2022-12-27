@@ -1,29 +1,34 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Index};
 
-pub type InternId = usize;
+use crate::symbol::{Symbol, SymbolId};
 
 #[derive(Debug, Default)]
 pub struct Interner {
-    next_intern_id: InternId,
-    id_relation: HashMap<String, InternId>,
-    pool: HashMap<InternId, String>,
+    next_intern_id: SymbolId,
+    identifier_pool: Vec<String>,
+    id_relation: HashMap<String, Symbol>,
 }
 
 impl Interner {
-    pub fn insert_value(&mut self, value: String) -> InternId {
-        match self.id_relation.get(&value) {
+    pub fn add(&mut self, identifier: &str) -> Symbol {
+        match self.id_relation.get(identifier) {
             Some(id) => *id,
             None => {
-                self.next_intern_id += 1;
-                self.id_relation
-                    .insert(value.to_string(), self.next_intern_id - 1);
-                self.pool.insert(self.next_intern_id - 1, value);
-                self.next_intern_id - 1
+                let intern_id = self.next_intern_id;
+                let symbol = Symbol(intern_id);
+                self.next_intern_id = intern_id + 1;
+                self.identifier_pool[intern_id] = identifier.to_string();
+                self.id_relation.insert(identifier.to_string(), symbol);
+                symbol
             }
         }
     }
+}
 
-    pub fn get_value(&self, id: InternId) -> Option<String> {
-        self.pool.get(&id).cloned()
+impl Index<SymbolId> for Interner {
+    type Output = String;
+
+    fn index(&self, index: SymbolId) -> &Self::Output {
+        &self.identifier_pool[index]
     }
 }

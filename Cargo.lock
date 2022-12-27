@@ -15,6 +15,7 @@ name = "envyc_driver"
 version = "0.1.0"
 dependencies = [
  "envyc_context",
+ "envyc_error",
  "envyc_lexer",
 ]
 
@@ -33,6 +34,10 @@ dependencies = [
  "envyc_error",
  "envyc_source",
 ]
+
+[[package]]
+name = "envyc_parser"
+version = "0.1.0"
 
 [[package]]
 name = "envyc_source"
