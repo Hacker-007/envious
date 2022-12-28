@@ -38,6 +38,11 @@ dependencies = [
 [[package]]
 name = "envyc_parser"
 version = "0.1.0"
+dependencies = [
+ "envyc_context",
+ "envyc_error",
+ "envyc_lexer",
+]
 
 [[package]]
 name = "envyc_source"
