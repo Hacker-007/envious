@@ -6,4 +6,6 @@ edition = "2021"
 [dependencies]
 envyc_context = { path = "../envyc_context" }
 envyc_lexer = { path = "../envyc_lexer" }
+envyc_parser = { path = "../envyc_parser" }
 envyc_error = { path = "../envyc_error" }
+envyc_source = { path = "../envyc_source" }

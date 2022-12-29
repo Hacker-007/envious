@@ -17,7 +17,7 @@ impl Interner {
                 let intern_id = self.next_intern_id;
                 let symbol = Symbol(intern_id);
                 self.next_intern_id = intern_id + 1;
-                self.identifier_pool[intern_id] = identifier.to_string();
+                self.identifier_pool.push(identifier.to_string());
                 self.id_relation.insert(identifier.to_string(), symbol);
                 symbol
             }

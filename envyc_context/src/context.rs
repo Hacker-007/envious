@@ -4,12 +4,13 @@ use std::{
 };
 
 use envyc_error::{error::Diagnostic, error_handler::ErrorHandler};
-use envyc_source::source::{Source, SourceId};
+use envyc_source::source::{Source, SourceId, SourceMeta};
 
 use crate::{shared_resources::SharedResources, symbol::Symbol};
 
 #[derive(Debug)]
 pub struct CompilationContext<'shared, E: ErrorHandler> {
+    next_source_id: SourceId,
     source_map: HashMap<SourceId, Source>,
     shared_resources: &'shared RwLock<SharedResources<E>>,
 }
@@ -17,9 +18,19 @@ pub struct CompilationContext<'shared, E: ErrorHandler> {
 impl<'shared, E: ErrorHandler> CompilationContext<'shared, E> {
     pub fn new(shared_resources: &'shared RwLock<SharedResources<E>>) -> Self {
         Self {
+            next_source_id: 0,
             source_map: HashMap::new(),
             shared_resources,
         }
+    }
+
+    pub fn add_source(&mut self, source_meta: SourceMeta, text: String) {
+        self.source_map.insert(
+            self.next_source_id,
+            Source::new(self.next_source_id, source_meta, text),
+        );
+
+        self.next_source_id += 1;
     }
 
     pub fn get_sources(&self) -> hash_map::Iter<usize, Source> {

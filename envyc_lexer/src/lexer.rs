@@ -1,5 +1,8 @@
 use envyc_context::context::CompilationContext;
-use envyc_error::{error::{Diagnostic, Level}, error_handler::ErrorHandler};
+use envyc_error::{
+    error::{Diagnostic, Level},
+    error_handler::ErrorHandler,
+};
 use envyc_source::{
     snippet::{Snippet, SourcePos},
     source::{Source, SourceIter},
@@ -13,20 +16,25 @@ pub struct LexicalAnalyzer<'ctx, 'shared, 'source, E: ErrorHandler> {
     source: &'source Source,
     source_iter: SourceIter<'source>,
     pos: usize,
+    reached_eof: bool,
 }
 
 impl<'ctx, 'shared, 'source, E: ErrorHandler> LexicalAnalyzer<'ctx, 'shared, 'source, E> {
-    pub fn new(compilation_ctx: &'ctx CompilationContext<'shared, E>, source: &'source Source) -> Self {
+    pub fn new(
+        compilation_ctx: &'ctx CompilationContext<'shared, E>,
+        source: &'source Source,
+    ) -> Self {
         Self {
             compilation_ctx,
             source,
             source_iter: SourceIter::new(source),
             pos: 0,
+            reached_eof: false,
         }
     }
 
     pub fn next_token(&mut self) -> Option<Token> {
-        self.continue_while(|ch| ch.is_whitespace());
+        self.skip_whitespace();
         match self.next()? {
             digit if digit.is_digit(10) => Some(self.tokenize_number(self.pos - 1)),
             letter if letter.is_alphabetic() => Some(self.tokenize_word(self.pos - 1)),
@@ -34,16 +42,16 @@ impl<'ctx, 'shared, 'source, E: ErrorHandler> LexicalAnalyzer<'ctx, 'shared, 'so
             ')' => Some(self.single_character_token(TokenKind::RightParenthesis)),
             '{' => Some(self.single_character_token(TokenKind::LeftCurlyBrace)),
             '}' => Some(self.single_character_token(TokenKind::RightCurlyBrace)),
-            '<' => self.optionally_continue(
+            '<' => Some(self.optionally_continue(
                 |ch| ch == '=',
-                TokenKind::LessThanEqualSign,
+                TokenKind::LessThanEqual,
                 TokenKind::LeftAngleBracket,
-            ),
-            '>' => self.optionally_continue(
+            )),
+            '>' => Some(self.optionally_continue(
                 |ch| ch == '=',
-                TokenKind::GreaterThanEqualSign,
+                TokenKind::GreaterThanEqual,
                 TokenKind::RightAngleBracket,
-            ),
+            )),
             '+' | '-' if matches!(self.peek(), Some(digit) if digit.is_digit(10)) => {
                 Some(self.tokenize_number(self.pos - 1))
             }
@@ -51,13 +59,16 @@ impl<'ctx, 'shared, 'source, E: ErrorHandler> LexicalAnalyzer<'ctx, 'shared, 'so
             '-' => Some(self.single_character_token(TokenKind::Minus)),
             '*' => Some(self.single_character_token(TokenKind::Star)),
             '/' => Some(self.single_character_token(TokenKind::Slash)),
-            '%' => Some(self.single_character_token(TokenKind::PercentSign)),
-            '=' => Some(self.single_character_token(TokenKind::EqualSign)),
+            '%' => Some(self.single_character_token(TokenKind::Percent)),
+            '=' => Some(self.single_character_token(TokenKind::Equal)),
             ',' => Some(self.single_character_token(TokenKind::Comma)),
-            ':' => {
-                self.optionally_continue(|ch| ch == ':', TokenKind::ColonColon, TokenKind::Colon)
-            }
+            ':' => Some(self.optionally_continue(
+                |ch| ch == ':',
+                TokenKind::ColonColon,
+                TokenKind::Colon,
+            )),
             ';' => Some(self.single_character_token(TokenKind::SemiColon)),
+            '\0' => Some(self.single_character_token(TokenKind::EndOfFile)),
             _ => {
                 self.compilation_ctx.emit_diagnostic(Diagnostic::new(
                     Level::Error,
@@ -70,14 +81,32 @@ impl<'ctx, 'shared, 'source, E: ErrorHandler> LexicalAnalyzer<'ctx, 'shared, 'so
         }
     }
 
-    pub fn tokenize_number(&mut self, start: usize) -> Token {
+    fn tokenize_number(&mut self, start: usize) -> Token {
         let digits_snippet = self.continue_while(|ch| ch.is_digit(10));
-        let word = self
+        let number = self
             .source
             .get_range(digits_snippet.low, digits_snippet.high);
-        let value = match word.parse() {
+        let value = match number.parse() {
             Ok(value) => value,
-            Err(_) => 0,
+            Err(_) => {
+                self.compilation_ctx.emit_diagnostic(
+                    Diagnostic::new(
+                        Level::Error,
+                        vec!["numerical overflow"],
+                        self.generate_snippet(start),
+                    )
+                    .add_footer(
+                        Level::Hint,
+                        format!(
+                            "all integers must be in the range (`{}`, `{}`)",
+                            i64::MIN,
+                            i64::MAX
+                        ),
+                    ),
+                );
+
+                0
+            }
         };
 
         Token::new(
@@ -86,9 +115,9 @@ impl<'ctx, 'shared, 'source, E: ErrorHandler> LexicalAnalyzer<'ctx, 'shared, 'so
         )
     }
 
-    pub fn tokenize_word(&mut self, start: usize) -> Token {
+    fn tokenize_word(&mut self, start: usize) -> Token {
         let snippet = self
-            .continue_while(|ch| ch.is_alphabetic() || ch == '_')
+            .continue_while(|ch| ch.is_alphanumeric() || ch == '_')
             .with_low(SourcePos(start));
         let word = self.source.get_range(snippet.low, snippet.high);
         let kind = match word {
@@ -113,7 +142,18 @@ impl<'ctx, 'shared, 'source, E: ErrorHandler> LexicalAnalyzer<'ctx, 'shared, 'so
         Token::new(snippet, kind)
     }
 
-    pub fn continue_while<P: Fn(char) -> bool>(&mut self, predicate: P) -> Snippet {
+    fn skip_whitespace(&mut self) {
+        loop {
+            match self.peek() {
+                Some(ch) if ch.is_whitespace() => {
+                    self.next();
+                }
+                _ => break,
+            }
+        }
+    }
+
+    fn continue_while<P: Fn(char) -> bool>(&mut self, predicate: P) -> Snippet {
         let start = self.pos - 1;
         loop {
             match self.peek() {
@@ -132,14 +172,14 @@ impl<'ctx, 'shared, 'source, E: ErrorHandler> LexicalAnalyzer<'ctx, 'shared, 'so
         predicate: P,
         consumed_kind: TokenKind,
         default_kind: TokenKind,
-    ) -> Option<Token> {
+    ) -> Token {
         let start = self.pos - 1;
-        match self.peek()? {
-            ch if predicate(ch) => {
+        match self.peek() {
+            Some(ch) if predicate(ch) => {
                 self.next();
-                return Some(Token::new(self.generate_snippet(start), consumed_kind));
+                return Token::new(self.generate_snippet(start), consumed_kind);
             }
-            _ => Some(Token::new(self.generate_snippet(start), default_kind)),
+            _ => Token::new(self.generate_snippet(start), default_kind),
         }
     }
 
@@ -152,16 +192,27 @@ impl<'ctx, 'shared, 'source, E: ErrorHandler> LexicalAnalyzer<'ctx, 'shared, 'so
     }
 
     pub fn peek(&mut self) -> Option<char> {
-        self.source_iter.peek()
+        match self.source_iter.peek() {
+            None if !self.reached_eof => Some('\0'),
+            ch => ch,
+        }
     }
 
     pub fn next(&mut self) -> Option<char> {
         self.pos += 1;
-        self.source_iter.next()
+        match self.source_iter.next() {
+            None if !self.reached_eof => {
+                self.reached_eof = true;
+                Some('\0')
+            }
+            ch => ch,
+        }
     }
 }
 
-impl<'ctx, 'shared, 'source, E: ErrorHandler> Iterator for LexicalAnalyzer<'ctx, 'shared, 'source, E> {
+impl<'ctx, 'shared, 'source, E: ErrorHandler> Iterator
+    for LexicalAnalyzer<'ctx, 'shared, 'source, E>
+{
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {

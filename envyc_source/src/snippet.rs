@@ -1,9 +1,9 @@
 use crate::source::SourceId;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SourcePos(pub usize);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Snippet {
     source_id: SourceId,
     pub low: SourcePos,

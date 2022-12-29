@@ -7,3 +7,4 @@ edition = "2021"
 envyc_lexer = { path = "../envyc_lexer" }
 envyc_context = { path = "../envyc_context" }
 envyc_error = { path = "../envyc_error" }
+envyc_source = { path = "../envyc_source" }

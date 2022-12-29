@@ -20,6 +20,14 @@ pub struct Source {
 }
 
 impl Source {
+    pub fn new(id: SourceId, source_meta: SourceMeta, text: String) -> Self {
+        Self {
+            id,
+            source_meta,
+            text,
+        }
+    }
+
     pub fn get_range(&self, low: SourcePos, high: SourcePos) -> &str {
         &self.text[low.0..=high.0]
     }

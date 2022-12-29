@@ -4,12 +4,11 @@ pub trait ErrorHandler {
     fn handle_diagnostic(&mut self, diagnostic: Diagnostic);
 }
 
-pub struct InMemoryErrorHandler {
-    diagnostics: Vec<Diagnostic>,
-}
+#[derive(Debug, Default)]
+pub struct StdoutErrorHandler {}
 
-impl ErrorHandler for InMemoryErrorHandler {
+impl ErrorHandler for StdoutErrorHandler {
     fn handle_diagnostic(&mut self, diagnostic: Diagnostic) {
-        self.diagnostics.push(diagnostic);
+        println!("{:#?}", diagnostic);
     }
 }

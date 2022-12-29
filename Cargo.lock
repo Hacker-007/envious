@@ -17,6 +17,8 @@ dependencies = [
  "envyc_context",
  "envyc_error",
  "envyc_lexer",
+ "envyc_parser",
+ "envyc_source",
 ]
 
 [[package]]
@@ -42,6 +44,7 @@ dependencies = [
  "envyc_context",
  "envyc_error",
  "envyc_lexer",
+ "envyc_source",
 ]
 
 [[package]]
