@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 envyc_source = { path = "../envyc_source" }
+annotate-snippets = "0.9.1"

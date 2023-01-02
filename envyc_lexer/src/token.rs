@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use envyc_context::symbol::Symbol;
 use envyc_source::snippet::Snippet;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -17,11 +16,11 @@ impl Token {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
-    EndOfFile,
+    Whitespace,
 
-    Int(i64),
-    Boolean(bool),
-    Identifer(Symbol),
+    Int,
+    Boolean,
+    Identifer,
 
     LeftParenthesis,
     RightParenthesis,
@@ -54,45 +53,52 @@ pub enum TokenKind {
     While,
     Define,
     Return,
+
+    Error,
+    EndOfFile,
 }
 
 impl Display for TokenKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TokenKind::EndOfFile => write!(f, "end of file"),
-            TokenKind::Int(_) => write!(f, "int"),
-            TokenKind::Boolean(_) => write!(f, "boolean"),
-            TokenKind::Identifer(_) => write!(f, "identifier"),
-            TokenKind::LeftParenthesis => write!(f, "left parenthesis"),
-            TokenKind::RightParenthesis => write!(f, "right parenthesis"),
-            TokenKind::LeftCurlyBrace => write!(f, "left curly bracket"),
-            TokenKind::RightCurlyBrace => write!(f, "right curly bracket"),
-            TokenKind::LeftAngleBracket => write!(f, "left angle bracket"),
-            TokenKind::RightAngleBracket => write!(f, "right curly bracket"),
-            TokenKind::Plus => write!(f, "plus sign"),
-            TokenKind::Minus => write!(f, "minus sign"),
-            TokenKind::Star => write!(f, "star sign"),
-            TokenKind::Slash => write!(f, "slash sign"),
-            TokenKind::Percent => write!(f, "percentage sign"),
-            TokenKind::Equal => write!(f, "equal sign"),
-            TokenKind::ColonEqual => write!(f, "colon equal sign"),
-            TokenKind::ExclamationEqual => write!(f, "exclamation equal sign"),
-            TokenKind::LessThanEqual => write!(f, "less than equal sign"),
-            TokenKind::GreaterThanEqual => write!(f, "greater than equal sign"),
-            TokenKind::Comma => write!(f, "comma"),
-            TokenKind::Colon => write!(f, "colon"),
-            TokenKind::SemiColon => write!(f, "semi-colon"),
-            TokenKind::ColonColon => write!(f, "double colon sign"),
-            TokenKind::Not => write!(f, "not keyword"),
-            TokenKind::Or => write!(f, "or keyword"),
-            TokenKind::And => write!(f, "and keyword"),
-            TokenKind::Let => write!(f, "let keyword"),
-            TokenKind::If => write!(f, "if keyword"),
-            TokenKind::Then => write!(f, "then keyword"),
-            TokenKind::Else => write!(f, "else keyword"),
-            TokenKind::While => write!(f, "while keyword"),
-            TokenKind::Define => write!(f, "define keyword"),
-            TokenKind::Return => write!(f, "return keyword"),
-        }
+        let token_representation = match self {
+            TokenKind::Whitespace => "whitespace",
+            TokenKind::Int => "int",
+            TokenKind::Boolean => "boolean",
+            TokenKind::Identifer => "identifier",
+            TokenKind::LeftParenthesis => "left parenthesis",
+            TokenKind::RightParenthesis => "right parenthesis",
+            TokenKind::LeftCurlyBrace => "left curly bracket",
+            TokenKind::RightCurlyBrace => "right curly bracket",
+            TokenKind::LeftAngleBracket => "left angle bracket",
+            TokenKind::RightAngleBracket => "right curly bracket",
+            TokenKind::Plus => "plus sign",
+            TokenKind::Minus => "minus sign",
+            TokenKind::Star => "star sign",
+            TokenKind::Slash => "slash sign",
+            TokenKind::Percent => "percentage sign",
+            TokenKind::Equal => "equal sign",
+            TokenKind::ColonEqual => "colon equal sign",
+            TokenKind::ExclamationEqual => "exclamation equal sign",
+            TokenKind::LessThanEqual => "less than equal sign",
+            TokenKind::GreaterThanEqual => "greater than equal sign",
+            TokenKind::Comma => "comma",
+            TokenKind::Colon => "colon",
+            TokenKind::SemiColon => "semi-colon",
+            TokenKind::ColonColon => "double colon sign",
+            TokenKind::Not => "not keyword",
+            TokenKind::Or => "or keyword",
+            TokenKind::And => "and keyword",
+            TokenKind::Let => "let keyword",
+            TokenKind::If => "if keyword",
+            TokenKind::Then => "then keyword",
+            TokenKind::Else => "else keyword",
+            TokenKind::While => "while keyword",
+            TokenKind::Define => "define keyword",
+            TokenKind::Return => "return keyword",
+            TokenKind::Error => "error",
+            TokenKind::EndOfFile => "end of file",
+        };
+
+        f.write_str(token_representation)
     }
 }
