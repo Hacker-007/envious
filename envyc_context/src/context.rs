@@ -1,27 +1,31 @@
-use envyc_error::diagnostics::Diagnostic;
-use envyc_source::source::Source;
+use envyc_source::source::{Source, SourceId};
+
+use crate::diagnostic_handler::DiagnosticHandler;
 
 #[derive(Debug)]
-pub struct CompilationContext {
+pub struct CompilationContext<D: DiagnosticHandler> {
     sources: Vec<Source>,
+    pub diagnostic_handler: D,
 }
 
-impl CompilationContext {
-    pub fn new() -> Self {
-        Self { sources: vec![] }
+impl<D: DiagnosticHandler> CompilationContext<D> {
+    pub fn new(diagnostic_handler: D) -> Self {
+        Self {
+            sources: vec![],
+            diagnostic_handler,
+        }
     }
 
-    pub fn add_source(&mut self, text: String) {
+    pub fn add_source(&mut self, name: String, text: String) {
         let source_id = self.sources.len();
-        self.sources.push(Source::new(source_id, text));
+        self.sources.push(Source::new(source_id, name, text));
+    }
+
+    pub fn get_source(&self, source_id: SourceId) -> &Source {
+        &self.sources[source_id]
     }
 
     pub fn get_sources(&self) -> std::slice::Iter<Source> {
         self.sources.iter()
-    }
-
-    pub fn emit_diagnostic(&self, diagnostic: Diagnostic) {
-        println!("{:#?}", diagnostic);
-        println!("TODO: emit diagnostics to dedicated error handler")
     }
 }

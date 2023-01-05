@@ -1,4 +1,5 @@
 pub mod context;
+pub mod diagnostic_handler;
 
 #[cfg(test)]
 mod tests {

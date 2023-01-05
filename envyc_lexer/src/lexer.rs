@@ -1,5 +1,5 @@
-use envyc_context::context::CompilationContext;
-use envyc_error::diagnostics::{Diagnostic, Level};
+use envyc_context::{context::CompilationContext, diagnostic_handler::DiagnosticHandler};
+use envyc_error::diagnostic::{Diagnostic, Level, Message, SubDiagnostic};
 use envyc_source::{
     snippet::{Snippet, SourcePos},
     source::{Source, SourceIter},
@@ -8,14 +8,14 @@ use envyc_source::{
 use crate::token::{Token, TokenKind};
 
 #[derive(Debug)]
-pub struct LexicalAnalyzer<'ctx, 'source> {
-    compilation_ctx: &'ctx CompilationContext,
+pub struct LexicalAnalyzer<'ctx, 'source, D: DiagnosticHandler> {
+    compilation_ctx: &'ctx CompilationContext<D>,
     source: &'source Source,
     source_iter: SourceIter<'source>,
 }
 
-impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
-    pub fn new(compilation_ctx: &'ctx CompilationContext, source: &'source Source) -> Self {
+impl<'ctx, 'source, D: DiagnosticHandler> LexicalAnalyzer<'ctx, 'source, D> {
+    pub fn new(compilation_ctx: &'ctx CompilationContext<D>, source: &'source Source) -> Self {
         Self {
             compilation_ctx,
             source,
@@ -61,13 +61,15 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
             ';' => Some(self.single_character_token(start, TokenKind::SemiColon)),
             '\0' => Some(self.single_character_token(start, TokenKind::EndOfFile)),
             _ => {
-                // self.compilation_ctx.emit_diagnostic(Diagnostic::new(
-                //     Level::Error,
-                //     vec!["unrecognized character"],
-                //     self.cook_snippet(start, start),
-                // ));
+                let snippet = self.cook_snippet(start, start + 1);
+                Diagnostic::new(Level::Error, "unrecognized character")
+                    .add_child(SubDiagnostic::new(
+                        vec![Message::new(Level::Error, "", Some(snippet))],
+                        snippet,
+                    ))
+                    .emit(&self.compilation_ctx);
 
-                None
+                Some(self.single_character_token(start, TokenKind::Error))
             }
         }
     }
@@ -116,7 +118,7 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
             }
         }
 
-        self.cook_snippet(start, end)
+        self.cook_snippet(start, end + SourcePos(1))
     }
 
     fn optionally_continue<P: Fn(char) -> bool>(
@@ -129,14 +131,14 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
         match self.peek() {
             Some((end, ch)) if predicate(ch) => {
                 self.next();
-                return Token::new(self.cook_snippet(start, end), consumed_kind);
+                return Token::new(self.cook_snippet(start, end + 1), consumed_kind);
             }
-            _ => Token::new(self.cook_snippet(start, start), default_kind),
+            _ => Token::new(self.cook_snippet(start, start + 1), default_kind),
         }
     }
 
     fn single_character_token(&self, start: SourcePos, kind: TokenKind) -> Token {
-        Token::new(self.cook_snippet(start, start), kind)
+        Token::new(self.cook_snippet(start, start + 1), kind)
     }
 
     fn cook_snippet(&self, start: SourcePos, end: SourcePos) -> Snippet {
@@ -152,7 +154,7 @@ impl<'ctx, 'source> LexicalAnalyzer<'ctx, 'source> {
     }
 }
 
-impl<'ctx, 'source> Iterator for LexicalAnalyzer<'ctx, 'source> {
+impl<'ctx, 'source, D: DiagnosticHandler> Iterator for LexicalAnalyzer<'ctx, 'source, D> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {

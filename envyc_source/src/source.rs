@@ -8,16 +8,55 @@ pub type SourceId = usize;
 #[derive(Debug)]
 pub struct Source {
     pub id: SourceId,
+    pub name: String,
     pub text: String,
 }
 
+#[derive(Debug)]
+pub struct LineInformation {
+    pub line_number: usize,
+    pub line_start: SourcePos,
+    pub line_end: SourcePos,
+}
+
 impl Source {
-    pub fn new(id: SourceId, text: String) -> Self {
-        Self { id, text }
+    pub fn new(id: SourceId, name: String, text: String) -> Self {
+        Self { id, name, text }
     }
 
     pub fn get_text(&self, start: SourcePos, end: SourcePos) -> &str {
-        &self.text[start.0..=end.0]
+        &self.text[start.0..end.0]
+    }
+
+    pub fn extend_back(&self, pos: SourcePos) -> SourcePos {
+        let line_info = self.get_line_information(pos);
+        line_info.line_start
+    }
+
+    pub fn extend(&self, pos: SourcePos) -> SourcePos {
+        let line_info = self.get_line_information(pos);
+        line_info.line_end
+    }
+
+    pub fn get_line_information(&self, pos: SourcePos) -> LineInformation {
+        let mut line_number = 1;
+        let mut line_start = 0;
+        let mut line_end = 0;
+        for line in self.text.split_inclusive('\n') {
+            line_end += line.len();
+            if line_start + line.len() >= pos.0 {
+                break;
+            }
+
+            line_number += 1;
+            line_start += line.len();
+        }
+
+        LineInformation {
+            line_number,
+            line_start: SourcePos(line_start),
+            line_end: SourcePos(line_end),
+        }
     }
 
     pub fn len(&self) -> usize {

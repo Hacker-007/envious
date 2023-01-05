@@ -1,4 +1,5 @@
-pub mod diagnostics;
+pub mod diagnostic;
+pub mod handler;
 
 #[cfg(test)]
 mod tests {
