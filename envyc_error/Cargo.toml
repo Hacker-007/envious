@@ -1,9 +1,0 @@
-[package]
-name = "envyc_error"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-annotate-snippets = { version = "0.9.1", features = ["color"] }
-envyc_source = { path = "../envyc_source" }
-envyc_context = { path = "../envyc_context" }

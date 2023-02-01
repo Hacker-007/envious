@@ -1,18 +1,8 @@
 use std::fmt::Display;
 
-use envyc_source::snippet::Snippet;
+use envyc_source::span::Spanned;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Token {
-    pub snippet: Snippet,
-    pub kind: TokenKind,
-}
-
-impl Token {
-    pub fn new(snippet: Snippet, kind: TokenKind) -> Self {
-        Self { snippet, kind }
-    }
-}
+pub type Token = Spanned<TokenKind>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {

@@ -1,9 +1,0 @@
-[package]
-name = "envyc_lexer"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-envyc_source = { path = "../envyc_source" }
-envyc_error = { path = "../envyc_error" }
-envyc_context = { path = "../envyc_context" }

@@ -3,8 +3,6 @@ name = "envyc_driver"
 version = "0.1.0"
 edition = "2021"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [dependencies]
-envyc_context = { path = "../envyc_context" }
-envyc_lexer = { path = "../envyc_lexer" }
-envyc_source = { path = "../envyc_source" }
-envyc_error = { path = "../envyc_error" }
