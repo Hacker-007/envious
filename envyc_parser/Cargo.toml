@@ -1,7 +1,0 @@
-[package]
-name = "envyc_parser"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-envyc_source = { path = "../envyc_source" }

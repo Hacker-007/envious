@@ -1,6 +1,7 @@
-[workspace]
-members = [
-    "envyc_driver",
-    "envyc_source",
-    "envyc_parser",
-]
+[package]
+name = "envyc"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+codespan-reporting = "0.11.1"

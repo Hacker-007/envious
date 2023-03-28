@@ -1,9 +1,5 @@
 use std::fmt::Display;
 
-use envyc_source::span::Spanned;
-
-pub type Token = Spanned<TokenKind>;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
     Whitespace,
@@ -28,6 +24,7 @@ pub enum TokenKind {
     ExclamationEqual,
     LessThanEqual,
     GreaterThanEqual,
+    Period,
     Comma,
     Colon,
     SemiColon,
@@ -71,6 +68,7 @@ impl Display for TokenKind {
             TokenKind::ExclamationEqual => "exclamation equal sign",
             TokenKind::LessThanEqual => "less than equal sign",
             TokenKind::GreaterThanEqual => "greater than equal sign",
+            TokenKind::Period => "period",
             TokenKind::Comma => "comma",
             TokenKind::Colon => "colon",
             TokenKind::SemiColon => "semi-colon",
