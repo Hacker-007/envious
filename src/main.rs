@@ -8,11 +8,15 @@ use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use context::{CompilationContext, DiagnosticStats};
 use lexical_analysis::token_stream::TokenStream;
 
+use crate::lexical_analysis::parser::Parser;
+
 fn main() {
     let mut ctx = CompilationContext::new(Box::new(StandardStream::stderr(ColorChoice::Auto)));
-    let source_id = ctx.add_source("test.envy", "");
+    let source_id = ctx.add_source("test.envy", "hello not + - 13");
     let token_stream = TokenStream::new(&ctx, ctx.get_source(source_id).unwrap());
-    token_stream.for_each(|token| println!("{:#?}", token));
+    let mut parser = Parser::from_stream(token_stream);
+    let program = parser.parse();
+    println!("{:#?}", program);
     
     let DiagnosticStats {
         error_count,

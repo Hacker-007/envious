@@ -6,6 +6,7 @@ use crate::{
 
 use super::token_kind::TokenKind;
 
+#[derive(Debug)]
 pub struct TokenStream<'ctx, 'source, 'text> {
     compilation_ctx: &'ctx CompilationContext<'text>,
     source_iter: SourceIter<'source, 'text>,
@@ -20,6 +21,10 @@ impl<'ctx, 'source, 'text> TokenStream<'ctx, 'source, 'text> {
             compilation_ctx,
             source_iter: SourceIter::new(source),
         }
+    }
+
+    pub fn get_compilation_ctx(&self) -> &'ctx CompilationContext<'text> {
+        self.compilation_ctx
     }
 
     fn next_token(&mut self) -> Option<Spanned<TokenKind>> {

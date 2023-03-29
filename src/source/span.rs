@@ -60,16 +60,30 @@ impl Span {
 #[derive(Debug)]
 pub struct Spanned<T> {
     span: Span,
-    node: T,
+    item: T,
 }
 
 impl<T> Spanned<T> {
-    pub fn new(span: Span, node: T) -> Self {
-        Self { span, node }
+    pub fn new(span: Span, item: T) -> Self {
+        Self { span, item }
     }
 
     pub fn span(&self) -> Span {
         self.span
+    }
+
+    pub fn item(&self) -> &T {
+        &self.item
+    }
+}
+
+impl<T: Copy> Copy for Spanned<T> {}
+impl<T: Clone> Clone for Spanned<T> {
+    fn clone(&self) -> Self {
+        Self {
+            span: self.span,
+            item: self.item.clone(),
+        }
     }
 }
 
@@ -77,13 +91,13 @@ impl<T> Deref for Spanned<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.node
+        &self.item
     }
 }
 
 impl<T> DerefMut for Spanned<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.node
+        &mut self.item
     }
 }
 

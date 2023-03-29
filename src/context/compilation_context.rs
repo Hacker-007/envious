@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::{fmt::Debug, sync::Mutex};
 
 use codespan_reporting::term::{emit, termcolor::WriteColor, Config};
 
@@ -34,10 +34,15 @@ impl<'text> CompilationContext<'text> {
     }
 
     pub fn get_diagnostic_stats(&self) -> DiagnosticStats {
-        self.diagnostic_handler
-            .lock()
-            .unwrap()
-            .get_stats()
+        self.diagnostic_handler.lock().unwrap().get_stats()
+    }
+}
+
+impl Debug for CompilationContext<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CompilationContext")
+            .field("source_map", &self.source_map)
+            .finish_non_exhaustive()
     }
 }
 
@@ -87,4 +92,3 @@ pub struct DiagnosticStats {
     pub error_count: usize,
     pub warning_count: usize,
 }
-
