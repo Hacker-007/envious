@@ -46,7 +46,7 @@ impl Span {
 ///
 /// # Examples
 /// ```
-/// use sandbox::span::{Span, WithSpan};
+/// use envyc::source::{Span, WithSpan};
 ///
 /// #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// enum TokenKind {

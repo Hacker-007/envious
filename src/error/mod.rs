@@ -1,7 +1,7 @@
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 
 use crate::{
-    lexical_analysis::token_kind::TokenKind,
+    parse::token_kind::TokenKind,
     source::{SourceId, Span},
 };
 
@@ -88,7 +88,7 @@ impl From<&ParserDiagnosticKind> for Diagnostic<SourceId> {
                 found_kind,
             } => {
                 let expected_kinds_message = match &expected_kinds[..] {
-                    [] => unreachable!("got no expected kinds for error message!"),
+                    [] => format!("some item"),
                     [kind] => format!("{}", kind),
                     [kind_a, kind_b] => format!("{} or {}", kind_a, kind_b),
                     [first_kind, rest @ .., last] => format!(

@@ -4,6 +4,16 @@ use codespan_reporting::files::{Error as CodespanError, Files};
 
 use super::{Source, SourceId};
 
+/// Stores all of the sources in the compilation process for retrieval
+/// at a later point. This is mostly used in the beginning stage of
+/// analysis and during error reporting.
+/// 
+/// # Examples
+/// use envyc::source::SourceMap;
+/// 
+/// let mut source_map = SourceMap::default();
+/// let source_id = source_map.insert("name of source", "text of source");
+/// assert!(source_map.get(source_id).is_some())
 #[derive(Debug, Default)]
 pub struct SourceMap<'text> {
     sources: Vec<Source<'text>>,

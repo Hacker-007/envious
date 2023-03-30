@@ -8,6 +8,9 @@ pub enum TokenKind {
     Boolean,
     Identifer,
 
+    IntType,
+    BooleanType,
+
     LeftParenthesis,
     RightParenthesis,
     LeftCurlyBrace,
@@ -42,6 +45,8 @@ pub enum TokenKind {
     Return,
 
     EndOfFile,
+
+    Dummy,
 }
 
 impl Display for TokenKind {
@@ -51,6 +56,8 @@ impl Display for TokenKind {
             TokenKind::Int => "an integer",
             TokenKind::Boolean => "a boolean",
             TokenKind::Identifer => "an identifier",
+            TokenKind::IntType => "the integer type",
+            TokenKind::BooleanType => "the boolean type",
             TokenKind::LeftParenthesis => "a left parenthesis",
             TokenKind::RightParenthesis => "a right parenthesis",
             TokenKind::LeftCurlyBrace => "a left curly bracket",
@@ -83,6 +90,7 @@ impl Display for TokenKind {
             TokenKind::Define => "the define keyword",
             TokenKind::Return => "the return keyword",
             TokenKind::EndOfFile => "the end of the file",
+            TokenKind::Dummy => unreachable!("tried to use dummy token!"),
         };
 
         f.write_str(token_representation)

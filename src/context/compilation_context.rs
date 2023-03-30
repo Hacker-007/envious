@@ -7,8 +7,11 @@ use crate::{
     source::{Source, SourceId, SourceMap},
 };
 
+use super::symbol_interner::{SymbolId, SymbolInterner};
+
 pub struct CompilationContext<'text> {
     source_map: SourceMap<'text>,
+    symbol_interner: Mutex<SymbolInterner>,
     diagnostic_handler: Mutex<EnviousDiagnosticHandler>,
 }
 
@@ -16,6 +19,7 @@ impl<'text> CompilationContext<'text> {
     pub fn new(diagnostic_stream_writer: Box<dyn WriteColor>) -> Self {
         Self {
             source_map: SourceMap::default(),
+            symbol_interner: Mutex::new(SymbolInterner::default()),
             diagnostic_handler: Mutex::new(EnviousDiagnosticHandler::new(diagnostic_stream_writer)),
         }
     }
@@ -26,6 +30,16 @@ impl<'text> CompilationContext<'text> {
 
     pub fn get_source(&self, source_id: SourceId) -> Option<&Source> {
         self.source_map.get(source_id)
+    }
+
+    pub fn get_symbol(&self, key: &str) -> SymbolId {
+        let mut lock = self.symbol_interner.lock().unwrap();
+        lock.get_symbol(key)
+    }
+
+    pub fn get_key(&self, id: &SymbolId) -> String {
+        let lock = self.symbol_interner.lock().unwrap();
+        lock.get_key(id).to_string()
     }
 
     pub fn emit_diagnostic(&self, diagnostic: EnviousDiagnostic) {

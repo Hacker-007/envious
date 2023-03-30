@@ -12,7 +12,7 @@ use super::{Source, span::{Span, SourcePos}};
 ///
 /// # Examples
 /// ```
-/// use sandbox::source::{Source, SourceIter};
+/// use envyc::source::{Source, SourceIter};
 ///
 /// let text = "Source Text";
 /// let source = Source::new(0, "test.txt", text);

@@ -1,4 +1,4 @@
-use crate::source::Spanned;
+use crate::{context::symbol_interner::SymbolId, source::Spanned};
 
 use super::ptr::P;
 
@@ -8,7 +8,7 @@ pub enum Type {
     Boolean,
 }
 
-pub type Identifier = Spanned<usize>;
+pub type Identifier = Spanned<SymbolId>;
 
 #[derive(Debug)]
 pub enum ExpressionKind {

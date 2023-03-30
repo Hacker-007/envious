@@ -20,8 +20,8 @@ pub struct Function {
 
 #[derive(Debug)]
 pub struct Parameter {
+    pub leading_comma: Option<Span>,
     pub name: Identifier,
     pub colon: Span,
     pub ty: Spanned<Type>,
-    pub trailing_comma: Option<Span>,
 }

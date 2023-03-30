@@ -19,7 +19,7 @@ pub type SourceId = usize;
 ///
 /// # Examples
 /// ```
-/// use sandbox::{span::Span, source::Source};
+/// use envyc::source::{Span, Source};
 ///
 /// let source = Source::new(0, "test.txt", "This is the text of the source");
 /// let source_len = source.len();
@@ -44,6 +44,10 @@ impl<'text> Source<'text> {
         }
     }
 
+    pub fn id(&self) -> SourceId {
+        self.id
+    }
+
     pub fn len(&self) -> usize {
         self.text.len()
     }
@@ -58,7 +62,7 @@ impl<'text> Source<'text> {
     ///
     /// # Examples
     /// ```
-    /// use sandbox::source::Source;
+    /// use envyc::source::Source;
     ///
     /// let source = Source::new(0, "test.txt", "This is the text of the source\nThis is a new line.");
     /// assert_eq!(source.line_index(12), 0);
@@ -77,12 +81,13 @@ impl<'text> Source<'text> {
     ///
     /// # Examples
     /// ```
-    /// use sandbox::source::Source;
+    /// use envyc::source::Source;
     ///
     /// let source = Source::new(0, "test.txt", "This is the text of the source\nThis is a new line");
     /// assert_eq!(source.line_start_index(0), Ok(0));
     /// assert_eq!(source.line_start_index(1), Ok(31));
-    /// assert_eq!(source.line_start_index(2), Err(1));
+    /// assert_eq!(source.line_start_index(2), Ok(49));
+    /// assert_eq!(source.line_start_index(3), Err(1));
     /// ```
     pub fn line_start_index(&self, line_index: usize) -> Result<usize, usize> {
         if line_index == self.line_start_indices.len() {

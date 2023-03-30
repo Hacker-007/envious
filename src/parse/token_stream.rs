@@ -116,6 +116,8 @@ impl<'ctx, 'source, 'text> TokenStream<'ctx, 'source, 'text> {
         let word_span = self.continue_while(start, |ch| ch.is_alphanumeric() || ch == '_');
         let word = self.source_iter.get_text(word_span);
         match word {
+            "Int" => TokenKind::IntType,
+            "Bool" => TokenKind::BooleanType,
             "true" => TokenKind::Boolean,
             "false" => TokenKind::Boolean,
             "not" => TokenKind::Not,

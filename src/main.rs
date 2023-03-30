@@ -1,23 +1,21 @@
 pub mod context;
-pub mod source;
 pub mod error;
+pub mod source;
 
-pub mod lexical_analysis;
+pub mod parse;
 
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
-use context::{CompilationContext, DiagnosticStats};
-use lexical_analysis::token_stream::TokenStream;
 
-use crate::lexical_analysis::parser::Parser;
+use context::{CompilationContext, DiagnosticStats};
+use parse::Parser;
 
 fn main() {
     let mut ctx = CompilationContext::new(Box::new(StandardStream::stderr(ColorChoice::Auto)));
-    let source_id = ctx.add_source("test.envy", "hello not + - 13");
-    let token_stream = TokenStream::new(&ctx, ctx.get_source(source_id).unwrap());
-    let mut parser = Parser::from_stream(token_stream);
+    let source_id = ctx.add_source("test.envy", "define test(x: Int, y: Bool) =");
+    let mut parser = Parser::new(&ctx, ctx.get_source(source_id).unwrap());
     let program = parser.parse();
     println!("{:#?}", program);
-    
+
     let DiagnosticStats {
         error_count,
         warning_count,
