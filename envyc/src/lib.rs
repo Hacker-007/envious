@@ -1,14 +1,21 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+use crate::{
+    context::CompilationContext,
+    lex::{buffer::TokenizedBuffer, Lexer},
+    source::SourceId,
+};
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub mod context;
+pub(crate) mod dense;
+pub mod diagnostics;
+pub mod lex;
+pub mod source;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub fn lex<'src>(ctx: &mut CompilationContext<'src>, bytes: &'src [u8]) -> SourceId {
+    // Register the source with a placeholder buffer that will be replaced after lexing.
+    let id = ctx.sources.register(bytes, TokenizedBuffer::default());
+    let source = ctx.sources.get_mut(id);
+    let buffer = Lexer::new(source).lex();
+    let _ = std::mem::replace(source.buffer_mut(), buffer);
+
+    id
 }
