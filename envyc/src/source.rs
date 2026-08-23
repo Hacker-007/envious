@@ -1,9 +1,15 @@
-use std::str::Chars;
+use std::{rc::Rc, str::Chars};
 
 use crate::dense::{DenseIndex, DenseVec};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SourceId(DenseIndex);
+
+impl Default for SourceId {
+    fn default() -> Self {
+        Self(DenseIndex::ZERO)
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct SourceMap {
@@ -11,19 +17,19 @@ pub struct SourceMap {
 }
 
 impl SourceMap {
-    pub(crate) fn register(&mut self, bytes: impl Into<Box<str>>) -> (SourceId, &Source) {
-        // Insert the source with a dummy ID which we will overwrite 
-        let idx = self
-            .sources
-            .push(Source::new(SourceId(DenseIndex::default()), bytes));
-
+    pub(crate) fn register(&mut self, bytes: impl Into<Box<str>>) -> SourceId {
+        // Insert the source with a dummy ID which we will overwrite
+        let idx = self.sources.push(Source::new(SourceId::default(), bytes));
         self.sources[idx].id = SourceId(idx);
-        (SourceId(idx), &self.sources[idx])
+        SourceId(idx)
+    }
+
+    pub(crate) fn get(&self, id: SourceId) -> &Source {
+        &self.sources[id.0]
     }
 }
 
-/// A reference to the original source bytes
-/// being compiled.
+/// A reference to the original source bytes being compiled.
 #[derive(Debug)]
 pub struct Source {
     id: SourceId,
@@ -56,6 +62,11 @@ impl Source {
     #[inline]
     pub fn chars(&self) -> Chars<'_> {
         self.text.chars()
+    }
+
+    #[inline]
+    pub fn text(&self, span: Span) -> &str {
+        &self.text[span.start as usize..span.end as usize]
     }
 }
 

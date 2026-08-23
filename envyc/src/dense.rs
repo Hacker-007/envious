@@ -1,9 +1,17 @@
-use std::ops::{Index, IndexMut};
+use std::ops::{Add, Index, IndexMut};
 
 /// A wrapper type around the indices within a dense
 /// vector.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DenseIndex(u32);
+
+impl DenseIndex {
+    pub const ZERO: Self = Self(0);
+
+    pub fn saturating_add(self, rhs: u32) -> Self {
+        Self(self.0.saturating_add(rhs))
+    }
+}
 
 /// A wrapper type around a contiguous range of elements within
 /// a dense vector.
@@ -57,6 +65,10 @@ impl<T> DenseVec<T> {
             start: DenseIndex(start),
             end: DenseIndex(end),
         }
+    }
+
+    pub fn get(&self, idx: DenseIndex) -> Option<&T> {
+        self.0.get(idx.0 as usize)
     }
 }
 

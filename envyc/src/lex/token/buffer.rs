@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 use crate::{
     dense::{DenseIndex, DenseRange, DenseVec},
     lex::token::{Token, TokenKind, Trivia},
@@ -8,6 +10,14 @@ use crate::{
 /// given token.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TokenIndex(DenseIndex);
+
+impl TokenIndex {
+    pub const ZERO: Self = Self(DenseIndex::ZERO);
+
+    pub fn advance(self, delta: u32) -> Self {
+        Self(self.0.saturating_add(delta))
+    }
+}
 
 /// A buffer of tokenized source code.
 #[derive(Debug, Clone, Default)]
@@ -30,5 +40,13 @@ impl TokenizedBuffer {
         self.leading.push(leading_range);
         self.trailing.push(trailing_range);
         TokenIndex(idx)
+    }
+
+    pub fn kind_at(&self, idx: TokenIndex) -> Option<TokenKind> {
+        self.kinds.get(idx.0).copied()
+    }
+
+    pub fn span_at(&self, idx: TokenIndex) -> Option<Span> {
+        self.spans.get(idx.0).copied()
     }
 }

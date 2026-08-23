@@ -1,28 +1,36 @@
 #![allow(unused)]
 
-use crate::{context::CompilationContext, lex::{Lexer, token::buffer::TokenizedBuffer}, source::SourceId};
+use crate::{
+    context::CompilationContext,
+    lex::{token::buffer::TokenizedBuffer, Lexer},
+    source::SourceId,
+};
 
-pub mod context;
-pub(crate) mod dense;
+pub mod ast;
+pub mod compiler;
 pub mod diagnostics;
-pub mod lex;
 pub mod source;
 
-pub fn lex(ctx: &mut CompilationContext, source: impl Into<Box<str>>) -> (SourceId, TokenizedBuffer) {
-    let (id, source) = ctx.sources.register(source);
-    let buffer = Lexer::new(source).lex(&mut ctx.diagnostics);
-    (id, buffer)
-}
+pub(crate) mod context;
+pub(crate) mod dense;
+pub(crate) mod lex;
+pub(crate) mod parser;
 
 #[cfg(test)]
 mod test {
-    use crate::{context::CompilationContext, lex};
+    use crate::{ast::printer::PrettyPrinter, compiler::Compiler};
 
     #[test]
-   fn lex_ok() {
-        let mut ctx = CompilationContext::default();
-        let (_, buffer) = lex(&mut ctx, "123");
-        assert!(ctx.diagnostics.is_empty());
-        assert_eq!(buffer.kinds.len(), 2);
+    fn print_ok() {
+        let mut compiler = Compiler::default();
+        let id = compiler.lex("1+2");
+        compiler.parse(&id);
+        let printer = PrettyPrinter::new(
+            compiler.source(&id),
+            compiler.tokens(&id),
+            compiler.ast(&id),
+        );
+
+        assert_eq!(printer.to_string(), "(1 + 2)");
     }
 }

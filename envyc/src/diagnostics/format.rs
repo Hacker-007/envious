@@ -11,6 +11,21 @@ pub trait DiagnosticFormatter {
     ) -> std::io::Result<()>;
 }
 
+/// A diagnostic formatter that outputs a JSON payload for a
+/// message.
+pub struct JsonFormatter;
+
+impl DiagnosticFormatter for JsonFormatter {
+    fn format<W>(
+        &mut self,
+        _sources: &SourceMap,
+        _diagnostic: Diagnostic,
+        _sink: &mut W,
+    ) -> std::io::Result<()> {
+        todo!()
+    }
+}
+
 /// A diagnostic formatter that outputs a pretty rendered
 /// message, similar to the `rustc` compiler.
 pub struct PrettyFormatter;

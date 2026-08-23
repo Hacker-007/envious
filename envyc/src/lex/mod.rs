@@ -3,6 +3,7 @@ use std::str::Chars;
 use smallvec::SmallVec;
 
 use crate::{
+    context::CompilationContext,
     diagnostics::{Anchor, Diagnostic, DiagnosticBag, DiagnosticKind, Severity},
     lex::token::{
         buffer::{TokenIndex, TokenizedBuffer},
@@ -47,10 +48,11 @@ pub struct Lexer<'a> {
     /// A vector of all trivia we have encountered
     /// but not yet assigned to a token.
     unassigned_trivia: SmallVec<[Trivia; 4]>,
+    diagnostics: &'a mut DiagnosticBag,
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(source: &'a Source) -> Self {
+    pub fn new(source: &'a Source, diagnostics: &'a mut DiagnosticBag) -> Self {
         let mut chars = source.chars();
         let current = chars.next().unwrap_or('\0');
         let next = chars.next().unwrap_or('\0');
@@ -64,14 +66,17 @@ impl<'a> Lexer<'a> {
             current_mode: LexMode::Standard,
             prior_modes: vec![],
             unassigned_trivia: SmallVec::default(),
+            diagnostics,
         }
     }
 
-    /// TODO: write doc comment
-    pub fn lex(mut self, diagnostics: &mut DiagnosticBag) -> TokenizedBuffer {
+    /// Tokenizes the entire source, consuming the lexer, and reports any
+    /// errors encountered into `diagnostics`. The returned buffer always
+    /// ends with a zero-width [`TokenKind::EndOfFile`] token.
+    pub fn lex(mut self) -> TokenizedBuffer {
         while !self.at_end() {
             match self.current_mode {
-                LexMode::Standard => self.lex_standard(diagnostics),
+                LexMode::Standard => self.lex_standard(),
                 LexMode::InString => todo!(),
                 LexMode::InStringInterpolation => todo!(),
             }
@@ -82,8 +87,7 @@ impl<'a> Lexer<'a> {
         self.buffer
     }
 
-    /// TODO: write doc comment
-    fn lex_standard(&mut self, diagnostics: &mut DiagnosticBag) {
+    fn lex_standard(&mut self) {
         if let Some(trivia) = self.scan_trivia() {
             self.unassigned_trivia.push(trivia);
             return;
@@ -95,14 +99,12 @@ impl<'a> Lexer<'a> {
                 self.skip_while(|ch| ch.is_ascii_digit());
                 self.mint_at(TokenKind::IntLiteral, self.span_since(start));
             }
+            ('+', _) => {
+                self.mint(TokenKind::Plus);
+            }
             _ => {
                 let idx = self.mint(TokenKind::Error);
-                diagnostics.add(Diagnostic {
-                    kind: DiagnosticKind::UnknownCharacter,
-                    primary: Anchor(self.source.id(), idx),
-                    secondary: SmallVec::default(),
-                    severity: Severity::Error,
-                });
+                self.diagnostics.unknown_character(self.source.id(), idx);
             }
         }
     }

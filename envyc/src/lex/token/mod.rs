@@ -4,9 +4,10 @@ use smallvec::SmallVec;
 
 use crate::source::Span;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
     IntLiteral,
+    Plus,
 
     EndOfFile,
     /// A placeholder token for any errors that

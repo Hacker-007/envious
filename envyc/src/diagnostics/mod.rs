@@ -4,7 +4,7 @@ use smallvec::SmallVec;
 
 use crate::{
     diagnostics::format::DiagnosticFormatter,
-    lex::token::buffer::TokenIndex,
+    lex::token::{buffer::TokenIndex, TokenKind},
     source::{SourceId, SourceMap},
 };
 
@@ -26,7 +26,8 @@ pub enum Severity {
 #[derive(Debug, Clone, Copy)]
 pub enum DiagnosticKind {
     UnknownCharacter,
-    UnexpectedEndOfFile,
+    ExpectedToken(TokenKind),
+    ExpectedExpression,
 }
 
 #[derive(Debug, Clone)]
@@ -39,11 +40,41 @@ pub struct Diagnostic {
     pub(crate) severity: Severity,
 }
 
+impl Diagnostic {
+    pub(crate) fn unknown_character(source: SourceId, at: TokenIndex) -> Self {
+        Self {
+            kind: DiagnosticKind::UnknownCharacter,
+            primary: Anchor(source, at),
+            secondary: SmallVec::default(),
+            severity: Severity::Error,
+        }
+    }
+
+    pub(crate) fn expected_token(source: SourceId, at: TokenIndex, expected: TokenKind) -> Self {
+        Self {
+            kind: DiagnosticKind::ExpectedToken(expected),
+            primary: Anchor(source, at),
+            secondary: SmallVec::new(),
+            severity: Severity::Error,
+        }
+    }
+
+    pub(crate) fn expected_expression(source: SourceId, at: TokenIndex) -> Self {
+        Self {
+            kind: DiagnosticKind::ExpectedExpression,
+            primary: Anchor(source, at),
+            secondary: SmallVec::new(),
+            severity: Severity::Error,
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct DiagnosticBag(Vec<Diagnostic>);
 
 impl DiagnosticBag {
     /// Stores the diagnostic until the next [`DiagnosticBag::flush`] call.
+    #[inline]
     pub fn add(&mut self, diagnostic: Diagnostic) {
         self.0.push(diagnostic);
     }
@@ -65,5 +96,32 @@ impl DiagnosticBag {
         }
 
         Ok(())
+    }
+
+    pub(crate) fn unknown_character(&mut self, source: SourceId, at: TokenIndex) {
+        self.add(Diagnostic {
+            kind: DiagnosticKind::UnknownCharacter,
+            primary: Anchor(source, at),
+            secondary: SmallVec::default(),
+            severity: Severity::Error,
+        })
+    }
+
+    pub(crate) fn expected_token(&mut self, source: SourceId, at: TokenIndex, expected: TokenKind) {
+        self.add(Diagnostic {
+            kind: DiagnosticKind::ExpectedToken(expected),
+            primary: Anchor(source, at),
+            secondary: SmallVec::new(),
+            severity: Severity::Error,
+        })
+    }
+
+    pub(crate) fn expected_expression(&mut self, source: SourceId, at: TokenIndex) {
+        self.add(Diagnostic {
+            kind: DiagnosticKind::ExpectedExpression,
+            primary: Anchor(source, at),
+            secondary: SmallVec::new(),
+            severity: Severity::Error,
+        })
     }
 }
