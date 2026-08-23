@@ -1,7 +1,7 @@
 use crate::{diagnostics::DiagnosticBag, source::SourceMap};
 
-#[derive(Debug)]
-pub struct CompilationContext<'src> {
-    pub(crate) sources: SourceMap<'src>,
+#[derive(Debug, Default)]
+pub struct CompilationContext {
+    pub(crate) sources: SourceMap,
     pub(crate) diagnostics: DiagnosticBag,
 }

@@ -1,8 +1,10 @@
 use std::io::{self, Write};
 
+use smallvec::SmallVec;
+
 use crate::{
     diagnostics::format::DiagnosticFormatter,
-    lex::buffer::TokenIndex,
+    lex::token::buffer::TokenIndex,
     source::{SourceId, SourceMap},
 };
 
@@ -12,7 +14,7 @@ mod format;
 /// that can be used to resolve locations when
 /// reporting diagnostics.
 #[derive(Debug, Clone, Copy)]
-pub struct Anchor(SourceId, TokenIndex);
+pub struct Anchor(pub(crate) SourceId, pub(crate) TokenIndex);
 
 #[derive(Debug, Clone, Copy)]
 pub enum Severity {
@@ -23,16 +25,18 @@ pub enum Severity {
 
 #[derive(Debug, Clone, Copy)]
 pub enum DiagnosticKind {
+    UnknownCharacter,
     UnexpectedEndOfFile,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Diagnostic {
-    kind: DiagnosticKind,
+    pub(crate) kind: DiagnosticKind,
     /// The primary anchor location of this
     /// diagnostic.
-    primary: Anchor,
-    severity: Severity,
+    pub(crate) primary: Anchor,
+    pub(crate) secondary: SmallVec<[Anchor; 1]>,
+    pub(crate) severity: Severity,
 }
 
 #[derive(Debug, Default)]
@@ -42,6 +46,10 @@ impl DiagnosticBag {
     /// Stores the diagnostic until the next [`DiagnosticBag::flush`] call.
     pub fn add(&mut self, diagnostic: Diagnostic) {
         self.0.push(diagnostic);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     /// Formats all of the diagnostic in the buffer and outputs

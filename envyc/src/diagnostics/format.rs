@@ -3,9 +3,9 @@ use crate::{diagnostics::Diagnostic, source::SourceMap};
 /// Formats a diagnostic and writes it in "human-readable" text to
 /// a sink [`std::io::Write`].
 pub trait DiagnosticFormatter {
-    fn format<'src, W>(
+    fn format<W>(
         &mut self,
-        sources: &SourceMap<'src>,
+        sources: &SourceMap,
         diagnostic: Diagnostic,
         sink: &mut W,
     ) -> std::io::Result<()>;
@@ -16,9 +16,9 @@ pub trait DiagnosticFormatter {
 pub struct PrettyFormatter;
 
 impl DiagnosticFormatter for PrettyFormatter {
-    fn format<'src, W>(
+    fn format<W>(
         &mut self,
-        _sources: &SourceMap<'src>,
+        _sources: &SourceMap,
         _diagnostic: Diagnostic,
         _sink: &mut W,
     ) -> std::io::Result<()> {

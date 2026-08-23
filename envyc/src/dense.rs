@@ -1,3 +1,18 @@
+use std::ops::{Index, IndexMut};
+
+/// A wrapper type around the indices within a dense
+/// vector.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DenseIndex(u32);
+
+/// A wrapper type around a contiguous range of elements within
+/// a dense vector.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DenseRange {
+    start: DenseIndex,
+    end: DenseIndex,
+}
+
 /// A wrapper type around vectors providing "dense"
 /// storage of values; that is, a vector that is used
 /// in conjunction with others to minimize the overall
@@ -6,44 +21,77 @@
 pub struct DenseVec<T>(Vec<T>);
 
 impl<T> DenseVec<T> {
-    /// Returns an immutable reference to the item at
-    /// `idx`.
-    ///
-    /// Note that no bounds checks are performed;
-    /// thus, if the index is invalid, this function
-    /// panics.
-    pub fn get(&self, idx: u32) -> &T {
-        debug_assert!((idx as usize) < self.0.len());
-        self.0.get(idx as usize).unwrap()
+    pub fn len(&self) -> usize {
+        self.0.len()
     }
 
-    /// Returns a mutable reference to the item at
-    /// `idx`.
-    ///
-    /// Note that no bounds checks are performed;
-    /// thus, if the index is invalid, this function
-    /// panics.
-    pub fn get_mut(&mut self, idx: u32) -> &mut T {
-        debug_assert!((idx as usize) < self.0.len());
-        self.0.get_mut(idx as usize).unwrap()
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     /// Appends `item` to the end of the vector and
     /// returns the 32-bit integer index at which it
     /// was inserted.
     ///
-    /// Note that this panics if there are `2^32 - 1`
-    /// items in the vector.
-    pub fn push(&mut self, item: T) -> u32 {
+    /// Note that this panics if there is not enough space
+    /// in the vector.
+    pub fn push(&mut self, item: T) -> DenseIndex {
         debug_assert!(self.0.len() < u32::MAX as usize);
         let idx = self.0.len() as u32;
         self.0.push(item);
-        idx
+        DenseIndex(idx)
+    }
+
+    /// Appends all `items` to the end of the vector and
+    /// returns the index range at which the elements were
+    /// inserted.
+    ///
+    /// Note that this panics if there are is not enough space
+    /// in the vector.
+    pub fn push_all(&mut self, items: impl IntoIterator<Item = T>) -> DenseRange {
+        let start = self.0.len() as u32;
+        self.0.extend(items);
+        debug_assert!(self.0.len() < u32::MAX as usize);
+        let end = self.0.len() as u32;
+        DenseRange {
+            start: DenseIndex(start),
+            end: DenseIndex(end),
+        }
     }
 }
 
 impl<T> Default for DenseVec<T> {
     fn default() -> Self {
         Self(Default::default())
+    }
+}
+
+impl<T> Index<DenseIndex> for DenseVec<T> {
+    type Output = T;
+
+    fn index(&self, idx: DenseIndex) -> &Self::Output {
+        debug_assert!((idx.0 as usize) < self.0.len());
+        self.0.get(idx.0 as usize).unwrap()
+    }
+}
+
+impl<T> IndexMut<DenseIndex> for DenseVec<T> {
+    fn index_mut(&mut self, idx: DenseIndex) -> &mut Self::Output {
+        debug_assert!((idx.0 as usize) < self.0.len());
+        self.0.get_mut(idx.0 as usize).unwrap()
+    }
+}
+
+impl<T> Index<DenseRange> for DenseVec<T> {
+    type Output = [T];
+
+    fn index(&self, DenseRange { start, end }: DenseRange) -> &Self::Output {
+        &self.0[(start.0 as usize)..(end.0 as usize)]
+    }
+}
+
+impl<T> IndexMut<DenseRange> for DenseVec<T> {
+    fn index_mut(&mut self, DenseRange { start, end }: DenseRange) -> &mut Self::Output {
+        &mut self.0[(start.0 as usize)..(end.0 as usize)]
     }
 }

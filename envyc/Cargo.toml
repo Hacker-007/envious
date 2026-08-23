@@ -5,3 +5,4 @@ authors = ["Revanth Pothukuchi <revanthpothukuchi123@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+smallvec = "1.15.2"

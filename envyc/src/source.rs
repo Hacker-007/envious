@@ -1,80 +1,79 @@
-use crate::{dense::DenseVec, lex::buffer::TokenizedBuffer};
+use std::str::Chars;
+
+use crate::dense::{DenseIndex, DenseVec};
 
 #[derive(Debug, Clone, Copy)]
-pub struct SourceId(u32);
+pub struct SourceId(DenseIndex);
 
 #[derive(Debug, Default)]
-pub struct SourceMap<'src> {
-    sources: DenseVec<Source<'src>>,
+pub struct SourceMap {
+    sources: DenseVec<Source>,
 }
 
-impl<'src> SourceMap<'src> {
-    pub(crate) fn register(&mut self, bytes: &'src [u8], buffer: TokenizedBuffer) -> SourceId {
-        let idx = self.sources.push(Source::new(bytes, buffer));
-        SourceId(idx)
-    }
+impl SourceMap {
+    pub(crate) fn register(&mut self, bytes: impl Into<Box<str>>) -> (SourceId, &Source) {
+        // Insert the source with a dummy ID which we will overwrite 
+        let idx = self
+            .sources
+            .push(Source::new(SourceId(DenseIndex::default()), bytes));
 
-    pub fn get_mut(&mut self, id: SourceId) -> &mut Source<'src> {
-        self.sources.get_mut(id.0)
-    }
-
-    pub fn buffer(&self, id: SourceId) -> &TokenizedBuffer {
-        self.sources.get(id.0).buffer()
-    }
-
-    pub fn buffer_mut(&mut self, id: SourceId) -> &mut TokenizedBuffer {
-        self.sources.get_mut(id.0).buffer_mut()
+        self.sources[idx].id = SourceId(idx);
+        (SourceId(idx), &self.sources[idx])
     }
 }
 
 /// A reference to the original source bytes
 /// being compiled.
 #[derive(Debug)]
-pub struct Source<'src> {
-    bytes: &'src [u8],
-    newline_offsets: Vec<u32>,
-    buffer: Box<TokenizedBuffer>,
+pub struct Source {
+    id: SourceId,
+    text: Box<str>,
 }
 
-impl<'src> Source<'src> {
-    pub fn new(bytes: &'src [u8], buffer: TokenizedBuffer) -> Self {
+impl Source {
+    pub fn new(id: SourceId, source: impl Into<Box<str>>) -> Self {
         Self {
-            bytes,
-            newline_offsets: vec![],
-            buffer: Box::new(buffer),
+            id,
+            text: source.into(),
         }
     }
 
     #[inline]
+    pub fn id(&self) -> SourceId {
+        self.id
+    }
+
+    #[inline]
     pub fn len(&self) -> usize {
-        self.bytes.len()
+        self.text.len()
     }
 
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.bytes.is_empty()
-    }
-
-    pub fn get(&self, idx: usize) -> Option<u8> {
-        self.bytes.get(idx).copied()
+        self.text.is_empty()
     }
 
     #[inline]
-    pub fn bytes(&self) -> &[u8] {
-        self.bytes
+    pub fn chars(&self) -> Chars<'_> {
+        self.text.chars()
     }
+}
 
-    #[inline]
-    pub fn buffer(&self) -> &TokenizedBuffer {
-        &self.buffer
-    }
+/// A contiguous range of characters within the
+/// original source.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Span {
+    pub(crate) start: u32,
+    pub(crate) end: u32,
+}
 
-    #[inline]
-    pub fn buffer_mut(&mut self) -> &mut TokenizedBuffer {
-        &mut self.buffer
-    }
-
-    pub(crate) fn record_newline(&mut self, position: u32) {
-        self.newline_offsets.push(position);
+impl Span {
+    pub fn new(start: usize, end: usize) -> Self {
+        debug_assert!(start <= u32::MAX as usize);
+        debug_assert!(end <= u32::MAX as usize);
+        Self {
+            start: start as u32,
+            end: end as u32,
+        }
     }
 }
