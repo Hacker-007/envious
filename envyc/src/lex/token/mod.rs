@@ -1,5 +1,7 @@
 pub mod buffer;
 
+use std::fmt::Display;
+
 use smallvec::SmallVec;
 
 use crate::source::Span;
@@ -13,6 +15,17 @@ pub enum TokenKind {
     /// A placeholder token for any errors that
     /// occur during lexing.
     Error,
+}
+
+impl Display for TokenKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TokenKind::IntLiteral => write!(f, "int literal"),
+            TokenKind::Plus => write!(f, "+"),
+            TokenKind::EndOfFile => write!(f, "eof"),
+            TokenKind::Error => write!(f, "error"),
+        }
+    }
 }
 
 /// A category of source text that does not contribute

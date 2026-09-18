@@ -107,3 +107,21 @@ impl<T> IndexMut<DenseRange> for DenseVec<T> {
         &mut self.0[(start.0 as usize)..(end.0 as usize)]
     }
 }
+
+impl<'a, T> IntoIterator for &'a DenseVec<T> {
+    type Item = &'a T;
+    type IntoIter = std::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl<T> IntoIterator for DenseVec<T> {
+    type Item = T;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}

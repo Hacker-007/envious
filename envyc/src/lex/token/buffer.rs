@@ -1,4 +1,4 @@
-use std::ops::{Deref, DerefMut};
+use std::{fmt::Display, ops::{Deref, DerefMut}};
 
 use crate::{
     dense::{DenseIndex, DenseRange, DenseVec},
@@ -48,5 +48,15 @@ impl TokenizedBuffer {
 
     pub fn span_at(&self, idx: TokenIndex) -> Option<Span> {
         self.spans.get(idx.0).copied()
+    }
+}
+
+impl Display for TokenizedBuffer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for &kind in &self.kinds {
+            write!(f, "{kind}")?;
+        }
+
+        Ok(())
     }
 }

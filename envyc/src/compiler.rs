@@ -20,7 +20,7 @@ impl Compiler {
     pub fn lex(&mut self, source: impl Into<Box<str>>) -> SourceId {
         let id = self.ctx.sources.register(source);
         let source = self.ctx.sources.get(id);
-        let buffer = Lexer::new(&source, &mut self.ctx.diagnostics).lex();
+        let buffer = Lexer::new(source, &mut self.ctx.diagnostics).lex();
         self.buffers.insert(id, buffer);
         id
     }
