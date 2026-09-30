@@ -102,6 +102,21 @@ impl<'a> Lexer<'a> {
             ('+', _) => {
                 self.mint(TokenKind::Plus);
             }
+            ('-', _) => {
+                self.mint(TokenKind::Minus);
+            }
+            ('*', _) => {
+                self.mint(TokenKind::Asterisk);
+            }
+            ('/', _) => {
+                self.mint(TokenKind::ForwardSlash);
+            }
+            ('(', _) => {
+                self.mint(TokenKind::LeftParenthesis);
+            }
+            (')', _) => {
+                self.mint(TokenKind::RightParenthesis);
+            }
             _ => {
                 let idx = self.mint(TokenKind::Error);
                 self.diagnostics.unknown_character(self.source.id(), idx);

@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        binding::{Associativity, BindingPower, InfixOperator, Power},
+        binding::{Associativity, BindingPower, InfixOperator, Power, PrefixOperator},
         Ast, AstBuilder, Expression, ExpressionIndex, Literal,
     },
     diagnostics::{Diagnostic, DiagnosticBag},
@@ -45,7 +45,6 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self, minimum: Power) -> ExpressionIndex {
-        // TODO: implement Pratt parsing for expressions.
         let mut lhs = self.parse_primary();
         while let Some(operator) = InfixOperator::from_kind(self.current()) {
             let bp = operator.bp();
@@ -64,6 +63,14 @@ impl<'a> Parser<'a> {
     fn parse_primary(&mut self) -> ExpressionIndex {
         if let Some(token) = self.eat(TokenKind::IntLiteral) {
             return self.ast.allocate_literal(Literal::Integer(token));
+        } else if let Some(token) = self.eat(TokenKind::LeftParenthesis) {
+            let expression = self.parse_expression(Power::MIN);
+            self.expect(TokenKind::RightParenthesis);
+            return expression;
+        } else if let Some(operator) = PrefixOperator::from_kind(self.current()) {
+            let idx = self.bump();
+            let operand = self.parse_expression(operator.bp().right);
+            return self.ast.allocate_unary((operator, idx), operand);
         }
 
         self.bump();

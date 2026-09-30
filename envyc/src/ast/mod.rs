@@ -1,13 +1,12 @@
 use std::fmt::Display;
 
 use crate::{
-    ast::binding::InfixOperator,
+    ast::binding::{InfixOperator, PrefixOperator},
     dense::{DenseIndex, DenseVec},
     lex::token::buffer::TokenIndex,
 };
 
 pub mod binding;
-pub mod printer;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ExpressionIndex(DenseIndex);
@@ -23,19 +22,31 @@ impl AstBuilder {
         ExpressionIndex(idx)
     }
 
+    pub(crate) fn allocate_unary(
+        &mut self,
+        (operator, token): (PrefixOperator, TokenIndex),
+        operand: ExpressionIndex,
+    ) -> ExpressionIndex {
+        let idx = self.expressions.push(Expression::UnaryOperation {
+            operator: UnaryOperation(operator, token),
+            operand,
+        });
+
+        ExpressionIndex(idx)
+    }
+
     pub(crate) fn allocate_binary(
         &mut self,
         (operator, token): (InfixOperator, TokenIndex),
         lhs: ExpressionIndex,
         rhs: ExpressionIndex,
     ) -> ExpressionIndex {
-        let operator = match operator {
-            InfixOperator::Plus => BinaryOperation::Plus(token),
-        };
+        let idx = self.expressions.push(Expression::BinaryOperation {
+            lhs,
+            operator: BinaryOperation(operator, token),
+            rhs,
+        });
 
-        let idx = self
-            .expressions
-            .push(Expression::BinaryOperation { lhs, operator, rhs });
         ExpressionIndex(idx)
     }
 
@@ -58,9 +69,23 @@ pub struct Ast {
     expressions: DenseVec<Expression>,
 }
 
+impl Ast {
+    pub fn root(&self) -> ExpressionIndex {
+        self.root
+    }
+
+    pub fn get(&self, expression: ExpressionIndex) -> &Expression {
+        &self.expressions[expression.0]
+    }
+}
+
 #[derive(Debug)]
 pub enum Expression {
     Literal(Literal),
+    UnaryOperation {
+        operator: UnaryOperation,
+        operand: ExpressionIndex,
+    },
     BinaryOperation {
         lhs: ExpressionIndex,
         operator: BinaryOperation,
@@ -75,14 +100,7 @@ pub enum Literal {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum BinaryOperation {
-    Plus(TokenIndex),
-}
+pub struct UnaryOperation(pub(crate) PrefixOperator, TokenIndex);
 
-impl Display for BinaryOperation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BinaryOperation::Plus(_) => write!(f, "+"),
-        }
-    }
-}
+#[derive(Debug, Clone, Copy)]
+pub struct BinaryOperation(pub(crate) InfixOperator, TokenIndex);

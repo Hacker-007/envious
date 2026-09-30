@@ -10,6 +10,12 @@ use crate::source::Span;
 pub enum TokenKind {
     IntLiteral,
     Plus,
+    Minus,
+    Asterisk,
+    ForwardSlash,
+
+    LeftParenthesis,
+    RightParenthesis,
 
     EndOfFile,
     /// A placeholder token for any errors that
@@ -22,6 +28,11 @@ impl Display for TokenKind {
         match self {
             TokenKind::IntLiteral => write!(f, "int literal"),
             TokenKind::Plus => write!(f, "+"),
+            TokenKind::Minus => write!(f, "-"),
+            TokenKind::Asterisk => write!(f, "*"),
+            TokenKind::LeftParenthesis => write!(f, "("),
+            TokenKind::RightParenthesis => write!(f, ")"),
+            TokenKind::ForwardSlash => write!(f, "/"),
             TokenKind::EndOfFile => write!(f, "eof"),
             TokenKind::Error => write!(f, "error"),
         }
