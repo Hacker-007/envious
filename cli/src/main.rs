@@ -1,7 +1,7 @@
-use std::path::PathBuf;
+use std::{io::stdout, path::PathBuf};
 
 use clap::{Parser, Subcommand};
-use envyc::{compiler::Compiler, evaluator::Evaluator};
+use envyc::{compiler::Compiler, diagnostics::format::PrettyFormatter, evaluator::Evaluator};
 
 #[derive(Parser)]
 #[command(name = "envious", version, about, long_about = None)]
@@ -20,14 +20,12 @@ fn main() -> std::io::Result<()> {
     match cli.command {
         Command::Run { path } => {
             let mut compiler = Compiler::default();
-            let contents = std::fs::read_to_string(path)?;
-            let id = compiler.lex(contents);
-            compiler.parse(&id);
-            let evaluator = Evaluator::new(
-                compiler.source(&id),
-                compiler.tokens(&id),
-                compiler.ast(&id),
-            );
+            let contents = std::fs::read_to_string(&path)?;
+            let id = compiler.lex(path.display(), contents);
+            compiler.parse(id);
+            compiler.emit(&mut PrettyFormatter { color: true }, &mut stdout())?;
+            let evaluator =
+                Evaluator::new(compiler.source(id), compiler.tokens(id), compiler.ast(id));
 
             match evaluator.evaluate() {
                 Ok(value) => println!("{}", value),

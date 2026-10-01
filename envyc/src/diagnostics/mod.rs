@@ -1,14 +1,21 @@
-use std::io::{self, Write};
+use std::{
+    fmt::Display,
+    io::{self, Write},
+};
 
 use smallvec::SmallVec;
 
 use crate::{
+    ast::Ast,
     diagnostics::format::DiagnosticFormatter,
-    lex::token::{buffer::TokenIndex, TokenKind},
-    source::{SourceId, SourceMap},
+    lex::token::{
+        buffer::{TokenIndex, TokenizedBuffer},
+        TokenKind,
+    },
+    source::{SourceId, SourceMap, Span},
 };
 
-mod format;
+pub mod format;
 
 /// A combination of a source ID and token index
 /// that can be used to resolve locations when
@@ -26,8 +33,33 @@ pub enum Severity {
 #[derive(Debug, Clone, Copy)]
 pub enum DiagnosticKind {
     UnknownCharacter,
-    ExpectedToken(TokenKind),
+    ExpectedToken {
+        expected: TokenKind,
+        actual: TokenKind,
+    },
     ExpectedExpression,
+}
+
+impl DiagnosticKind {
+    pub fn code(&self) -> &'static str {
+        match self {
+            DiagnosticKind::UnknownCharacter => "E001",
+            DiagnosticKind::ExpectedToken { .. } => "E002",
+            DiagnosticKind::ExpectedExpression => "E003",
+        }
+    }
+}
+
+impl Display for DiagnosticKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DiagnosticKind::UnknownCharacter => write!(f, "found an unknown character"),
+            DiagnosticKind::ExpectedToken { expected, actual } => {
+                write!(f, "expected to find `{expected}` but got `{actual}`")
+            }
+            DiagnosticKind::ExpectedExpression => write!(f, "expected the start of an expression"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -38,35 +70,6 @@ pub struct Diagnostic {
     pub(crate) primary: Anchor,
     pub(crate) secondary: SmallVec<[Anchor; 1]>,
     pub(crate) severity: Severity,
-}
-
-impl Diagnostic {
-    pub(crate) fn unknown_character(source: SourceId, at: TokenIndex) -> Self {
-        Self {
-            kind: DiagnosticKind::UnknownCharacter,
-            primary: Anchor(source, at),
-            secondary: SmallVec::default(),
-            severity: Severity::Error,
-        }
-    }
-
-    pub(crate) fn expected_token(source: SourceId, at: TokenIndex, expected: TokenKind) -> Self {
-        Self {
-            kind: DiagnosticKind::ExpectedToken(expected),
-            primary: Anchor(source, at),
-            secondary: SmallVec::new(),
-            severity: Severity::Error,
-        }
-    }
-
-    pub(crate) fn expected_expression(source: SourceId, at: TokenIndex) -> Self {
-        Self {
-            kind: DiagnosticKind::ExpectedExpression,
-            primary: Anchor(source, at),
-            secondary: SmallVec::new(),
-            severity: Severity::Error,
-        }
-    }
 }
 
 #[derive(Debug, Default)]
@@ -83,21 +86,6 @@ impl DiagnosticBag {
         self.0.is_empty()
     }
 
-    /// Formats all of the diagnostic in the buffer and outputs
-    /// them to `sink`.
-    pub fn flush(
-        &mut self,
-        sources: &SourceMap,
-        formatter: &mut impl DiagnosticFormatter,
-        sink: &mut impl Write,
-    ) -> io::Result<()> {
-        for diagnostic in self.0.drain(..) {
-            formatter.format(sources, diagnostic, sink)?;
-        }
-
-        Ok(())
-    }
-
     pub(crate) fn unknown_character(&mut self, source: SourceId, at: TokenIndex) {
         self.add(Diagnostic {
             kind: DiagnosticKind::UnknownCharacter,
@@ -107,9 +95,15 @@ impl DiagnosticBag {
         })
     }
 
-    pub(crate) fn expected_token(&mut self, source: SourceId, at: TokenIndex, expected: TokenKind) {
+    pub(crate) fn expected_token(
+        &mut self,
+        source: SourceId,
+        at: TokenIndex,
+        expected: TokenKind,
+        actual: TokenKind,
+    ) {
         self.add(Diagnostic {
-            kind: DiagnosticKind::ExpectedToken(expected),
+            kind: DiagnosticKind::ExpectedToken { expected, actual },
             primary: Anchor(source, at),
             secondary: SmallVec::new(),
             severity: Severity::Error,
@@ -123,5 +117,9 @@ impl DiagnosticBag {
             secondary: SmallVec::new(),
             severity: Severity::Error,
         })
+    }
+
+    pub(crate) fn drain(&mut self) -> Vec<Diagnostic> {
+        std::mem::take(&mut self.0)
     }
 }

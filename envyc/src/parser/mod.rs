@@ -111,7 +111,8 @@ impl<'a> Parser<'a> {
             return Some(idx);
         }
 
-        self.diagnostics.expected_token(self.source, self.idx, kind);
+        self.diagnostics
+            .expected_token(self.source, self.idx, kind, self.current());
         None
     }
 }

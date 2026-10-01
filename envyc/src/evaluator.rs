@@ -32,7 +32,7 @@ impl<'a> Evaluator<'a> {
         match self.ast.get(idx) {
             Expression::Literal(Literal::Integer(token)) => {
                 let span = self.span_at(token);
-                self.source.text(span).parse().map_err(|_| ())
+                self.source.slice(span).parse().map_err(|_| ())
             }
             Expression::UnaryOperation { operator, operand } => {
                 let operand = self.evaluate_expression(*operand)?;

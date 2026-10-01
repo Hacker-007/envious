@@ -33,7 +33,7 @@ impl Display for TokenKind {
             TokenKind::LeftParenthesis => write!(f, "("),
             TokenKind::RightParenthesis => write!(f, ")"),
             TokenKind::ForwardSlash => write!(f, "/"),
-            TokenKind::EndOfFile => write!(f, "eof"),
+            TokenKind::EndOfFile => write!(f, "end of file"),
             TokenKind::Error => write!(f, "error"),
         }
     }

@@ -1,4 +1,4 @@
-use std::{rc::Rc, str::Chars};
+use std::{cmp::Ordering, ops::Range, rc::Rc, str::Chars};
 
 use crate::dense::{DenseIndex, DenseVec};
 
@@ -17,9 +17,14 @@ pub struct SourceMap {
 }
 
 impl SourceMap {
-    pub(crate) fn register(&mut self, bytes: impl Into<Box<str>>) -> SourceId {
+    pub(crate) fn register(&mut self, name: impl ToString, text: impl Into<Box<str>>) -> SourceId {
         // Insert the source with a dummy ID which we will overwrite
-        let idx = self.sources.push(Source::new(SourceId::default(), bytes));
+        let idx = self.sources.push(Source::new(
+            SourceId::default(),
+            name.to_string(),
+            text.into(),
+        ));
+
         self.sources[idx].id = SourceId(idx);
         SourceId(idx)
     }
@@ -33,20 +38,55 @@ impl SourceMap {
 #[derive(Debug)]
 pub struct Source {
     id: SourceId,
+    name: String,
     text: Box<str>,
+    /// An eagerly computed list of byte offsets at which line `i`
+    /// starts, i.e. the line at index `i` starts at byte offset
+    /// `line_starts[i]`.
+    line_starts: Vec<usize>,
 }
 
 impl Source {
-    pub fn new(id: SourceId, source: impl Into<Box<str>>) -> Self {
+    fn new(id: SourceId, name: String, text: Box<str>) -> Self {
+        let line_starts = core::iter::once(0)
+            .chain(text.match_indices('\n').map(|(i, _)| i + 1))
+            .collect();
+
         Self {
             id,
-            text: source.into(),
+            name: name.into(),
+            text,
+            line_starts,
         }
     }
 
     #[inline]
     pub fn id(&self) -> SourceId {
         self.id
+    }
+
+    #[inline]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    #[inline]
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    /// Returns the starting byte offset of the line at index `index`.
+    pub fn line(&self, index: usize) -> Option<usize> {
+        match index.cmp(&self.line_starts.len()) {
+            Ordering::Less => Some(self.line_starts[index]),
+            Ordering::Equal => Some(self.text.len()),
+            Ordering::Greater => None,
+        }
+    }
+
+    #[inline]
+    pub fn lines(&self) -> &[usize] {
+        &self.line_starts
     }
 
     #[inline]
@@ -65,7 +105,7 @@ impl Source {
     }
 
     #[inline]
-    pub fn text(&self, span: Span) -> &str {
+    pub fn slice(&self, span: Span) -> &str {
         &self.text[span.start as usize..span.end as usize]
     }
 }
@@ -85,6 +125,15 @@ impl Span {
         Self {
             start: start as u32,
             end: end as u32,
+        }
+    }
+}
+
+impl From<Span> for Range<usize> {
+    fn from(span: Span) -> Self {
+        Range {
+            start: span.start as usize,
+            end: span.end as usize,
         }
     }
 }

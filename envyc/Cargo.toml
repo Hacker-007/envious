@@ -5,4 +5,5 @@ authors = ["Revanth Pothukuchi <revanthpothukuchi123@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+codespan-reporting = { version = "0.13.1", features = ["termcolor"] }
 smallvec = "1.15.2"
