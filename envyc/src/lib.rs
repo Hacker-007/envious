@@ -1,11 +1,3 @@
-#![allow(unused)]
-
-use crate::{
-    context::CompilationContext,
-    lex::{token::buffer::TokenizedBuffer, Lexer},
-    source::SourceId,
-};
-
 pub mod ast;
 pub mod compiler;
 pub mod diagnostics;

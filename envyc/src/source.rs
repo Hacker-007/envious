@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, ops::Range, rc::Rc, str::Chars};
+use std::{cmp::Ordering, ops::Range, str::Chars};
 
 use crate::dense::{DenseIndex, DenseVec};
 
@@ -54,7 +54,7 @@ impl Source {
 
         Self {
             id,
-            name: name.into(),
+            name,
             text,
             line_starts,
         }

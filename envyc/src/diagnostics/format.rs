@@ -1,21 +1,17 @@
-use std::{io::Write, ops::Deref};
+use std::io::Write;
 
 use crate::{
-    ast::Ast,
     compiler::Compiler,
-    diagnostics::{Anchor, Diagnostic, Severity},
-    lex::token::buffer::TokenizedBuffer,
+    diagnostics::{Diagnostic, Severity},
     source::{SourceId, SourceMap},
 };
 use codespan_reporting::{
-    diagnostic::{
-        Diagnostic as CodespanDiagnostic, Label, LabelStyle, Severity as CodespanSeverity,
-    },
+    diagnostic::{Diagnostic as CodespanDiagnostic, Label, LabelStyle},
     files::{Error as CodespanError, Files},
     term::{
         self,
-        termcolor::{Ansi, BufferedStandardStream, ColorChoice, NoColor, WriteColor},
-        Config, WriteStyle,
+        termcolor::{Ansi, NoColor, WriteColor},
+        Config,
     },
 };
 
@@ -76,7 +72,7 @@ impl PrettyFormatter {
 
         builder
             .with_code(diagnostic.kind.code())
-            .with_message(&diagnostic.kind)
+            .with_message(diagnostic.kind)
             .with_labels_iter(labels)
     }
 }

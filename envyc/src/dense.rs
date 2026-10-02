@@ -1,4 +1,4 @@
-use std::ops::{Add, Index, IndexMut};
+use std::ops::{Index, IndexMut};
 
 /// A wrapper type around the indices within a dense
 /// vector.

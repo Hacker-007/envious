@@ -1,9 +1,9 @@
 use crate::{
     ast::{
-        binding::{Associativity, BindingPower, InfixOperator, Power, PrefixOperator},
-        Ast, AstBuilder, Expression, ExpressionIndex, Literal,
+        binding::{InfixOperator, Power, PrefixOperator},
+        Ast, AstBuilder, ExpressionIndex, Literal,
     },
-    diagnostics::{Diagnostic, DiagnosticBag},
+    diagnostics::DiagnosticBag,
     lex::token::{
         buffer::{TokenIndex, TokenizedBuffer},
         TokenKind,
@@ -63,7 +63,7 @@ impl<'a> Parser<'a> {
     fn parse_primary(&mut self) -> ExpressionIndex {
         if let Some(token) = self.eat(TokenKind::IntLiteral) {
             return self.ast.allocate_literal(Literal::Integer(token));
-        } else if let Some(token) = self.eat(TokenKind::LeftParenthesis) {
+        } else if self.eat(TokenKind::LeftParenthesis).is_some() {
             let expression = self.parse_expression(Power::MIN);
             self.expect(TokenKind::RightParenthesis);
             return expression;

@@ -1,7 +1,6 @@
 use std::{
     collections::HashMap,
     io::{self, Write},
-    rc::Rc,
 };
 
 use crate::{
@@ -29,7 +28,7 @@ impl Compiler {
         id
     }
 
-    pub fn update(&mut self, id: SourceId, source: impl Into<Box<str>>) {
+    pub fn update(&mut self, _id: SourceId, _source: impl Into<Box<str>>) {
         // TODO:
         // We need to update the text for `self.ctx.sources[id]`, re-lex
         // the new text and invalidate all dependents of that source.
@@ -68,7 +67,7 @@ impl Compiler {
         sink: &mut impl Write,
     ) -> io::Result<()> {
         for diagnostic in self.ctx.diagnostics.drain() {
-            formatter.emit(&self, diagnostic, sink)?;
+            formatter.emit(self, diagnostic, sink)?;
         }
 
         Ok(())

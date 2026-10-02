@@ -1,18 +1,10 @@
-use std::{
-    fmt::Display,
-    io::{self, Write},
-};
+use std::fmt::Display;
 
 use smallvec::SmallVec;
 
 use crate::{
-    ast::Ast,
-    diagnostics::format::DiagnosticFormatter,
-    lex::token::{
-        buffer::{TokenIndex, TokenizedBuffer},
-        TokenKind,
-    },
-    source::{SourceId, SourceMap, Span},
+    lex::token::{buffer::TokenIndex, TokenKind},
+    source::SourceId,
 };
 
 pub mod format;

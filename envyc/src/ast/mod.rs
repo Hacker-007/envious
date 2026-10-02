@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use crate::{
     ast::binding::{InfixOperator, PrefixOperator},
     dense::{DenseIndex, DenseVec},

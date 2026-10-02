@@ -3,8 +3,7 @@ use std::str::Chars;
 use smallvec::SmallVec;
 
 use crate::{
-    context::CompilationContext,
-    diagnostics::{Anchor, Diagnostic, DiagnosticBag, DiagnosticKind, Severity},
+    diagnostics::DiagnosticBag,
     lex::token::{
         buffer::{TokenIndex, TokenizedBuffer},
         Token, TokenKind, Trivia, TriviaKind,
