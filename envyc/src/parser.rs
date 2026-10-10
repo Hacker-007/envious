@@ -1,14 +1,14 @@
 use crate::{
     ast::{
         binding::{InfixOperator, Power, PrefixOperator},
-        Ast, AstBuilder, ExpressionIndex, Literal,
+        Ast, AstBuilder, ExpressionIndex, Literal, StatementIndex,
     },
     diagnostics::DiagnosticBag,
-    lex::token::{
+    source::SourceId,
+    token::{
         buffer::{TokenIndex, TokenizedBuffer},
         TokenKind,
     },
-    source::SourceId,
 };
 
 #[derive(Debug)]
@@ -36,12 +36,27 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(mut self) -> Ast {
-        let root = self.parse_expression(Power::MIN);
-        if self.expect(TokenKind::EndOfFile).is_none() {
-            debug_assert!(false, "parser advanced beyond end-of-file token");
+        let mut roots = vec![];
+        while self.current() != TokenKind::EndOfFile {
+            roots.push(self.parse_statement());
         }
 
-        self.ast.finish(root)
+        self.ast.finish(roots)
+    }
+
+    fn parse_statement(&mut self) -> StatementIndex {
+        if self.eat(TokenKind::Let).is_some() {
+            // TODO: move to a recovery point if we do not find an identifier.
+            let identifier = self.expect(TokenKind::Identifier).expect("TODO recovery");
+            self.expect(TokenKind::EqualSign);
+            let value = self.parse_expression(Power::MIN);
+            self.expect(TokenKind::Semicolon);
+            return self.ast.allocate_let(identifier, value);
+        }
+
+        let expression = self.parse_expression(Power::MIN);
+        self.expect(TokenKind::Semicolon);
+        self.ast.allocate_expression(expression)
     }
 
     fn parse_expression(&mut self, minimum: Power) -> ExpressionIndex {

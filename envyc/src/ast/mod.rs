@@ -1,20 +1,38 @@
 use crate::{
     ast::binding::{InfixOperator, PrefixOperator},
     dense::{DenseIndex, DenseVec},
-    lex::token::buffer::TokenIndex,
+    token::buffer::TokenIndex,
 };
 
 pub mod binding;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct StatementIndex(DenseIndex);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ExpressionIndex(DenseIndex);
 
 #[derive(Debug, Default)]
 pub(crate) struct AstBuilder {
+    statements: DenseVec<Statement>,
     expressions: DenseVec<Expression>,
 }
 
 impl AstBuilder {
+    pub(crate) fn allocate_expression(&mut self, expression: ExpressionIndex) -> StatementIndex {
+        let idx = self.statements.push(Statement::Expression(expression));
+        StatementIndex(idx)
+    }
+
+    pub(crate) fn allocate_let(
+        &mut self,
+        identifier: TokenIndex,
+        value: ExpressionIndex,
+    ) -> StatementIndex {
+        let idx = self.statements.push(Statement::Let { identifier, value });
+        StatementIndex(idx)
+    }
+
     pub(crate) fn allocate_literal(&mut self, literal: Literal) -> ExpressionIndex {
         let idx = self.expressions.push(Expression::Literal(literal));
         ExpressionIndex(idx)
@@ -53,9 +71,10 @@ impl AstBuilder {
         ExpressionIndex(idx)
     }
 
-    pub(crate) fn finish(self, root: ExpressionIndex) -> Ast {
+    pub(crate) fn finish(self, roots: Vec<StatementIndex>) -> Ast {
         Ast {
-            root,
+            roots,
+            statements: self.statements,
             expressions: self.expressions,
         }
     }
@@ -63,18 +82,33 @@ impl AstBuilder {
 
 #[derive(Debug)]
 pub struct Ast {
-    root: ExpressionIndex,
+    roots: Vec<StatementIndex>,
+    statements: DenseVec<Statement>,
     expressions: DenseVec<Expression>,
 }
 
 impl Ast {
-    pub fn root(&self) -> ExpressionIndex {
-        self.root
+    pub fn roots(&self) -> &[StatementIndex] {
+        &self.roots
     }
 
-    pub fn get(&self, expression: ExpressionIndex) -> &Expression {
+    pub fn get_statement(&self, statement: StatementIndex) -> &Statement {
+        &self.statements[statement.0]
+    }
+
+    pub fn get_expression(&self, expression: ExpressionIndex) -> &Expression {
         &self.expressions[expression.0]
     }
+}
+
+#[derive(Debug)]
+pub enum Statement {
+    Expression(ExpressionIndex),
+    Let {
+        // TODO: update this to be an interned ID.
+        identifier: TokenIndex,
+        value: ExpressionIndex,
+    },
 }
 
 #[derive(Debug)]

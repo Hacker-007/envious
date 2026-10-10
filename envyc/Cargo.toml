@@ -6,4 +6,5 @@ edition = "2018"
 
 [dependencies]
 codespan-reporting = { version = "0.13.1", features = ["termcolor"] }
+lasso = "0.7.3"
 smallvec = "1.15.2"

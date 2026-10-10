@@ -22,9 +22,10 @@ fn main() -> std::io::Result<()> {
             let mut compiler = Compiler::default();
             let contents = std::fs::read_to_string(&path)?;
             let id = compiler.lex(path.display(), contents);
+            compiler.emit(&mut PrettyFormatter { color: true }, &mut stdout())?;
             compiler.parse(id);
             compiler.emit(&mut PrettyFormatter { color: true }, &mut stdout())?;
-            let evaluator =
+            let mut evaluator =
                 Evaluator::new(compiler.source(id), compiler.tokens(id), compiler.ast(id));
 
             match evaluator.evaluate() {

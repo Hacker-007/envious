@@ -2,8 +2,8 @@ use std::fmt::Display;
 
 use crate::{
     dense::{DenseIndex, DenseRange, DenseVec},
-    lex::token::{Token, TokenKind, Trivia},
     source::Span,
+    token::{Token, TokenKind, Trivia},
 };
 
 /// The index into the [`TokenizedBuffer`] for a

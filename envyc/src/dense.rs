@@ -70,6 +70,10 @@ impl<T> DenseVec<T> {
     pub fn get(&self, idx: DenseIndex) -> Option<&T> {
         self.0.get(idx.0 as usize)
     }
+
+    pub fn last(&self) -> Option<&T> {
+        self.0.last()
+    }
 }
 
 impl<T> Default for DenseVec<T> {

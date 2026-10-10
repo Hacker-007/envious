@@ -7,9 +7,10 @@ use crate::{
     ast::Ast,
     context::CompilationContext,
     diagnostics::{format::DiagnosticFormatter, DiagnosticBag},
-    lex::{token::buffer::TokenizedBuffer, Lexer},
+    lex::Lexer,
     parser::Parser,
     source::{Source, SourceId},
+    token::buffer::TokenizedBuffer,
 };
 
 #[derive(Debug, Default)]

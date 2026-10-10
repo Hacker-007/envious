@@ -9,14 +9,26 @@ use crate::source::Span;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
     IntLiteral,
+
     Plus,
     Minus,
     Asterisk,
     ForwardSlash,
+    Tilde,
+    Ampersand,
+    Caret,
+    Bar,
+    LeftShift,
+    RightShift,
+    EqualSign,
 
     LeftParenthesis,
     RightParenthesis,
 
+    Let,
+    Identifier,
+
+    Semicolon,
     EndOfFile,
     /// A placeholder token for any errors that
     /// occur during lexing.
@@ -30,9 +42,19 @@ impl Display for TokenKind {
             TokenKind::Plus => write!(f, "+"),
             TokenKind::Minus => write!(f, "-"),
             TokenKind::Asterisk => write!(f, "*"),
+            TokenKind::ForwardSlash => write!(f, "/"),
+            TokenKind::Tilde => write!(f, "~"),
+            TokenKind::Ampersand => write!(f, "&"),
+            TokenKind::Caret => write!(f, "^"),
+            TokenKind::Bar => write!(f, "|"),
+            TokenKind::LeftShift => write!(f, "<<"),
+            TokenKind::RightShift => write!(f, ">>"),
+            TokenKind::EqualSign => write!(f, "="),
             TokenKind::LeftParenthesis => write!(f, "("),
             TokenKind::RightParenthesis => write!(f, ")"),
-            TokenKind::ForwardSlash => write!(f, "/"),
+            TokenKind::Let => write!(f, "let"),
+            TokenKind::Identifier => write!(f, "identifier"),
+            TokenKind::Semicolon => write!(f, "semicolon"),
             TokenKind::EndOfFile => write!(f, "end of file"),
             TokenKind::Error => write!(f, "error"),
         }

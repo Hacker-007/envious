@@ -3,8 +3,8 @@ use std::fmt::Display;
 use smallvec::SmallVec;
 
 use crate::{
-    lex::token::{buffer::TokenIndex, TokenKind},
     source::SourceId,
+    token::{buffer::TokenIndex, TokenKind},
 };
 
 pub mod format;

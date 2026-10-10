@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::lex::token::TokenKind;
+use crate::token::TokenKind;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Power(u8);
@@ -54,6 +54,7 @@ impl BindingPower {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PrefixOperator {
     Negate,
+    BitwiseComplement,
 }
 
 impl PrefixOperator {
@@ -66,36 +67,52 @@ impl PrefixOperator {
 
     pub fn bp(&self) -> BindingPower {
         match self {
-            Self::Negate => BindingPower::right(3),
+            Self::Negate => BindingPower::right(7),
+            Self::BitwiseComplement => BindingPower::right(7),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InfixOperator {
-    Plus,
-    Minus,
     Multiply,
     Divide,
+    Plus,
+    Minus,
+    LeftShift,
+    RightShift,
+    BitwiseAnd,
+    BitwiseXor,
+    BitwiseOr,
 }
 
 impl InfixOperator {
     pub fn from_kind(kind: TokenKind) -> Option<Self> {
         match kind {
-            TokenKind::Plus => Some(Self::Plus),
-            TokenKind::Minus => Some(Self::Minus),
             TokenKind::Asterisk => Some(Self::Multiply),
             TokenKind::ForwardSlash => Some(Self::Divide),
+            TokenKind::Plus => Some(Self::Plus),
+            TokenKind::Minus => Some(Self::Minus),
+            TokenKind::LeftShift => Some(Self::LeftShift),
+            TokenKind::RightShift => Some(Self::RightShift),
+            TokenKind::Ampersand => Some(Self::BitwiseAnd),
+            TokenKind::Caret => Some(Self::BitwiseXor),
+            TokenKind::Bar => Some(Self::BitwiseOr),
             _ => None,
         }
     }
 
     pub fn bp(&self) -> BindingPower {
         match self {
-            Self::Plus => BindingPower::new(1, Associativity::Left),
-            Self::Minus => BindingPower::new(1, Associativity::Left),
+            Self::LeftShift => BindingPower::new(6, Associativity::Left),
+            Self::RightShift => BindingPower::new(6, Associativity::Left),
+            Self::BitwiseAnd => BindingPower::new(5, Associativity::Left),
+            Self::BitwiseXor => BindingPower::new(4, Associativity::Left),
+            Self::BitwiseOr => BindingPower::new(3, Associativity::Left),
             Self::Multiply => BindingPower::new(2, Associativity::Left),
             Self::Divide => BindingPower::new(2, Associativity::Left),
+            Self::Plus => BindingPower::new(1, Associativity::Left),
+            Self::Minus => BindingPower::new(1, Associativity::Left),
         }
     }
 }
@@ -103,10 +120,15 @@ impl InfixOperator {
 impl Display for InfixOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Plus => write!(f, "+"),
-            Self::Minus => write!(f, "-"),
             Self::Multiply => write!(f, "*"),
             Self::Divide => write!(f, "/"),
+            Self::Plus => write!(f, "+"),
+            Self::Minus => write!(f, "-"),
+            Self::LeftShift => write!(f, "<<"),
+            Self::RightShift => write!(f, ">>"),
+            Self::BitwiseAnd => write!(f, "&"),
+            Self::BitwiseXor => write!(f, "^"),
+            Self::BitwiseOr => write!(f, "|"),
         }
     }
 }

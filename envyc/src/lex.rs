@@ -4,14 +4,12 @@ use smallvec::SmallVec;
 
 use crate::{
     diagnostics::DiagnosticBag,
-    lex::token::{
+    token::{
         buffer::{TokenIndex, TokenizedBuffer},
         Token, TokenKind, Trivia, TriviaKind,
     },
     source::{Source, Span},
 };
-
-pub mod token;
 
 #[derive(Debug, Clone, Copy)]
 enum LexMode {
@@ -82,6 +80,7 @@ impl<'a> Lexer<'a> {
         }
 
         let eof = self.span_since(self.idx);
+        self.maybe_manufacture_semicolon(eof);
         self.mint_at(TokenKind::EndOfFile, eof);
         self.buffer
     }
@@ -96,37 +95,52 @@ impl<'a> Lexer<'a> {
             ('0'..='9', _) => {
                 let start = self.idx;
                 self.skip_while(|ch| ch.is_ascii_digit());
-                self.mint_at(TokenKind::IntLiteral, self.span_since(start));
+                self.mint_at(TokenKind::IntLiteral, self.span_since(start))
             }
-            ('+', _) => {
-                self.mint(TokenKind::Plus);
+            ('+', _) => self.mint(TokenKind::Plus),
+            ('-', _) => self.mint(TokenKind::Minus),
+            ('*', _) => self.mint(TokenKind::Asterisk),
+            ('/', _) => self.mint(TokenKind::ForwardSlash),
+            ('~', _) => self.mint(TokenKind::Tilde),
+            ('&', _) => self.mint(TokenKind::Ampersand),
+            ('^', _) => self.mint(TokenKind::Caret),
+            ('|', _) => self.mint(TokenKind::Bar),
+            ('<', '<') => {
+                let start = self.idx;
+                self.advance();
+                self.advance();
+                self.mint_at(TokenKind::LeftShift, self.span_since(start))
             }
-            ('-', _) => {
-                self.mint(TokenKind::Minus);
+            ('>', '>') => {
+                let start = self.idx;
+                self.advance();
+                self.advance();
+                self.mint_at(TokenKind::RightShift, self.span_since(start))
             }
-            ('*', _) => {
-                self.mint(TokenKind::Asterisk);
+            ('=', _) => self.mint(TokenKind::EqualSign),
+            ('(', _) => self.mint(TokenKind::LeftParenthesis),
+            (')', _) => self.mint(TokenKind::RightParenthesis),
+            ('a'..='z' | 'A'..='Z', _) => {
+                let start = self.idx;
+                self.skip_while(|ch| ch.is_alphanumeric() || ch == '_');
+                let kind = match self.source.slice(self.span_since(start)) {
+                    "let" => TokenKind::Let,
+                    _ => TokenKind::Identifier,
+                };
+
+                self.mint_at(kind, self.span_since(start))
             }
-            ('/', _) => {
-                self.mint(TokenKind::ForwardSlash);
-            }
-            ('(', _) => {
-                self.mint(TokenKind::LeftParenthesis);
-            }
-            (')', _) => {
-                self.mint(TokenKind::RightParenthesis);
-            }
+            (';', _) => self.mint(TokenKind::Semicolon),
             _ => {
                 let idx = self.mint(TokenKind::Error);
                 self.diagnostics.unknown_character(self.source.id(), idx);
+                idx
             }
-        }
+        };
     }
 
-    /// Mints a single-character token starting at the
-    /// current position, consuming that character first
-    /// so that trailing-trivia lookahead sees the character
-    /// that follows it, not the token's own text.
+    /// Mints a single-character token starting at the current position, consuming that character first
+    /// so that trailing-trivia lookahead sees the character that follows it, not the token's own text.
     #[inline]
     fn mint(&mut self, kind: TokenKind) -> TokenIndex {
         let span = Span::new(self.idx, self.idx + self.current.len_utf8());
@@ -136,6 +150,14 @@ impl<'a> Lexer<'a> {
 
     fn mint_at(&mut self, kind: TokenKind, span: Span) -> TokenIndex {
         let (leading, trailing) = self.sweep_trivia();
+        if let Some(newline) = leading
+            .first()
+            .filter(|trivia| trivia.kind == TriviaKind::Newline)
+            .map(|trivia| trivia.span)
+        {
+            self.maybe_manufacture_semicolon(newline);
+        }
+
         self.buffer.push(Token {
             kind,
             span,
@@ -144,12 +166,10 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    /// Looks ahead from the current position for trivia that should
-    /// retroactively become trailing trivia of the token just minted:
-    /// a run of trivia up to and including the first newline, kept
-    /// only if it contains a comment (the association rule is "trivia
-    /// defaults to leading; a same-line trailing comment + its newline
-    /// overrides that to trailing of the previous token").
+    /// Looks ahead from the current position for trivia that should retroactively become trailing
+    /// trivia of the token just minted: a run of trivia up to and including the first newline, kept
+    /// only if it contains a comment (the association rule is "trivia defaults to leading; a
+    /// same-line trailing comment + its newline overrides that to trailing of the previous token").
     fn sweep_trivia(&mut self) -> (SmallVec<[Trivia; 1]>, SmallVec<[Trivia; 1]>) {
         let leading = self
             .unassigned_trivia
@@ -200,6 +220,28 @@ impl<'a> Lexer<'a> {
             kind,
             span: self.span_since(start),
         })
+    }
+
+    /// Inserts a semicolon after the last seen token with
+    /// the given `span` under the following conditions:
+    ///
+    /// 1. The last token is a literal (e.g. integer, float);
+    /// 2. The last token is a closing delimeeter (e.g. right parenthesis)
+    /// 3. The last token is an identifier
+    fn maybe_manufacture_semicolon(&mut self, span: Span) {
+        match self.buffer.kinds.last() {
+            Some(TokenKind::IntLiteral)
+            | Some(TokenKind::RightParenthesis)
+            | Some(TokenKind::Identifier) => {
+                self.buffer.push(Token {
+                    kind: TokenKind::Semicolon,
+                    span,
+                    leading: SmallVec::default(),
+                    trailing: SmallVec::default(),
+                });
+            }
+            _ => {}
+        }
     }
 
     /// Builds a [`Span`] from `start` to the current position.

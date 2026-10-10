@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 pub mod ast;
 pub mod compiler;
 pub mod diagnostics;
@@ -8,3 +10,4 @@ pub(crate) mod context;
 pub(crate) mod dense;
 pub(crate) mod lex;
 pub(crate) mod parser;
+pub(crate) mod token;
